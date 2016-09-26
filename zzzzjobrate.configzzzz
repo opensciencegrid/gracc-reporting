@@ -1,0 +1,46 @@
+;====================================================================================
+; Email
+;====================================================================================
+; Set the email related values under this section
+
+[email]
+
+realname = Gratia Operation
+; This is the real name from which the report appears to be emailed from
+
+from = tlevshin@fnal.gov 
+; This is the email from which the reports appears to be emailed from
+
+realname = Tanya Levshina
+test_to = tlevshin@fnal.gov
+nova_email = ahimmel@fnal.gov,dingpf@fnal.gov,desai@physics.umn.edu,fife-group@fnal.gov,opos@fnal.gov,ruth@fnal.gov,votava@fnal.gov
+mu2e_email = gandr@fnal.gov,rlc@fnal.gov,kutschke@fnal.gov,fife-group@fnal.gov,opos@fnal.gov,
+uboone_email=kirby@fnal.gov,greenlee@fnal.gov,kterao@fnal.gov,jiangl@fnal.gov,joelam@fnal.gov,ruth@fnal.gov,fife-group@fnal.gov,votava@fnal.gov
+dune_email=trj@fnal.gov,tjyang@fnal.gov,opos@fnal.gov,ruth@fnal.gov,votava@fnal.gov
+; Email to which all the reports (except for the user site report which needs to be set below)
+; need to be sent to.
+; If you want the reports to be emailed, this value needs to be set
+; Also if the report cron is enabled then this value needs to be set
+; If the cron is disabled and you don't set this value, then the report
+; will be print to screen
+; Example value: myEmail@myDomain.com
+smtphost = smtp.fnal.gov
+; This is the FQDN of the mail server, which gratia will use to send the email
+; Example value: yourSmtpServer.yourDomain.com
+
+;====================================================================================
+; Databases
+;====================================================================================
+[main_db]
+hostname= gr-osg-mysql-reports.opensciencegrid.org
+port=3306
+username=reader
+password=readdb2day
+schema=gratia
+
+
+[query]
+mu2e_commonname=/CN=production/mu2egpvm01.fnal.gov
+nova_commonname=/CN=novaproduction/nova-offline.fnal.gov
+uboone_commonname=/CN=uboonepro/uboonegpvm01.fnal.gov
+dune_commonname=dunegpvm01.fnal.gov

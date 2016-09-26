@@ -1,0 +1,131 @@
+;====================================================================================
+; Email
+;====================================================================================
+; Set the email related values under this section
+
+[email]
+
+realname = Gratia Operation
+; This is the real name from which the report appears to be emailed from
+
+from = tlevshin@fnal.gov 
+; This is the email from which the reports appears to be emailed from
+
+realname = Tanya Levshina
+test_to = tlevshin@fnal.gov
+;nova_email = ahimmel@fnal.gov,dingpf@fnal.gov,group@fnal.gov,desai@physics.umn.edu,fife-group@fnal.gov,opos@fnal.gov
+;mu2e_email = gandr@fnal.gov,rlc@fnal.gov,kutschke@fnal.gov,fife-group@fnal.gov,opos@fnal.gov
+nova_email=tlevshin@fnal.gov,ahimmel@fnal.gov,dingpf@fnal.gov,group@fnal.gov,desai@physics.umn.edu
+mu2e_email=tlevshin@fnal.gov,kutschke@fnal.gov
+minerva_email=tlevshin@fnal.gov,perdue@fnal.gov,druterbo@pas.rochester.edu
+minos_email=tlevshin@fnal.gov,kreymer@fnal.gov
+lbne_email=tlevshin@fnal.gov
+gm2_email=tlevshin@fnal.gov
+coupp_email=tlevshin@fnal.gov
+lariat_email=tlevsin@fnal.gov
+fife_email=fife-group@fnal.gov,votava@fnal.gov
+microboone_email=tlevshin@fnal.gov,kirby@fnal.gov,greenlee@fnal.gov
+; Email to which all the reports (except for the user site report which needs to be set below)
+; need to be sent to.
+; If you want the reports to be emailed, this value needs to be set
+; Also if the report cron is enabled then this value needs to be set
+; If the cron is disabled and you don't set this value, then the report
+; will be print to screen
+; Example value: myEmail@myDomain.com
+smtphost = smtp.fnal.gov
+; This is the FQDN of the mail server, which gratia will use to send the email
+; Example value: yourSmtpServer.yourDomain.com
+
+;====================================================================================
+; Databases
+;====================================================================================
+[main_db]
+;hostname=gr-osg-mysql-reports.opensciencegrid.org
+hostname=gratiadb02.fnal.gov
+port=3306
+username=reader
+password=readdb2day
+schema=gratia
+
+
+[query]
+mu2e_commonname=/CN=production/mu2egpvm01.fnal.gov
+nova_commonname=/CN=novaproduction/nova-offline.fnal.gov
+uboone_commonname=/CN=uboonepro/uboonegpvm01.fnal.gov
+curl="http://gratiaweb-itb.grid.iu.edu/gratia/csv/osg_hours_efficiency_tree_map_by_vo_project_facility?facility=.*&probe=.*fifebatch.*&resource-type=BatchPilot&sql_dynamic_modif_func=oim_vo_ownership.alter_sql&vo=$VO&grid=.*&user=.*&endtime=$END+23%3A59%3A59&exclude-vo=Unknown%7Cunknown%7Cother&includeFailed=true&exclude-role=NONE&span=86400&sql_dynamic_modif_func_mod_name=gratia.database.opportunistic_filter&projectname=.*&role=.*&opportunistic-filter=BOTH&starttime=$START+00%3A00%3A00&min_hours=$MIN_HOURS&exclude-facility=NONE&exclude-user=NONE&includeSuccess=true&exclude-projectname=NONE" 
+
+[nova]
+;asked to send email weekly
+email=tlevshin@fnal.gov,desai@physics.umn.edu,ahimmel@fnal.gov
+min_hours=1000
+efficiency=0.5
+
+
+[seaquest]
+;can you set it up for us so that it sends it weekly using the default settings for now, at my address and the following 
+min_hours=1000
+email=tlevshin@fnal.gov,chenyc@fnal.gov,garzogli@fnal.gov
+efficiency=0.5
+
+
+[minerva]
+;1. Email, yes 2. Weekly 3. perdue@fnal.gov, druterbo@pas.rochester.edu 4. 50% seems okay, sort of hard to judge where we will want that to settle.  5. wall duration seems okay, hard to judge.
+min_hours=1000
+efficiency=0.5
+email=tlevshin@fnal.gov,perdue@fnal.gov,druterbo@pas.rochester.edu
+
+[minos]
+min_hours=1000
+efficiency=0.5
+email=tlevshin@fnal.gov,wingmc@gmail.com
+
+[gm2]
+;no reply
+min_hours=1000
+efficiency=0.5
+email=tlevshin@fnal.gov,lyon@fnal.gov
+
+
+[mu2e]
+min_hours=1000
+efficiency=0.5
+email=tlevshin@fnal.gov,kutschke@fnal.gov
+
+
+[microboone]
+;send to Herb with default parameters daily
+min_hours=1000
+efficiency=0.5
+email=tlevshin@fnal.gov,greenlee@fnal.gov
+
+[darkside]
+;weekly to Ken  35%  500 hours
+min_hours=500
+efficiency=0.35
+email=tlevshin@fnal.gov,kherner@fnal.gov
+
+
+
+[dune]
+#Weekly e-mails to trj@fnal.gov,afarbin@uta.edu 
+min_hours=1000
+efficiency=0.5
+email=tlevshin@fnal.gov,trj@fnal.gov,afarbin@uta.edu
+
+
+[cdms]
+min_hours=1000
+efficiency=0.5
+email=tlevshin@fnal.gov
+
+
+[mars]
+min_hours=1000
+efficiency=0.5
+email=tlevshin@fnal.gov
+
+[cdf]
+#monthly 
+min_hours=1000
+efficiency=0.5
+email=willis@fnal.gov
