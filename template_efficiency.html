@@ -1,0 +1,46 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+       <head>
+               <title>Job with low efficiency</title>
+               <style>
+                 body {
+                   font-family: Helvetica, Arial, sans-serif;
+                   font-size: 12px;
+                   line-height: 17px;
+                   margin:50px 0;
+                 }
+                 td {
+                   border-top: 2px solid #ccc;
+                 }
+
+        /*  Define the background color for all the EVEN background rows  */
+        tr:nth-child(even){
+                background: #fad7be;
+        }
+
+
+
+               </style>
+       </head>
+       <body>
+<div class="container-narrow" style="width:770px; margin:0 auto; text-align:center">
+<div class="masthead">
+       <h3 class="muted"><img src="http://www.opensciencegrid.org/wp-content/themes/osg/images/new_osglogo.78x40.png"><!--<img src="http://www.opensciencegrid.org/wp-content/themes/osg/images/osg.diamonds.64.png">--><img src="http://www.opensciencegrid.org/wp-content/themes/osg/images/open_science_grid.png"></h3>
+</div>
+</div>
+       <div style="width:770px; margin:0 auto; font-family: Helvetica, Arial, sans-serif; font-size: 12px; line-height: 17px;">
+<div style="background:#ee8130; width:100%; padding:15px; margin:10px 0; font-size:20px; line-height:25px;">$VO Jobs with Low Efficiency on the OSG Resources ($START - $END).</div>
+       <table cellpadding="7" cellspacing="0" border="0" width="100%" style="clear:both;">
+       <tr>
+        <th align="center" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#ee8130">Experiment</td>
+        <th align="center" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#ee8130">Facility</th>
+        <th align="center" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#ee8130">User</th>
+        <th align="center" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#ee8130">Used Wall Hours</th>
+        <th align="center" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#ee8130">Efficiency</th>
+        </tr>
+$TABLE
+</table>
+       </div>
+       </body>
+
+</html>
