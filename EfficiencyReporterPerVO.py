@@ -34,7 +34,7 @@ class User:
         """Parse the CN to grab the email address and user"""
         m = re.match(".+CN=UID:(\w+)", cn)      # CILogon certs
         if m:
-            email = '{}@fnal.gov'.format(m.group(1))
+            email = '{0}@fnal.gov'.format(m.group(1))
         else:
             email = ""
             m = re.match('/CN=(\w+)/.+', cn)    # Non-CILogon Certs (note - this matches what we did before, but we might need to change it in the future
@@ -42,7 +42,7 @@ class User:
         return email, user
 
     def dump(self):
-        print "{:>10}, {:>20}, {:>20}, {}, {}".format(self.vo, self.facility, self.user, int(self.hours), round(self.eff, 2))
+        print "{0:>10}, {1:>20}, {2:>20}, {3}, {4}".format(self.vo, self.facility, self.user, int(self.hours), round(self.eff, 2))
 
 
 class Efficiency(Reporter):
@@ -112,7 +112,7 @@ class Efficiency(Reporter):
             print json.dumps(response.to_dict(), sort_keys=True, indent=4)
 
         # Header for file
-        header = '{}\t{}\t{}\t{}\t{}\n'.format('VO',
+        header = '{0}\t{1}\t{2}\t{3}\t{4}\n'.format('VO',
                                              'Host Description',
                                              'Common Name',
                                              'Wall Hours',
@@ -124,7 +124,7 @@ class Efficiency(Reporter):
             for per_vo in resultset.group_VOname.buckets:
                 for per_hostdesc in per_vo.group_HostDescription.buckets:
                     for per_CN in per_hostdesc.group_commonName.buckets:
-                        outstring = '{},{},{},{},{}\n'.format(self.vo,
+                        outstring = '{0},{1},{2},{3},{4}\n'.format(self.vo,
                                                                   per_hostdesc.key,
                                                                   per_CN.key,
                                                                   per_CN.WallHours.value,
@@ -150,8 +150,8 @@ class Efficiency(Reporter):
 
         table = ""
         for u in report:
-            table += '<tr><td align="left">{}</td><td align="left">{}</td>'.format(u.vo.upper(), u.facility) + \
-                     '<td align="left">{}</td><td align="right">{}</td><td align="right">{}</td></tr>'.format(
+            table += '<tr><td align="left">{0}</td><td align="left">{1}</td>'.format(u.vo.upper(), u.facility) + \
+                     '<td align="left">{0}</td><td align="right">{1}</td><td align="right">{2}</td></tr>'.format(
                                                                         u.user, NiceNum.niceNum(u.hours), u.eff)
 
         text = "".join(open("template_efficiency.html").readlines())
@@ -161,7 +161,7 @@ class Efficiency(Reporter):
         text = text.replace("$VO", self.vo.upper())
 
         if self.verbose:
-            fn = "{}-efficiency.{}".format(self.vo.lower(), self.start_time.replace("/", "-"))
+            fn = "{0}-efficiency.{1}".format(self.vo.lower(), self.start_time.replace("/", "-"))
             with open(fn, 'w') as f:
                 f.write(text)
 
@@ -171,7 +171,7 @@ class Efficiency(Reporter):
             emails = re.split('[; ,]', self.config.get(self.vo.lower(), "email")) + re.split('[; ,]', self.config.get("email", "test_to"))
         TextUtils.sendEmail(
                             ([], emails),
-                            "{} Jobs with Low Efficiency ({})  on the  OSG Sites ({} - {})".format(
+                            "{0} Jobs with Low Efficiency ({1})  on the  OSG Sites ({2} - {3})".format(
                                                                                                     self.vo,
                                                                                                     self.eff_limit,
                                                                                                     self.start_time,
