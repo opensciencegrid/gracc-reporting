@@ -6,7 +6,6 @@ import logging
 from time import sleep
 import traceback
 
-from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Search, Q
 
 import TextUtils
@@ -153,15 +152,7 @@ class JobSuccessRateReporter(Reporter):
         return
 
     def generate(self):
-        # Set up elasticsearch client
-        client = Elasticsearch(['https://fifemon-es.fnal.gov'],
-                               use_ssl=True,
-                               verify_certs=True,
-                               ca_certs='/etc/grid-security/certificates/cilogon-osg.pem',
-                               client_cert='gracc_cert/gracc-reports-dev.crt',
-                               client_key='gracc_cert/gracc-reports-dev.key',
-                               timeout=60)
-
+        client = self.establish_client()
         resultset = self.query(client)  # Generate Search object for ES
         response = resultset.execute()  # Execute that Search
         return_code_success = response.success()  # True if the elasticsearch query completed without errors
