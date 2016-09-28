@@ -6,7 +6,6 @@ import traceback
 import re
 import json
 from datetime import datetime
-from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Q, Search
 
 import TextUtils
@@ -88,14 +87,7 @@ class Efficiency(Reporter):
         outfile = 'efficiency.csv'
 
         # Initialize the elasticsearch client
-        client = Elasticsearch(['https://gracc.opensciencegrid.org/q'],
-                             use_ssl = True,
-#                             verify_certs = True,
-#                             ca_certs = 'gracc_cert/lets-encrypt-x3-cross-signed.pem',
-#                             client_cert = 'gracc_cert/gracc-reports-dev.crt',
-#                             client_key = 'gracc_cert/gracc-reports-dev.key',
-                             timeout = 60)
-
+        client = self.establish_client()
         s = self.query(client)
 
         if self.verbose:

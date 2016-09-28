@@ -1,7 +1,10 @@
-import TextUtils
 import abc
 import optparse
 from datetime import datetime
+
+from elasticsearch import Elasticsearch
+
+import TextUtils
 from Configuration import checkRequiredArguments
 
 
@@ -25,6 +28,18 @@ class Reporter(object):
 
     def format_report(self):
         pass
+
+    @staticmethod
+    def establish_client():
+        # Initialize the elasticsearch client
+        client = Elasticsearch(['https://gracc.opensciencegrid.org/q'],
+                               use_ssl=True,
+                               # verify_certs = True,
+                               # ca_certs = 'gracc_cert/lets-encrypt-x3-cross-signed.pem',
+                               # client_cert = 'gracc_cert/gracc-reports-dev.crt',
+                               # client_key = 'gracc_cert/gracc-reports-dev.key',
+                               timeout=60)
+        return client
 
     @abc.abstractmethod
     def query(self):
