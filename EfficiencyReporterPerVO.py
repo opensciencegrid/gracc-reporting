@@ -88,12 +88,12 @@ class Efficiency(Reporter):
         outfile = 'efficiency.csv'
 
         # Initialize the elasticsearch client
-        client = Elasticsearch(['https://fifemon-es.fnal.gov'],
+        client = Elasticsearch(['https://gracc.opensciencegrid.org/q'],
                              use_ssl = True,
-                             verify_certs = True,
-                             ca_certs = '/etc/grid-security/certificates/cilogon-osg.pem',
-                             client_cert = 'gracc_cert/gracc-reports-dev.crt',
-                             client_key = 'gracc_cert/gracc-reports-dev.key',
+#                             verify_certs = True,
+#                             ca_certs = 'gracc_cert/lets-encrypt-x3-cross-signed.pem',
+#                             client_cert = 'gracc_cert/gracc-reports-dev.crt',
+#                             client_key = 'gracc_cert/gracc-reports-dev.key',
                              timeout = 60)
 
         s = self.query(client)
