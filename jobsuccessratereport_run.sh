@@ -4,7 +4,7 @@ VOS="UBooNE NOvA DUNE Mu2e"
 YESTERDAY=`date --date yesterday +"%F %T"`
 TODAY=`date +"%F %T"`
 
-cd /home/sbhat/JobSuccessRateReport
+cd /home/gratia/gracc_email_reports 
 
 echo "START" `date` >> jobsuccessratereport_run.log
 

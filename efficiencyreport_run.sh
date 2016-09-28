@@ -4,9 +4,7 @@ VOS="NOvA SeaQuest MINERvA MINOS gm2 Mu2e UBooNe DarkSide DUNE CDMS MARS CDF"
 YESTERDAY=`date --date yesterday +"%F %T"`
 TODAY=`date +"%F %T"`
 
-
-
-cd /home/sbhat/EfficiencyReport
+cd /home/gratia/gracc_email_reports 
 
 echo "START" `date` >> efficiencyreport_run.log
 
