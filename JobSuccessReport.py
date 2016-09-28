@@ -55,7 +55,7 @@ class JobSuccessRateReporter(Reporter):
     def query(self, client):
         """Method that actually queries elasticsearch"""
         # Set up our search parameters
-        voq = self.config.get("query", "{}_voname".format(self.vo.lower()))
+        voq = self.config.get("query", "{0}_voname".format(self.vo.lower()))
         productioncheck = '*Role=Production*'
 
         start_date = self.datesplit_pattern.split(self.start_time)
@@ -103,10 +103,9 @@ class JobSuccessRateReporter(Reporter):
                 # Parse jobid
                 try:
                     # Parse the GlobalJobId string to grab the cluster number and schedd
-                    jobparts = self.jobparts.match(hit['GlobalJobId']).group(2
-                                                                             ,1)
+                    jobparts = self.jobparts.match(hit['GlobalJobId']).group(2,1)
                     # Put these together to create the jobid (e.g. 123.0@fifebatch1.fnal.gov)
-                    jobid = '{}@{}'.format(*jobparts)
+                    jobid = '{0}@{1}'.format(*jobparts)
                 except AttributeError:
                     jobid = hit[
                         'GlobalJobId']  # If for some reason a probe gives us a bad jobid string, just keep going
@@ -190,8 +189,8 @@ class JobSuccessRateReporter(Reporter):
             if total_jobs_failed == 0:
                 continue
             if job_table_cl_count < 100:  # Limit number of clusters shown in report to 100.
-                job_table += '\n<tr><td align = "left">{}</td><td align = "right">{}</td><td align = "right">{}'\
-                             '</td><td align = "right">{}</td><td></td><td></td><td></td><td></td><td></td>'\
+                job_table += '\n<tr><td align = "left">{0}</td><td align = "right">{1}</td><td align = "right">{2}'\
+                             '</td><td align = "right">{3}</td><td></td><td></td><td></td><td></td><td></td>'\
                              '<td></td></tr>'.format(
                                                 cid,
                                                 cdict['userid'],
@@ -199,9 +198,9 @@ class JobSuccessRateReporter(Reporter):
                                                 total_jobs_failed)
                 # Generate HTML line for each failed job
                 for job in failures:
-                    job_table += '\n<tr><td></td><td></td><td></td><td></td><td align = "left">{}</td>'\
-                                 '<td align = "left">{}</td><td align = "left">{}</td><td align = "right">{}</td>'\
-                                 '<td align = "right">{}</td><td align = "right">{}</td></tr>'.format(
+                    job_table += '\n<tr><td></td><td></td><td></td><td></td><td align = "left">{0}</td>'\
+                                 '<td align = "left">{1}</td><td align = "left">{2}</td><td align = "right">{3}</td>'\
+                                 '<td align = "right">{4}</td><td align = "right">{5}</td></tr>'.format(
                                                                                                     job.jobid,
                                                                                                     job.start_time,
                                                                                                     job.end_time,
@@ -227,33 +226,33 @@ class JobSuccessRateReporter(Reporter):
                     failures[job.host][job.exit_code] += 1
             total_jobs += total
             total_failed += failed
-            table_summary += '\n<tr><td align = "left">{}</td><td align = "right">{}</td><td align = "right">{}</td>'\
-                             '<td align = "right">{}</td></tr>'.format(
+            table_summary += '\n<tr><td align = "left">{0}</td><td align = "right">{1}</td><td align = "right">{2}</td>'\
+                             '<td align = "right">{3}</td></tr>'.format(
                                                                     key,
                                                                     total,
                                                                     failed,
                                                                     round((total - failed) * 100. / total, 1))
-            table += '\n<tr><td align = "left">{}</td><td align = "right">{}</td><td align = "right">{}</td>'\
-                     '<td align = "right">{}</td><td></td><td></td><td></td></tr>'.format(
+            table += '\n<tr><td align = "left">{0}</td><td align = "right">{1}</td><td align = "right">{2}</td>'\
+                     '<td align = "right">{3}</td><td></td><td></td><td></td></tr>'.format(
                                                                                     key,
                                                                                     total,
                                                                                     failed,
                                                                                     round((total - failed) * 100. / total, 1))
             for host, errors in failures.items():
                 for code, count in errors.items():
-                    table += '\n<tr><td></td><td></td><td></td><td></td><td align = "left">{}</td>'\
-                             '<td align = "right">{}</td><td align = "right">{}</td></tr>'.format(
+                    table += '\n<tr><td></td><td></td><td></td><td></td><td align = "left">{0}</td>'\
+                             '<td align = "right">{1}</td><td align = "right">{2}</td></tr>'.format(
                                                                                             host,
                                                                                             code,
                                                                                             count)
 
-        table += '\n<tr><td align = "left">Total</td><td align = "right">{}</td><td align = "right">{}</td>'\
-                 '<td align = "right">{}</td><td></td><td></td><td></td></tr>'.format(
+        table += '\n<tr><td align = "left">Total</td><td align = "right">{0}</td><td align = "right">{1}</td>'\
+                 '<td align = "right">{2}</td><td></td><td></td><td></td></tr>'.format(
                                                                                 total_jobs,
                                                                                 total_failed,
                                                                                 round((total_jobs - total_failed) * 100. / total_jobs, 1))
-        table_summary += '\n<tr><td align = "left">Total</td><td align = "right">{}</td><td align = "right">{}</td>'\
-                         '<td align = "right">{}</td></td></tr>'.format(
+        table_summary += '\n<tr><td align = "left">Total</td><td align = "right">{0}</td><td align = "right">{1}</td>'\
+                         '<td align = "right">{2}</td></td></tr>'.format(
                                                                     total_jobs,
                                                                     total_failed,
                                                                     round((total_jobs - total_failed) * 100. / total_jobs, 1))
@@ -267,7 +266,7 @@ class JobSuccessRateReporter(Reporter):
         text = text.replace("$VO", self.vo)
 
         # Generate HTML file to send
-        fn = "{}-jobrate.{}".format(self.vo.lower(),
+        fn = "{0}-jobrate.{1}".format(self.vo.lower(),
                                     self.start_time.replace("/", "-"))
 
         with open(fn, 'w') as f:
@@ -281,11 +280,11 @@ class JobSuccessRateReporter(Reporter):
         if self.is_test:
             emails = re.split('[; ,]', self.config.get("email", "test_to"))
         else:
-            emails = re.split('[; ,]', self.config.get("email", "{}_email".format(self.vo.lower()))) + \
+            emails = re.split('[; ,]', self.config.get("email", "{0}_email".format(self.vo.lower()))) + \
                      re.split('[: ,]', self.config.get("email", "test_to"))
 
         TextUtils.sendEmail(([], emails),
-                            "{} Production Jobs Success Rate on the OSG Sites ({} - {})".format(self.vo,
+                            "{0} Production Jobs Success Rate on the OSG Sites ({1} - {2})".format(self.vo,
                                                                                                 self.start_time,
                                                                                                 self.end_time),
                             {"html": text},
@@ -313,6 +312,6 @@ if __name__ == "__main__":
         r.send_report()
     except Exception as e:
         print >> sys.stderr, traceback.format_exc()
-        Reporter.runerror(e, traceback.format_exc(), ['sbhat@fnal.gov'])
+        r.runerror(e, traceback.format_exc())
         sys.exit(1)
     sys.exit(0)
