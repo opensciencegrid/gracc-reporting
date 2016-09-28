@@ -1,6 +1,9 @@
 import abc
 import optparse
 from datetime import datetime
+from re import split
+import smtplib
+from email.mime.text import MIMEText
 
 from elasticsearch import Elasticsearch
 
@@ -96,11 +99,23 @@ class Reporter(object):
         checkRequiredArguments(options, parser)
         return options, arguments
 
-    @staticmethod
-    def runerror(error, traceback, admin_emails):
-        TextUtils.sendEmail(([], admin_emails),
-                            "ERROR PRODUCING REPORT: Production Jobs Success Rate on the OSG Sites: Date Generated {}".format(datetime.now()),
-                            "ERROR: {}\n\nTRACEBACK: {}".format(error, traceback),
-                            ("Gratia Operation", "sbhat@fnal.gov"),
-                            "smtp.fnal.gov")
-        return
+    def runerror(self, error, traceback):
+        admin_emails = split('[; ,]', self.config.get("email", "test_to"))
+
+        msg = MIMEText("ERROR: {}\n\nTRACEBACK: {}".format(error, traceback))
+        msg['Subject'] = "ERROR PRODUCING REPORT: Production Jobs Success Rate on the OSG Sites: Date Generated {}".format(datetime.now())
+        msg['From'] = 'sbhat@fnal.gov'
+        msg['To'] = ', '.join(admin_emails)
+
+        try:
+            s = smtplib.SMTP('smtp.fnal.gov')
+            s.sendmail('sbhat@fnal.gov', admin_emails, msg.as_string())
+            print "Successfully sent error email"
+        except Exception as e:
+             err = "Error:  unable to send email.\n%s\n" % e
+             print err
+             raise
+        finally:
+            s.quit()
+
+        return None
