@@ -1,7 +1,7 @@
 import abc
 import optparse
 from datetime import datetime
-from re import split
+import re
 import smtplib
 from email.mime.text import MIMEText
 
@@ -22,12 +22,21 @@ class Reporter(object):
                 end(str,optional) - end date (YYYY/MM/DD) of the report, defaults to 1 month from start date
                 verbose(boolean,optional) - print debug messages to stdout
         """
-
         self.header = []
         self.config = config.config
         self.start_time = start
         self.verbose = verbose
         self.end_time = end
+        self.datesplit_pattern = re.compile('[-/ :]')
+
+    def dateparse(self, date_time):
+        datelist = self.datesplit_pattern.split(date_time)
+        return datetime(*[int(elt) for elt in datelist]).isoformat()
+
+    @staticmethod
+    def datestamp_to_epoch(date_time):
+        pass
+
 
     def format_report(self):
         pass
@@ -100,7 +109,7 @@ class Reporter(object):
         return options, arguments
 
     def runerror(self, error, traceback):
-        admin_emails = split('[; ,]', self.config.get("email", "test_to"))
+        admin_emails = re.split('[; ,]', self.config.get("email", "test_to"))
 
         msg = MIMEText("ERROR: {}\n\nTRACEBACK: {}".format(error, traceback))
         msg['Subject'] = "ERROR PRODUCING REPORT: Production Jobs Success Rate on the OSG Sites: Date Generated {}".format(datetime.now())

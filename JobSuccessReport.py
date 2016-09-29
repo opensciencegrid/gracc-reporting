@@ -46,7 +46,6 @@ class JobSuccessRateReporter(Reporter):
         self.run = Jobs()
         self.clusters = {}
         self.connectStr = None
-        self.datesplit_pattern = re.compile('[-/ :]')
         self.usermatch_CILogon = re.compile('.+CN=UID:(\w+)')
         self.usermatch_FNAL = re.compile('.+/(\w+\.fnal\.gov)')
         self.jobparts = re.compile('\w+\.(\w+\.\w+\.\w+)#(\w+\.\w+)#.+')
@@ -58,14 +57,11 @@ class JobSuccessRateReporter(Reporter):
         voq = self.config.get("query", "{0}_voname".format(self.vo.lower()))
         productioncheck = '*Role=Production*'
 
-        start_date = self.datesplit_pattern.split(self.start_time)
-        starttimeq = datetime(*[int(elt) for elt in start_date]).isoformat()
-
-        end_date = self.datesplit_pattern.split(self.end_time)
-        endtimeq = datetime(*[int(elt) for elt in end_date]).isoformat()
+        starttimeq = self.dateparse(self.start_time)
+        endtimeq = self.dateparse(self.end_time)
 
         # Generate the index pattern based on the start and end dates
-        indexpattern = indexpattern_generate(start_date, end_date)
+        indexpattern = indexpattern_generate(self.start_time, self.end_time)
 
         if self.verbose:
             print >> sys.stdout, indexpattern
