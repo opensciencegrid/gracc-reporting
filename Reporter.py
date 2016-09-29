@@ -9,6 +9,8 @@ from elasticsearch import Elasticsearch
 
 import TextUtils
 from Configuration import checkRequiredArguments
+from IndexPattern.indexpattern import dateparse as idateparse
+from IndexPattern.indexpattern import indexpattern_generate
 
 
 class Reporter(object):
@@ -29,12 +31,12 @@ class Reporter(object):
         self.end_time = end
         self.datesplit_pattern = re.compile('[-/ :]')
 
-    def dateparse(self, date_time):
-        datelist = self.datesplit_pattern.split(date_time)
+    def dateparse_to_iso(self, date_time):
+        datelist = idateparse(date_time, time=True)
         return datetime(*[int(elt) for elt in datelist]).isoformat()
 
-    @staticmethod
-    def datestamp_to_epoch(date_time):
+    def get_epoch_stamps(self):
+        # use self.start_time, self.end_time, get epoch time stamps, return both as a tuple
         pass
 
 

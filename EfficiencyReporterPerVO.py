@@ -57,8 +57,8 @@ class Efficiency(Reporter):
     def query(self, client):
         """Method to query Elasticsearch cluster for EfficiencyReport information"""
         # Gather parameters, format them for the query
-        starttimeq = self.dateparse(self.start_time)
-        endtimeq = self.dateparse(self.end_time)
+        starttimeq = self.dateparse_to_iso(self.start_time)
+        endtimeq = self.dateparse_to_iso(self.end_time)
         wildcardVOq = '*' + self.vo.lower() + '*'
         wildcardProbeNameq = 'condor:fifebatch?.fnal.gov'
 
