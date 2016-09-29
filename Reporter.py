@@ -3,14 +3,14 @@ import optparse
 from datetime import datetime
 import re
 import smtplib
+import time
 from email.mime.text import MIMEText
 
 from elasticsearch import Elasticsearch
 
 import TextUtils
 from Configuration import checkRequiredArguments
-from IndexPattern.indexpattern import dateparse as idateparse
-from IndexPattern.indexpattern import indexpattern_generate
+import IndexPattern.indexpattern as indexpattern
 
 
 class Reporter(object):
@@ -29,18 +29,28 @@ class Reporter(object):
         self.start_time = start
         self.verbose = verbose
         self.end_time = end
-        self.indexpattern = self.get_indexpattern()
+        self.epochrange = None
+        self.indexpattern = indexpattern.indexpattern_generate(
+            self.start_time, self.end_time)
 
     def dateparse_to_iso(self, date_time):
-        datelist = idateparse(date_time,time=True)
+        """Parses date_time into iso format"""
+        datelist = indexpattern.dateparse(date_time,time=True)
         return datetime(*[int(elt) for elt in datelist]).isoformat()
 
-    def get_epoch_stamps(self):
-        # use self.start_time, self.end_time, get epoch time stamps, return both as a tuple
-        pass
-
-    def get_indexpattern(self):
-        return indexpattern_generate(self.start_time, self.end_time)
+    def get_epoch_stamps_for_grafana(self):
+        """Generates tuple of self.start_time, self.end_time in epoch time
+        form
+        """
+        start = time.strptime(re.sub('-','/',self.start_time),
+                              '%Y/%m/%d %H:%M:%S')
+        end = time.strptime(re.sub('-','/',self.end_time),
+                              '%Y/%m/%d %H:%M:%S')
+        # Multiply each by 1000 to convert to milliseconds
+        start_epoch = int(time.mktime(start) * 1000)
+        end_epoch = int(time.mktime(end) * 1000)
+        self.epochrange = (start_epoch, end_epoch)
+        return self.epochrange
 
     def format_report(self):
         pass
