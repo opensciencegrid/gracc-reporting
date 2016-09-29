@@ -247,6 +247,14 @@ class JobSuccessRateReporter(Reporter):
                                                                     total_jobs,
                                                                     total_failed,
                                                                     round((total_jobs - total_failed) * 100. / total_jobs, 1))
+
+        epoch_stamps = self.get_epoch_stamps_for_grafana()
+        elist = [elt for elt in epoch_stamps]
+        elist.append('{0}pro'.format(self.vo.lower()))
+        fifemon_link = 'https://fifemon.fnal.gov/monitor/dashboard/db/' \
+                       'user-batch-details?from={0}&to={1}&' \
+                       'var-user={2}'.format(*elist)
+
         # Grab HTML template, replace variables shown
         text = "".join(open(self.template).readlines())
         text = text.replace("$START", self.start_time)
@@ -254,6 +262,7 @@ class JobSuccessRateReporter(Reporter):
         text = text.replace("$TABLE_SUMMARY", table_summary)
         text = text.replace("$TABLE_JOBS", job_table)
         text = text.replace("$TABLE", table)
+        text = text.replace("$FIFEMON_LINK", fifemon_link)
         text = text.replace("$VO", self.vo)
 
         # Generate HTML file to send
@@ -301,6 +310,7 @@ if __name__ == "__main__":
                                    opts.no_email)
         r.generate()
         r.send_report()
+        print "Sent Report"
     except Exception as e:
         print >> sys.stderr, traceback.format_exc()
         r.runerror(e, traceback.format_exc())
