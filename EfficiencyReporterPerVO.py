@@ -5,7 +5,6 @@ import os
 import traceback
 import re
 import json
-from datetime import datetime
 from elasticsearch_dsl import Q, Search
 
 import TextUtils
@@ -14,8 +13,10 @@ import NiceNum
 from Reporter import Reporter
 from IndexPattern.indexpattern import indexpattern_generate
 
+cilogon_match = re.compile('.+CN=UID:(\w+)')
+non_cilogon_match = re.compile('/CN=(\w+)/.+')
 
-class User:
+class User(object):
     def __init__(self, info):
         """Take CSV as described below and assigns to it the attributes vo, facility, email, user, hours, eff
         # CSV format DARKSIDE, Fermigrid, /CN = fifegrid/CN = batch/CN = Shawn S. Westerdale/CN = UID:shawest,
@@ -31,12 +32,12 @@ class User:
 
     def parseCN(self, cn):
         """Parse the CN to grab the email address and user"""
-        m = re.match(".+CN=UID:(\w+)", cn)      # CILogon certs
+        m = cilogon_match.match(cn)      # CILogon certs
         if m:
             email = '{0}@fnal.gov'.format(m.group(1))
         else:
             email = ""
-            m = re.match('/CN=(\w+)/.+', cn)    # Non-CILogon Certs (note - this matches what we did before, but we might need to change it in the future
+            m = non_cilogon_match.match(cn)    # Non-CILogon Certs (note - this matches what we did before, but we might need to change it in the future
         user = m.group(1)
         return email, user
 
