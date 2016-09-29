@@ -11,7 +11,6 @@ import TextUtils
 import Configuration
 import NiceNum
 from Reporter import Reporter
-from IndexPattern.indexpattern import indexpattern_generate
 
 cilogon_match = re.compile('.+CN=UID:(\w+)')
 non_cilogon_match = re.compile('/CN=(\w+)/.+')
@@ -63,7 +62,7 @@ class Efficiency(Reporter):
         wildcardProbeNameq = 'condor:fifebatch?.fnal.gov'
 
         # Elasticsearch query and aggregations
-        s = Search(using = client, index = indexpattern_generate(self.start_time, self.end_time))\
+        s = Search(using = client, index = self.indexpattern)\
                    .query("wildcard", VOName=wildcardVOq)\
                    .query("wildcard", ProbeName=wildcardProbeNameq)\
                    .filter("range", EndTime={"gte" : starttimeq, "lt" : endtimeq})\

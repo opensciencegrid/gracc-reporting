@@ -29,16 +29,18 @@ class Reporter(object):
         self.start_time = start
         self.verbose = verbose
         self.end_time = end
-        self.datesplit_pattern = re.compile('[-/ :]')
+        self.indexpattern = self.get_indexpattern()
 
     def dateparse_to_iso(self, date_time):
-        datelist = idateparse(date_time, time=True)
+        datelist = idateparse(date_time,time=True)
         return datetime(*[int(elt) for elt in datelist]).isoformat()
 
     def get_epoch_stamps(self):
         # use self.start_time, self.end_time, get epoch time stamps, return both as a tuple
         pass
 
+    def get_indexpattern(self):
+        return indexpattern_generate(self.start_time, self.end_time)
 
     def format_report(self):
         pass

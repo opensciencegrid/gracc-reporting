@@ -1,7 +1,6 @@
 import sys
 import os
 import re
-from datetime import datetime
 import logging
 from time import sleep
 import traceback
@@ -11,7 +10,6 @@ from elasticsearch_dsl import Search, Q
 import TextUtils
 import Configuration
 from Reporter import Reporter
-from IndexPattern.indexpattern import indexpattern_generate
 
 
 class Jobs:
@@ -60,15 +58,12 @@ class JobSuccessRateReporter(Reporter):
         starttimeq = self.dateparse_to_iso(self.start_time)
         endtimeq = self.dateparse_to_iso(self.end_time)
 
-        # Generate the index pattern based on the start and end dates
-        indexpattern = indexpattern_generate(self.start_time, self.end_time)
-
         if self.verbose:
-            print >> sys.stdout, indexpattern
+            print >> sys.stdout, self.indexpattern
             sleep(3)
 
         # Elasticsearch query
-        resultset = Search(using=client, index=indexpattern) \
+        resultset = Search(using=client, index=self.indexpattern) \
             .query("wildcard", VOName=productioncheck) \
             .filter(Q({"term": {"VOName": voq}})) \
             .filter("range", EndTime={"gte": starttimeq, "lt": endtimeq}) \
