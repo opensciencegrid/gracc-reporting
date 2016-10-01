@@ -255,12 +255,21 @@ class JobSuccessRateReporter(Reporter):
                        'user-batch-details?from={0}&to={1}&' \
                        'var-user={2}'.format(*elist)
 
+        if total_failed == 0:
+            divopen = '\n<div style="display:none">'
+            divclose = '\n</div>'
+        else:
+            divopen = ''
+            divclose = ''
+
         # Grab HTML template, replace variables shown
         text = "".join(open(self.template).readlines())
         text = text.replace("$START", self.start_time)
         text = text.replace("$END", self.end_time)
         text = text.replace("$TABLE_SUMMARY", table_summary)
+        text = text.replace("$DIVOPEN", divopen)
         text = text.replace("$TABLE_JOBS", job_table)
+        text = text.replace("$DIVCLOSE", divclose)
         text = text.replace("$TABLE", table)
         text = text.replace("$FIFEMON_LINK", fifemon_link)
         text = text.replace("$VO", self.vo)
