@@ -38,13 +38,17 @@ class Reporter(object):
         datelist = indexpattern.dateparse(date_time,time=True)
         return datetime(*[int(elt) for elt in datelist]).isoformat()
 
-    def get_epoch_stamps_for_grafana(self):
+    def get_epoch_stamps_for_grafana(self, start_time=None, end_time=None):
         """Generates tuple of self.start_time, self.end_time in epoch time
         form
         """
-        start = time.strptime(re.sub('-','/',self.start_time),
+        if not start_time:
+            start_time = self.start_time
+        if not end_time:
+            end_time = self.end_time
+        start = time.strptime(re.sub('-','/',start_time),
                               '%Y/%m/%d %H:%M:%S')
-        end = time.strptime(re.sub('-','/',self.end_time),
+        end = time.strptime(re.sub('-','/',end_time),
                               '%Y/%m/%d %H:%M:%S')
         # Multiply each by 1000 to convert to milliseconds
         start_epoch = int(time.mktime(start) * 1000)
