@@ -251,9 +251,10 @@ class JobSuccessRateReporter(Reporter):
         epoch_stamps = self.get_epoch_stamps_for_grafana()
         elist = [elt for elt in epoch_stamps]
         elist.append('{0}pro'.format(self.vo.lower()))
-        fifemon_link = 'https://fifemon.fnal.gov/monitor/dashboard/db/' \
+        fifemon_link_raw = 'https://fifemon.fnal.gov/monitor/dashboard/db/' \
                        'user-batch-details?from={0}&to={1}&' \
                        'var-user={2}'.format(*elist)
+        fifemon_link = '<a href="{0}">Fifemon</a>'.format(fifemon_link_raw)
 
         if total_failed == 0:
             divopen = '\n<div style="display:none">'
