@@ -46,8 +46,9 @@ class JobSuccessRateReporter(Reporter):
         self.connectStr = None
         self.usermatch_CILogon = re.compile('.+CN=UID:(\w+)')
         self.usermatch_FNAL = re.compile('.+/(\w+\.fnal\.gov)')
-        self.jobparts = re.compile('\w+\.(\w+\.\w+\.\w+)#(\w+\.\w+)#.+')
+        self.globaljobparts = re.compile('\w+\.(fifebatch\d\.fnal\.gov)#(\d+\.\d+)#.+')
         self.realhost_pattern = re.compile('\s\(primary\)')
+        self.jobpattern = re.compile('(\d+).\d@(fifebatch\d\.fnal\.gov)')
 
     def query(self, client):
         """Method that actually queries elasticsearch"""
@@ -74,6 +75,9 @@ class JobSuccessRateReporter(Reporter):
 
         return resultset
 
+    def get_job_parts_from_jobid(self, jobid):
+        return self.jobpattern.match(jobid).groups()
+
     def generate_result_array(self, resultset):
         # Compile results into array
         results = []
@@ -94,7 +98,7 @@ class JobSuccessRateReporter(Reporter):
                 # Parse jobid
                 try:
                     # Parse the GlobalJobId string to grab the cluster number and schedd
-                    jobparts = self.jobparts.match(hit['GlobalJobId']).group(2,1)
+                    jobparts = self.globaljobparts.match(hit['GlobalJobId']).group(2,1)
                     # Put these together to create the jobid (e.g. 123.0@fifebatch1.fnal.gov)
                     jobid = '{0}@{1}'.format(*jobparts)
                 except AttributeError:
@@ -189,10 +193,23 @@ class JobSuccessRateReporter(Reporter):
                                                 total_jobs_failed)
                 # Generate HTML line for each failed job
                 for job in failures:
+
+                    job_link_parts = [elt for elt in
+                                      self.get_job_parts_from_jobid(job.jobid)]
+                    timestamps = self.get_epoch_stamps_for_grafana(
+                        start_time=job.start_time, end_time=job.end_time)
+                    job_link_parts.extend(timestamps)
+                    job_link = 'https://fifemon.fnal.gov/monitor/dashboard/db' \
+                               '/job-cluster-summary?var-cluster={0}' \
+                               '&var-schedd={1}&from={2}&to={3}'.format(
+                        *job_link_parts)
+                    job_html = '<a href="{0}">{1}</a>'.format(job_link,
+                                                              job.jobid)
+
                     job_table += '\n<tr><td></td><td></td><td></td><td></td><td align = "left">{0}</td>'\
                                  '<td align = "left">{1}</td><td align = "left">{2}</td><td align = "right">{3}</td>'\
                                  '<td align = "right">{4}</td><td align = "right">{5}</td></tr>'.format(
-                                                                                                    job.jobid,
+                                                                                                    job_html,
                                                                                                     job.start_time,
                                                                                                     job.end_time,
                                                                                                     job.site,
