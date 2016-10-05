@@ -129,8 +129,8 @@ class Reporter(object):
     def runerror(self, error, traceback):
         admin_emails = re.split('[; ,]', self.config.get("email", "test_to"))
 
-        msg = MIMEText("ERROR: {}\n\nTRACEBACK: {}".format(error, traceback))
-        msg['Subject'] = "ERROR PRODUCING REPORT: Production Jobs Success Rate on the OSG Sites: Date Generated {}".format(datetime.now())
+        msg = MIMEText("ERROR: {0}\n\nTRACEBACK: {1}".format(error, traceback))
+        msg['Subject'] = "ERROR PRODUCING REPORT: Production Jobs Success Rate on the OSG Sites: Date Generated {0}".format(datetime.now())
         msg['From'] = 'sbhat@fnal.gov'
         msg['To'] = ', '.join(admin_emails)
 
