@@ -10,7 +10,7 @@ from elasticsearch_dsl import Q, Search
 import TextUtils
 import Configuration
 import NiceNum
-from Reporter import Reporter
+from Reporter import Reporter, runerror
 
 cilogon_match = re.compile('.+CN=UID:(\w+)')
 non_cilogon_match = re.compile('/CN=(\w+)/.+')
@@ -208,5 +208,6 @@ if __name__ == "__main__":
             e.send_report(r)
     except:
         print >> sys.stderr, traceback.format_exc()
+        runerror(config, e, traceback.format_exc())
         sys.exit(1)
     sys.exit(0)
