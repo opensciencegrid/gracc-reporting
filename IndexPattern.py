@@ -1,7 +1,5 @@
 #!/usr/bin/python
 
-import datetime
-import re
 from TimeUtils import TimeUtils
 
 def indexpattern_generate(start, end, raw=True):
@@ -36,6 +34,8 @@ def indexpattern_generate(start, end, raw=True):
 
 
 if __name__ == "__main__":
+    import datetime
+
     # Meant for testing
     date_end = ['2016', '06', '12']
     date_start1 = ['2016', '06', '10']
