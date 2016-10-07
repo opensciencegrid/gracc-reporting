@@ -196,9 +196,12 @@ class JobSuccessRateReporter(Reporter):
 
                     job_link_parts = [elt for elt in
                                       self.get_job_parts_from_jobid(job.jobid)]
-                    timestamps = self.get_epoch_stamps_for_grafana(
+                    timestamps_exact = self.get_epoch_stamps_for_grafana(
                         start_time=job.start_time, end_time=job.end_time)
-                    job_link_parts.extend(timestamps)
+                    padding = 300
+                    timestamps_padded = (timestamps_exact[0]-padding,
+                                         timestamps_exact[1]+padding)
+                    job_link_parts.extend(timestamps_padded)
                     job_link = 'https://fifemon.fnal.gov/monitor/dashboard/db' \
                                '/job-cluster-summary?var-cluster={0}' \
                                '&var-schedd={1}&from={2}&to={3}'.format(
@@ -247,6 +250,7 @@ class JobSuccessRateReporter(Reporter):
                                                                                     failed,
                                                                                     round((total - failed) * 100. / total, 1))
             for host, errors in failures.items():
+#                print host, len(failures)
                 for code, count in errors.items():
                     table += '\n<tr><td></td><td></td><td></td><td></td><td align = "left">{0}</td>'\
                              '<td align = "right">{1}</td><td align = "right">{2}</td></tr>'.format(
