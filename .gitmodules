@@ -1,3 +1,0 @@
-[submodule "fifemon-index_pattern"]
-	path = IndexPattern
-	url = ssh://p-fifemon@cdcvs.fnal.gov/cvs/projects/fifemon-index_pattern
