@@ -70,7 +70,8 @@ if __name__ == "__main__":
     assert indexpattern_generate(datestringdash, date_dateend) == 'gracc.osg.raw-2016.06', "Assertion Error, {0}-{1} test failed".format(datestringslash, date_dateend)
     print "Passed date string tests (/ and -)"
 
-    dateparse_fulldate = dateparse(fulldate,time=True)
+    t2 = TimeUtils()
+    dateparse_fulldate = t2.dateparse(fulldate,time=True)
     assert indexpattern_generate(dateparse_fulldate, date_dateend) == 'gracc.osg.raw-2016.06', "Assertion Error, {0}-{1} test failed".format(datestringslash, date_dateend)
     print "Passed full date time test"
 
