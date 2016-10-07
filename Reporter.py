@@ -32,6 +32,12 @@ class Reporter(object):
         self.epochrange = None
         self.indexpattern = indexpattern.indexpattern_generate(
             self.start_time, self.end_time)
+        self.local_time_offset = self.get_local_time_offset()
+
+
+    def get_local_time_offset(self):
+        delta = datetime.now() - datetime.utcnow()
+        return int(delta.total_seconds())
 
     def dateparse_to_iso(self, date_time):
         """Parses date_time into iso format"""
@@ -51,8 +57,8 @@ class Reporter(object):
         end = time.strptime(re.sub('-','/',end_time),
                               '%Y/%m/%d %H:%M:%S')
         # Multiply each by 1000 to convert to milliseconds
-        start_epoch = int(time.mktime(start) * 1000)
-        end_epoch = int(time.mktime(end) * 1000)
+        start_epoch = int((time.mktime(start) + self.local_time_offset) * 1000)
+        end_epoch = int((time.mktime(end) + self.local_time_offset) * 1000)
         self.epochrange = (start_epoch, end_epoch)
         return self.epochrange
 
