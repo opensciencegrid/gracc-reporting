@@ -3,51 +3,14 @@ import optparse
 from datetime import datetime
 import re
 import smtplib
-import time
 from email.mime.text import MIMEText
 
 from elasticsearch import Elasticsearch
 
 import TextUtils
 from Configuration import checkRequiredArguments
-import IndexPattern.indexpattern as indexpattern
-
-
-class TimeUtils(object):
-    def __init__(self):
-        self.start_time = None
-        self.end_time = None
-        self.local_time_offset = self.get_local_time_offset()
-
-    @staticmethod
-    def get_local_time_offset():
-        delta = datetime.now() - datetime.utcnow()
-        return int(delta.total_seconds())
-
-    @staticmethod
-    def dateparse_to_iso(date_time):
-        """Parses date_time into iso format"""
-        datelist = indexpattern.dateparse(date_time, time=True)
-        return datetime(*[int(elt) for elt in datelist]).isoformat()
-
-    def get_epoch_stamps_for_grafana(self, start_time=None, end_time=None):
-        """Generates tuple of self.start_time, self.end_time in epoch time
-        form
-        """
-        if not start_time:
-            start_time = self.start_time
-        if not end_time:
-            end_time = self.end_time
-        start = time.strptime(re.sub('-', '/', start_time),
-                              '%Y/%m/%d %H:%M:%S')
-        end = time.strptime(re.sub('-', '/', end_time),
-                            '%Y/%m/%d %H:%M:%S')
-        # Multiply each by 1000 to convert to milliseconds for grafana
-        start_epoch = int((time.mktime(start) + self.local_time_offset) * 1000)
-        end_epoch = int((time.mktime(end) + self.local_time_offset) * 1000)
-        self.epochrange = (start_epoch, end_epoch)
-        return self.epochrange
-
+from IndexPattern import indexpattern_generate
+from TimeUtils import TimeUtils
 
 
 class Reporter(TimeUtils):
@@ -68,8 +31,8 @@ class Reporter(TimeUtils):
         self.verbose = verbose
         self.end_time = end
         self.epochrange = None
-        self.indexpattern = indexpattern.indexpattern_generate(
-            self.start_time, self.end_time)
+        self.indexpattern = indexpattern_generate(self.start_time,
+                                                  self.end_time)
 
     def format_report(self):
         pass
