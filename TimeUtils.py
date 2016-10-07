@@ -13,9 +13,10 @@ class TimeUtils(object):
 
     @staticmethod
     def get_local_time_offset():
+        """Returns local time offset from UTC"""
         delta = datetime.now() - datetime.utcnow()
         return int((delta.microseconds + (
-        delta.seconds + delta.days * 24 * 3600) * 10 ** 6) / 10 ** 6)
+            delta.seconds + delta.days * 24 * 3600) * 10 ** 6) / 10 ** 6)
 
     @staticmethod
     def datetimecheck(test_date):
