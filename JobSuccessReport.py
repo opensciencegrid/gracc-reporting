@@ -315,7 +315,7 @@ class JobSuccessRateReporter(Reporter):
                                                                                                 self.start_time,
                                                                                                 self.end_time),
                             {"html": text},
-                            ("Gratia Operation", "sbhat@fnal.gov"),
+                            ("GRACC Operations", "sbhat@fnal.gov"),
                             "smtp.fnal.gov")
 
         os.unlink(fn)  # Delete HTML file
