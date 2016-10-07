@@ -9,7 +9,7 @@ from elasticsearch_dsl import Search, Q
 
 import TextUtils
 import Configuration
-from Reporter import Reporter
+from Reporter import Reporter, runerror
 
 
 class Jobs:
@@ -330,9 +330,10 @@ if __name__ == "__main__":
         logging.basicConfig(filename='jobsuccessreport.log', level=logging.ERROR)
         logging.getLogger('elasticsearch.trace').addHandler(logging.StreamHandler())
 
+    config = Configuration.Configuration()
+    config.configure(opts.config)
+
     try:
-        config = Configuration.Configuration()
-        config.configure(opts.config)
         r = JobSuccessRateReporter(config, opts.start, opts.end, opts.vo, opts.template, opts.is_test, opts.verbose,
                                    opts.no_email)
         r.generate()
@@ -340,6 +341,6 @@ if __name__ == "__main__":
         print "Sent Report"
     except Exception as e:
         print >> sys.stderr, traceback.format_exc()
-        r.runerror(e, traceback.format_exc())
+        runerror(config, e, traceback.format_exc())
         sys.exit(1)
     sys.exit(0)

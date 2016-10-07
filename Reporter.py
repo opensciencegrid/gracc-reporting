@@ -13,35 +13,21 @@ from Configuration import checkRequiredArguments
 import IndexPattern.indexpattern as indexpattern
 
 
-class Reporter(object):
-    __metaclass__ = abc.ABCMeta
-
-    def __init__(self, config, start, end=None, verbose=False):
-        """Constructor for OSGReporter
-        Args:
-                config(Configuration) - configuration file
-                start(str) - start date (YYYY/MM/DD) of the report
-                end(str,optional) - end date (YYYY/MM/DD) of the report, defaults to 1 month from start date
-                verbose(boolean,optional) - print debug messages to stdout
-        """
-        self.header = []
-        self.config = config.config
-        self.start_time = start
-        self.verbose = verbose
-        self.end_time = end
-        self.epochrange = None
-        self.indexpattern = indexpattern.indexpattern_generate(
-            self.start_time, self.end_time)
+class TimeUtils(object):
+    def __init__(self):
+        self.start_time = None
+        self.end_time = None
         self.local_time_offset = self.get_local_time_offset()
 
-
-    def get_local_time_offset(self):
+    @staticmethod
+    def get_local_time_offset():
         delta = datetime.now() - datetime.utcnow()
         return int(delta.total_seconds())
 
-    def dateparse_to_iso(self, date_time):
+    @staticmethod
+    def dateparse_to_iso(date_time):
         """Parses date_time into iso format"""
-        datelist = indexpattern.dateparse(date_time,time=True)
+        datelist = indexpattern.dateparse(date_time, time=True)
         return datetime(*[int(elt) for elt in datelist]).isoformat()
 
     def get_epoch_stamps_for_grafana(self, start_time=None, end_time=None):
@@ -52,15 +38,38 @@ class Reporter(object):
             start_time = self.start_time
         if not end_time:
             end_time = self.end_time
-        start = time.strptime(re.sub('-','/',start_time),
+        start = time.strptime(re.sub('-', '/', start_time),
                               '%Y/%m/%d %H:%M:%S')
-        end = time.strptime(re.sub('-','/',end_time),
-                              '%Y/%m/%d %H:%M:%S')
-        # Multiply each by 1000 to convert to milliseconds
+        end = time.strptime(re.sub('-', '/', end_time),
+                            '%Y/%m/%d %H:%M:%S')
+        # Multiply each by 1000 to convert to milliseconds for grafana
         start_epoch = int((time.mktime(start) + self.local_time_offset) * 1000)
         end_epoch = int((time.mktime(end) + self.local_time_offset) * 1000)
         self.epochrange = (start_epoch, end_epoch)
         return self.epochrange
+
+
+
+class Reporter(TimeUtils):
+    __metaclass__ = abc.ABCMeta
+
+    def __init__(self, config, start, end=None, verbose=False):
+        """Constructor for OSGReporter
+        Args:
+                config(Configuration) - configuration file
+                start(str) - start date (YYYY/MM/DD) of the report
+                end(str,optional) - end date (YYYY/MM/DD) of the report, defaults to 1 month from start date
+                verbose(boolean,optional) - print debug messages to stdout
+        """
+        TimeUtils.__init__(self)
+        self.header = []
+        self.config = config.config
+        self.start_time = start
+        self.verbose = verbose
+        self.end_time = end
+        self.epochrange = None
+        self.indexpattern = indexpattern.indexpattern_generate(
+            self.start_time, self.end_time)
 
     def format_report(self):
         pass
@@ -132,23 +141,23 @@ class Reporter(object):
         checkRequiredArguments(options, parser)
         return options, arguments
 
-    def runerror(self, error, traceback):
-        admin_emails = re.split('[; ,]', self.config.get("email", "test_to"))
+def runerror(config, error, traceback):
+    admin_emails = re.split('[; ,]', config.config.get("email", "test_to"))
 
-        msg = MIMEText("ERROR: {0}\n\nTRACEBACK: {1}".format(error, traceback))
-        msg['Subject'] = "ERROR PRODUCING REPORT: Production Jobs Success Rate on the OSG Sites: Date Generated {0}".format(datetime.now())
-        msg['From'] = 'sbhat@fnal.gov'
-        msg['To'] = ', '.join(admin_emails)
+    msg = MIMEText("ERROR: {0}\n\nTRACEBACK: {1}".format(error, traceback))
+    msg['Subject'] = "ERROR PRODUCING REPORT: Production Jobs Success Rate on the OSG Sites: Date Generated {0}".format(datetime.now())
+    msg['From'] = 'sbhat@fnal.gov'
+    msg['To'] = ', '.join(admin_emails)
 
-        try:
-            s = smtplib.SMTP('smtp.fnal.gov')
-            s.sendmail('sbhat@fnal.gov', admin_emails, msg.as_string())
-            print "Successfully sent error email"
-        except Exception as e:
-             err = "Error:  unable to send email.\n%s\n" % e
-             print err
-             raise
-        finally:
-            s.quit()
+    try:
+        s = smtplib.SMTP('smtp.fnal.gov')
+        s.sendmail('sbhat@fnal.gov', admin_emails, msg.as_string())
+        print "Successfully sent error email"
+    except Exception as e:
+         err = "Error:  unable to send email.\n%s\n" % e
+         print err
+         raise
+    finally:
+        s.quit()
 
-        return None
+    return None
