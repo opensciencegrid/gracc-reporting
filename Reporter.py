@@ -39,7 +39,7 @@ class Reporter(TimeUtils):
 
     @staticmethod
     def establish_client():
-        # Initialize the elasticsearch client
+        """Initialize and return the elasticsearch client"""
         client = Elasticsearch(['https://gracc.opensciencegrid.org/q'],
                                use_ssl=True,
                                # verify_certs = True,
@@ -105,6 +105,7 @@ class Reporter(TimeUtils):
         return options, arguments
 
 def runerror(config, error, traceback):
+    """Global method to email admins if report run errors out"""
     admin_emails = re.split('[; ,]', config.config.get("email", "test_to"))
 
     msg = MIMEText("ERROR: {0}\n\nTRACEBACK: {1}".format(error, traceback))
