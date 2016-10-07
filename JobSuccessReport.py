@@ -198,7 +198,7 @@ class JobSuccessRateReporter(Reporter):
                                       self.get_job_parts_from_jobid(job.jobid)]
                     timestamps_exact = self.get_epoch_stamps_for_grafana(
                         start_time=job.start_time, end_time=job.end_time)
-                    padding = 300
+                    padding = 300000        # milliseconds
                     timestamps_padded = (timestamps_exact[0]-padding,
                                          timestamps_exact[1]+padding)
                     job_link_parts.extend(timestamps_padded)
@@ -273,7 +273,7 @@ class JobSuccessRateReporter(Reporter):
         elist = [elt for elt in epoch_stamps]
         elist.append('{0}pro'.format(self.vo.lower()))
         fifemon_link_raw = 'https://fifemon.fnal.gov/monitor/dashboard/db/' \
-                       'user-batch-details?from={0}&to={1}&' \
+                       'user-batch-history?from={0}&to={1}&' \
                        'var-user={2}'.format(*elist)
         fifemon_link = '<a href="{0}">Fifemon</a>'.format(fifemon_link_raw)
 
