@@ -167,7 +167,7 @@ class Efficiency(Reporter):
                                                                                                     self.start_time,
                                                                                                     self.end_time),
                             {"html": text},
-                            ("Gratia Operation", "sbhat@fnal.gov"),
+                            ("GRACC Operations", "sbhat@fnal.gov"),
                             "smtp.fnal.gov")
 
         if self.verbose:
