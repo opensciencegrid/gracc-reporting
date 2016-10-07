@@ -11,7 +11,7 @@ echo "START" `date` >> jobsuccessratereport_run.log
 for vo in ${VOS}
 do
 	echo $vo
-	python JobSuccessReport.py -c jobrate.config -E $vo -s "$YESTERDAY" -e "$TODAY" -T template_jobrate.html -d && echo "Sent report for $vo"
+	python JobSuccessReport.py -c jobrate.config -E $vo -s "$YESTERDAY" -e "$TODAY" -T template_jobrate.html && echo "Sent report for $vo"
 done
 
  
