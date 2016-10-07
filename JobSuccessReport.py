@@ -48,7 +48,7 @@ class JobSuccessRateReporter(Reporter):
         self.usermatch_FNAL = re.compile('.+/(\w+\.fnal\.gov)')
         self.globaljobparts = re.compile('\w+\.(fifebatch\d\.fnal\.gov)#(\d+\.\d+)#.+')
         self.realhost_pattern = re.compile('\s\(primary\)')
-        self.jobpattern = re.compile('(\d+).\d@(fifebatch\d\.fnal\.gov)')
+        self.jobpattern = re.compile('(\d+).\d+@(fifebatch\d\.fnal\.gov)')
 
     def query(self, client):
         """Method that actually queries elasticsearch"""
