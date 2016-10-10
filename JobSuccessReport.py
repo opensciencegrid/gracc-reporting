@@ -74,7 +74,6 @@ class JobSuccessRateReporter(Reporter):
             resultset = resultset.query("wildcard", VOName=productioncheck)\
                 .filter(Q({"term": {"VOName": voq}}))
 
-
         if self.verbose:
             print resultset.to_dict()
 
