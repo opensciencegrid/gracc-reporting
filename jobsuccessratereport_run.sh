@@ -1,6 +1,6 @@
 #!/bin/sh
 
-VOS="UBooNE NOvA DUNE Mu2e"
+VOS="UBooNE NOvA DUNE Mu2e SeaQuest"
 YESTERDAY=`date --date yesterday +"%F %T"`
 TODAY=`date +"%F %T"`
 
