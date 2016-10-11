@@ -20,8 +20,14 @@ vo=$2
 set_dates $1
 cd /home/gratia/gracc_email_reports 
 echo "START" `date` >> efficiencyreport_run.log
-./EfficiencyReporterPerVO.py -F GPGrid -c efficiency.config -E $vo -s "$starttime" -e "$endtime" 
-echo "Sent report for $vo"
 
+./EfficiencyReporterPerVO.py -F GPGrid -c efficiency.config -E $vo -s "$starttime" -e "$endtime" 
+
+if [ $? -ne 0 ]
+then
+	echo "Error sending report for $vo . Please investigate" >> efficiencyreport_run.log
+else
+	echo "Sent report for $vo" >> efficiencyreport_run.log
+fi
  
 echo "END" `date` >> efficiencyreport_run.log
