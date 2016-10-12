@@ -11,7 +11,7 @@ echo "START" `date` >> jobsuccessratereport_run.log
 for vo in ${VOS}
 do
 	echo $vo
-	python JobSuccessReport.py -c jobrate.config -E $vo -s "$YESTERDAY" -e "$TODAY" -T template_jobrate.html
+	python JobSuccessRateReport.py -c jobrate.config -E $vo -s "$YESTERDAY" -e "$TODAY" -T template_jobrate.html
 	if [ $? -ne 0 ]
 	then 
 		echo "Error running report for $vo.  Please try running the report manually" >> jobsuccessratereport_run.log
