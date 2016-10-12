@@ -49,6 +49,9 @@ class JobSuccessRateReporter(Reporter):
         self.globaljobparts = re.compile('\w+\.(fifebatch\d\.fnal\.gov)#(\d+\.\d+)#.+')
         self.realhost_pattern = re.compile('\s\(primary\)')
         self.jobpattern = re.compile('(\d+).\d+@(fifebatch\d\.fnal\.gov)')
+        self.text = ''
+        self.fn = "{0}-jobrate.{1}".format(self.vo.lower(),
+                                    self.start_time.replace("/", "-"))
 
     def query(self, client):
         """Method that actually queries elasticsearch"""
@@ -165,7 +168,7 @@ class JobSuccessRateReporter(Reporter):
         self.add_to_clusters(results)  # Parse our results and create clusters objects for each
         return
 
-    def send_report(self):
+    def generate_report_file(self):
         table = ""
         total_failed = 0
         if len(self.run.jobs) == 0:
@@ -188,8 +191,11 @@ class JobSuccessRateReporter(Reporter):
             if total_jobs_failed == 0:
                 continue
             if job_table_cl_count < 100:  # Limit number of clusters shown in report to 100.
-                job_table += '\n<tr><td align = "left">{0}</td><td align = "right">{1}</td><td align = "right">{2}'\
-                             '</td><td align = "right">{3}</td><td></td><td></td><td></td><td></td><td></td>'\
+                job_table += '\n<tr><td align = "left">{0}</td>' \
+                             '<td align = "right">{1}</td>' \
+                             '<td align = "right">{2}</td>' \
+                             '<td align = "right">{3}</td>' \
+                             '<td></td><td></td><td></td><td></td><td></td>'\
                              '<td></td></tr>'.format(
                                                 cid,
                                                 cdict['userid'],
@@ -197,7 +203,7 @@ class JobSuccessRateReporter(Reporter):
                                                 total_jobs_failed)
                 # Generate HTML line for each failed job
                 for job in failures:
-
+                    # Generate link for each job
                     job_link_parts = [elt for elt in
                                       self.get_job_parts_from_jobid(job.jobid)]
                     timestamps_exact = self.get_epoch_stamps_for_grafana(
@@ -213,15 +219,19 @@ class JobSuccessRateReporter(Reporter):
                     job_html = '<a href="{0}">{1}</a>'.format(job_link,
                                                               job.jobid)
 
-                    job_table += '\n<tr><td></td><td></td><td></td><td></td><td align = "left">{0}</td>'\
-                                 '<td align = "left">{1}</td><td align = "left">{2}</td><td align = "right">{3}</td>'\
-                                 '<td align = "right">{4}</td><td align = "right">{5}</td></tr>'.format(
-                                                                                                    job_html,
-                                                                                                    job.start_time,
-                                                                                                    job.end_time,
-                                                                                                    job.site,
-                                                                                                    job.host,
-                                                                                                    job.exit_code)
+                    job_table += '\n<tr><td></td><td></td><td></td><td></td>' \
+                                 '<td align = "left">{0}</td>'\
+                                 '<td align = "left">{1}</td>' \
+                                 '<td align = "left">{2}</td>' \
+                                 '<td align = "right">{3}</td>'\
+                                 '<td align = "right">{4}</td>' \
+                                 '<td align = "right">{5}</td></tr>'.format(
+                        job_html,
+                        job.start_time,
+                        job.end_time,
+                        job.site,
+                        job.host,
+                        job.exit_code)
                 job_table_cl_count += 1
 
         total_jobs = 0
@@ -241,38 +251,50 @@ class JobSuccessRateReporter(Reporter):
                     failures[job.host][job.exit_code] += 1
             total_jobs += total
             total_failed += failed
-            table_summary += '\n<tr><td align = "left">{0}</td><td align = "right">{1}</td><td align = "right">{2}</td>'\
+            table_summary += '\n<tr><td align = "left">{0}</td>' \
+                             '<td align = "right">{1}</td>' \
+                             '<td align = "right">{2}</td>'\
                              '<td align = "right">{3}</td></tr>'.format(
                                                                     key,
                                                                     total,
                                                                     failed,
                                                                     round((total - failed) * 100. / total, 1))
-            table += '\n<tr><td align = "left">{0}</td><td align = "right">{1}</td><td align = "right">{2}</td>'\
-                     '<td align = "right">{3}</td><td></td><td></td><td></td></tr>'.format(
-                                                                                    key,
-                                                                                    total,
-                                                                                    failed,
-                                                                                    round((total - failed) * 100. / total, 1))
+            table += '\n<tr><td align = "left">{0}</td>' \
+                     '<td align = "right">{1}</td>' \
+                     '<td align = "right">{2}</td>'\
+                     '<td align = "right">{3}</td>' \
+                     '<td></td><td></td><td></td></tr>'.format(
+                key,
+                total,
+                failed,
+                round((total - failed) * 100. / total, 1))
             for host, errors in failures.items():
-#                print host, len(failures)
                 for code, count in errors.items():
-                    table += '\n<tr><td></td><td></td><td></td><td></td><td align = "left">{0}</td>'\
-                             '<td align = "right">{1}</td><td align = "right">{2}</td></tr>'.format(
-                                                                                            host,
-                                                                                            code,
-                                                                                            count)
+                    table += '\n<tr><td></td><td></td><td></td><td></td>' \
+                             '<td align = "left">{0}</td>'\
+                             '<td align = "right">{1}</td>' \
+                             '<td align = "right">{2}</td></tr>'.format(
+                        host,
+                        code,
+                        count)
 
-        table += '\n<tr><td align = "left">Total</td><td align = "right">{0}</td><td align = "right">{1}</td>'\
-                 '<td align = "right">{2}</td><td></td><td></td><td></td></tr>'.format(
-                                                                                total_jobs,
-                                                                                total_failed,
-                                                                                round((total_jobs - total_failed) * 100. / total_jobs, 1))
-        table_summary += '\n<tr><td align = "left">Total</td><td align = "right">{0}</td><td align = "right">{1}</td>'\
+        table += '\n<tr><td align = "left">Total</td>' \
+                 '<td align = "right">{0}</td>' \
+                 '<td align = "right">{1}</td>'\
+                 '<td align = "right">{2}</td>' \
+                 '<td></td><td></td><td></td></tr>'.format(
+            total_jobs,
+            total_failed,
+            round((total_jobs - total_failed) * 100. / total_jobs, 1))
+        table_summary += '\n<tr><td align = "left">Total</td>' \
+                         '<td align = "right">{0}</td>' \
+                         '<td align = "right">{1}</td>'\
                          '<td align = "right">{2}</td></td></tr>'.format(
                                                                     total_jobs,
                                                                     total_failed,
                                                                     round((total_jobs - total_failed) * 100. / total_jobs, 1))
 
+        # Generate Grafana link for User Batch Details
         epoch_stamps = self.get_epoch_stamps_for_grafana()
         elist = [elt for elt in epoch_stamps]
         elist.append('{0}pro'.format(self.vo.lower()))
@@ -281,6 +303,7 @@ class JobSuccessRateReporter(Reporter):
                        'var-user={2}'.format(*elist)
         fifemon_link = '<a href="{0}">Fifemon</a>'.format(fifemon_link_raw)
 
+        # Hide failed jobs table if no failed jobs
         if total_failed == 0:
             divopen = '\n<div style="display:none">'
             divclose = '\n</div>'
@@ -289,25 +312,23 @@ class JobSuccessRateReporter(Reporter):
             divclose = ''
 
         # Grab HTML template, replace variables shown
-        text = "".join(open(self.template).readlines())
-        text = text.replace("$START", self.start_time)
-        text = text.replace("$END", self.end_time)
-        text = text.replace("$TABLE_SUMMARY", table_summary)
-        text = text.replace("$DIVOPEN", divopen)
-        text = text.replace("$TABLE_JOBS", job_table)
-        text = text.replace("$DIVCLOSE", divclose)
-        text = text.replace("$TABLE", table)
-        text = text.replace("$FIFEMON_LINK", fifemon_link)
-        text = text.replace("$VO", self.vo)
+        self.text = "".join(open(self.template).readlines())
+        self.text = self.text.replace("$START", self.start_time)
+        self.text = self.text.replace("$END", self.end_time)
+        self.text = self.text.replace("$TABLE_SUMMARY", table_summary)
+        self.text = self.text.replace("$DIVOPEN", divopen)
+        self.text = self.text.replace("$TABLE_JOBS", job_table)
+        self.text = self.text.replace("$DIVCLOSE", divclose)
+        self.text = self.text.replace("$TABLE", table)
+        self.text = self.text.replace("$FIFEMON_LINK", fifemon_link)
+        self.text = self.text.replace("$VO", self.vo)
 
         # Generate HTML file to send
-        fn = "{0}-jobrate.{1}".format(self.vo.lower(),
-                                    self.start_time.replace("/", "-"))
 
-        with open(fn, 'w') as f:
-            f.write(text)
+        with open(self.fn, 'w') as f:
+            f.write(self.text)
 
-        # The part that actually emails people.
+    def send_report(self):
         if self.no_email:
             print "Not sending email"
             return
@@ -315,36 +336,47 @@ class JobSuccessRateReporter(Reporter):
         if self.is_test:
             emails = re.split('[; ,]', self.config.get("email", "test_to"))
         else:
-            emails = re.split('[; ,]', self.config.get("email", "{0}_email".format(self.vo.lower()))) + \
-                     re.split('[: ,]', self.config.get("email", "test_to"))
+            emails = re.split('[; ,]', self.config.get("email",
+                                                       "{0}_email".format(self.vo.lower())))\
+                    + re.split('[: ,]', self.config.get("email", "test_to"))
 
         TextUtils.sendEmail(([], emails),
                             "{0} Production Jobs Success Rate on the OSG Sites ({1} - {2})".format(self.vo,
                                                                                                 self.start_time,
                                                                                                 self.end_time),
-                            {"html": text},
+                            {"html": self.text},
                             ("GRACC Operations", "sbhat@fnal.gov"),
                             "smtp.fnal.gov")
 
-        os.unlink(fn)  # Delete HTML file
+        os.unlink(self.fn)  # Delete HTML file
 
 
 if __name__ == "__main__":
     opts, args = Reporter.parse_opts()
 
     if opts.debug:
-        logging.basicConfig(filename='jobsuccessreport.log', level=logging.DEBUG)
+        logging.basicConfig(filename='jobsuccessreport.log',
+                            level=logging.DEBUG)
     else:
-        logging.basicConfig(filename='jobsuccessreport.log', level=logging.ERROR)
-        logging.getLogger('elasticsearch.trace').addHandler(logging.StreamHandler())
+        logging.basicConfig(filename='jobsuccessreport.log',
+                            level=logging.ERROR)
+        logging.getLogger('elasticsearch.trace')\
+            .addHandler(logging.StreamHandler())
 
     config = Configuration.Configuration()
     config.configure(opts.config)
 
     try:
-        r = JobSuccessRateReporter(config, opts.start, opts.end, opts.vo, opts.template, opts.is_test, opts.verbose,
+        r = JobSuccessRateReporter(config, 
+                                   opts.start, 
+                                   opts.end, 
+                                   opts.vo, 
+                                   opts.template, 
+                                   opts.is_test, 
+                                   opts.verbose,
                                    opts.no_email)
         r.generate()
+        r.generate_report_file()
         r.send_report()
         print "Sent Report"
     except Exception as e:
