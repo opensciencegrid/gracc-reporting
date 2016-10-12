@@ -16,7 +16,7 @@ from TimeUtils import TimeUtils
 class Reporter(TimeUtils):
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, config, start, end=None, verbose=False):
+    def __init__(self, config, start, end=None, verbose=False, raw=True):
         """Constructor for OSGReporter
         Args:
                 config(Configuration) - configuration file
@@ -32,7 +32,7 @@ class Reporter(TimeUtils):
         self.end_time = end
         self.epochrange = None
         self.indexpattern = indexpattern_generate(self.start_time,
-                                                  self.end_time)
+                                                  self.end_time, raw)
 
     def format_report(self):
         pass
@@ -109,7 +109,8 @@ def runerror(config, error, traceback):
     admin_emails = re.split('[; ,]', config.config.get("email", "test_to"))
 
     msg = MIMEText("ERROR: {0}\n\nTRACEBACK: {1}".format(error, traceback))
-    msg['Subject'] = "ERROR PRODUCING REPORT: Production Jobs Success Rate on the OSG Sites: Date Generated {0}".format(datetime.now())
+    msg['Subject'] = "ERROR PRODUCING REPORT: Date Generated {0}".format(
+        datetime.now())
     msg['From'] = 'sbhat@fnal.gov'
     msg['To'] = ', '.join(admin_emails)
 
@@ -118,9 +119,9 @@ def runerror(config, error, traceback):
         s.sendmail('sbhat@fnal.gov', admin_emails, msg.as_string())
         print "Successfully sent error email"
     except Exception as e:
-         err = "Error:  unable to send email.\n%s\n" % e
-         print err
-         raise
+        err = "Error:  unable to send email.\n%s\n" % e
+        print err
+        raise
     finally:
         s.quit()
 
