@@ -22,3 +22,6 @@ Change the date/times, and the VO.  -v makes it verbose.
 
 
 For example
+python WastedHoursReport.py -c osg.config -s "2016/07/01 00:00:00" -e "2016/07/21 00:00:00"  -d
+
+For example
