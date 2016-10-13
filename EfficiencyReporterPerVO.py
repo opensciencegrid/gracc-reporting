@@ -54,8 +54,9 @@ class User(object):
 
 class Efficiency(Reporter):
     def __init__(self, config, start, end, vo, verbose, hour_limit, eff_limit,
-                 is_test):
+                 is_test, no_email):
         Reporter.__init__(self, config, start, end, verbose = False)
+        self.no_email = no_email
         self.hour_limit = hour_limit
         self.vo = vo
         self.eff_limit = eff_limit
@@ -154,6 +155,7 @@ class Efficiency(Reporter):
 
     def generate_report_file(self, report):
         if len(report) == 0:
+            self.no_email = True
             print "Report empty"
             return
 
@@ -183,6 +185,10 @@ class Efficiency(Reporter):
 
     def send_report(self):
         """Generate HTML from report and send the email"""
+        if self.no_email:
+            print "Not sending report"
+            return
+
         if self.is_test:
             emails = re.split('[; ,]', self.config.get("email", "test_to"))
         else:
@@ -227,7 +233,8 @@ if __name__ == "__main__":
                        opts.verbose,
                        int(min_hours),
                        float(eff),
-                       opts.is_test)
+                       opts.is_test,
+                       opts.no_email)
         # Run our elasticsearch query, get results as CSV
         resultfile = e.query_to_csv()
 
