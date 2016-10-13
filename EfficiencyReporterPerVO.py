@@ -13,7 +13,7 @@ import NiceNum
 from Reporter import Reporter, runerror
 
 cilogon_match = re.compile('.+CN=UID:(\w+)')
-non_cilogon_match = re.compile('/CN=(\w+)/.+')
+non_cilogon_match = re.compile('/CN=([\w\s]+)/?.+?')
 
 class User(object):
     def __init__(self, info):
