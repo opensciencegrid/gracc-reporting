@@ -341,9 +341,10 @@ class JobSuccessRateReporter(Reporter):
                     + re.split('[: ,]', self.config.get("email", "test_to"))
 
         TextUtils.sendEmail(([], emails),
-                            "{0} Production Jobs Success Rate on the OSG Sites ({1} - {2})".format(self.vo,
-                                                                                                self.start_time,
-                                                                                                self.end_time),
+                            "{0} Production Jobs Success Rate on the OSG Sites ({1} - {2})".format(
+                                self.vo,
+                                self.start_time,
+                                self.end_time),
                             {"html": self.text},
                             ("GRACC Operations", "sbhat@fnal.gov"),
                             "smtp.fnal.gov")

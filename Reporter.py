@@ -21,7 +21,8 @@ class Reporter(TimeUtils):
         Args:
                 config(Configuration) - configuration file
                 start(str) - start date (YYYY/MM/DD) of the report
-                end(str,optional) - end date (YYYY/MM/DD) of the report, defaults to 1 month from start date
+                end(str,optional) - end date (YYYY/MM/DD) of the report,
+                    defaults to 1 month from start date
                 verbose(boolean,optional) - print debug messages to stdout
         """
         TimeUtils.__init__(self)
@@ -93,10 +94,13 @@ class Reporter(TimeUtils):
                           dest="template", type="string",
                           help="template_file")
         parser.add_option("-s", "--start", type="string",
-                          dest="start", help="report start date YYYY/MM/DD HH:mm:SS or YYYY-MM-DD HH:mm:SS (required)")
+                          dest="start",
+                          help="report start date YYYY/MM/DD HH:mm:SS or YYYY-MM-DD HH:mm:SS (required)")
         parser.add_option("-e", "--end", type="string",
-                          dest="end", help="report end date YYYY/MM/DD HH:mm:SS or YYYY-MM-DD HH:mm:SS")
-        parser.add_option("-d", "--dryrun", action="store_true", dest="is_test", default=False,
+                          dest="end",
+                          help="report end date YYYY/MM/DD HH:mm:SS or YYYY-MM-DD HH:mm:SS")
+        parser.add_option("-d", "--dryrun", action="store_true",
+                          dest="is_test", default=False,
                           help="send emails only to _testers")
         parser.add_option("-D", "--debug",
                           action="store_true", dest="debug", default=False,

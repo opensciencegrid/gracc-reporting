@@ -220,11 +220,19 @@ if __name__ == "__main__":
         min_hours = config.config.get(opts.vo.lower(), "min_hours")
 
         # Create an Efficiency object, create a report for the VO, and send it
-        e = Efficiency(config, opts.start, opts.end, vo, opts.verbose, int(min_hours), float(eff), opts.is_test)
+        e = Efficiency(config,
+                       opts.start,
+                       opts.end,
+                       vo,
+                       opts.verbose,
+                       int(min_hours),
+                       float(eff),
+                       opts.is_test)
         # Run our elasticsearch query, get results as CSV
         resultfile = e.query_to_csv()
 
-        # For each line returned, create a User object, and add the User and their vo to the users dict
+        # For each line returned, create a User object, and add the User and
+        # their vo to the users dict
         with open(resultfile, 'r') as file:
             f = file.readlines()
         users = {}
@@ -239,7 +247,7 @@ if __name__ == "__main__":
             r = e.reportVO(users, opts.facility)
             e.generate_report_file(r)
             e.send_report()
-    except:
+    except Exception as e:
         print >> sys.stderr, traceback.format_exc()
         runerror(config, e, traceback.format_exc())
         sys.exit(1)
