@@ -348,8 +348,8 @@ class JobSuccessRateReporter(Reporter):
                             {"html": self.text},
                             ("GRACC Operations", "sbhat@fnal.gov"),
                             "smtp.fnal.gov")
-
-        os.unlink(self.fn)  # Delete HTML file
+        if os.path.exists(self.fn):
+            os.unlink(self.fn)  # Delete HTML file
 
 
 if __name__ == "__main__":
