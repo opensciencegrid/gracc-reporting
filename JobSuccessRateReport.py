@@ -172,6 +172,7 @@ class JobSuccessRateReporter(Reporter):
         table = ""
         total_failed = 0
         if len(self.run.jobs) == 0:
+            self.no_email = True
             return
         table_summary = ""
         job_table = ""
@@ -351,6 +352,9 @@ class JobSuccessRateReporter(Reporter):
         if os.path.exists(self.fn):
             os.unlink(self.fn)  # Delete HTML file
 
+        print "Sent Report"
+        return
+
 
 if __name__ == "__main__":
     opts, args = Reporter.parse_opts()
@@ -379,7 +383,6 @@ if __name__ == "__main__":
         r.generate()
         r.generate_report_file()
         r.send_report()
-        print "Sent Report"
     except Exception as e:
         print >> sys.stderr, traceback.format_exc()
         runerror(config, e, traceback.format_exc())
