@@ -89,11 +89,20 @@ class TimeUtils(object):
                         "or yyyy-mm-dd or datetime in the form yyyy/mm/dd HH:MM:SS"
                         " or yyyy-mm-dd HH:MM:SS")
 
-
     def dateparse_to_iso(self, date_time):
         """Parses date_time into iso format"""
         datelist = self.dateparse(date_time, time=True)
         return datetime(*[int(elt) for elt in datelist]).isoformat()
+
+
+    @staticmethod
+    def handle_date_vs_datetime(time_in):
+        try:
+            out_time = time.strptime(re.sub('-', '/', time_in),
+                              '%Y/%m/%d %H:%M:%S')
+        except ValueError:
+            out_time = time.strptime(re.sub('-', '/', time_in), '%Y/%m/%d')
+        return out_time
 
     def get_epoch_stamps_for_grafana(self, start_time=None, end_time=None):
         """Generates tuple of self.start_time, self.end_time in epoch time
@@ -103,10 +112,8 @@ class TimeUtils(object):
             start_time = self.start_time
         if not end_time:
             end_time = self.end_time
-        start = time.strptime(re.sub('-', '/', start_time),
-                              '%Y/%m/%d %H:%M:%S')
-        end = time.strptime(re.sub('-', '/', end_time),
-                            '%Y/%m/%d %H:%M:%S')
+        start = self.handle_date_vs_datetime(start_time)
+        end = self.handle_date_vs_datetime(end_time)
         # Multiply each by 1000 to convert to milliseconds for grafana
         start_epoch = int((time.mktime(start) + self.local_time_offset) * 1000)
         end_epoch = int((time.mktime(end) + self.local_time_offset) * 1000)
