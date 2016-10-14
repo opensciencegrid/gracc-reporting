@@ -19,6 +19,17 @@ class TimeUtils(object):
             delta.seconds + delta.days * 24 * 3600) * 10 ** 6) / 10 ** 6)
 
     @staticmethod
+    def handle_date_vs_datetime(time_in):
+        """Tries to see if the timestamp is a in date-time format or just date
+        Returns a time.struct_time object either way"""
+        try:
+            out_time = time.strptime(re.sub('-', '/', time_in),
+                              '%Y/%m/%d %H:%M:%S')
+        except ValueError:
+            out_time = time.strptime(re.sub('-', '/', time_in), '%Y/%m/%d')
+        return out_time
+
+    @staticmethod
     def datetimecheck(test_date):
         """Checks to see if date is in the form yyyy/mm/dd HH:MM:SS or
         yyyy-mm-dd HH:MM:SS.  We return the match object if it is, or else None"""
@@ -44,7 +55,7 @@ class TimeUtils(object):
                 break
         return match
 
-    def dateparse(self, date_in, time=False):
+    def dateparse(self, date_in):
         """Function to make sure that our date is either a list of form
         [yyyy, mm, dd], a datetime.datetime object or a date in the form of
         yyyy/mm/dd HH:MM:SS or yyyy-mm-dd HH:MM:SS
@@ -61,24 +72,18 @@ class TimeUtils(object):
         while True:
             if isinstance(date_in, datetime) or \
                     isinstance(date_in, date):
-                if time:
-                    return [date_in.year, date_in.month, date_in.day, date_in.hour,
-                            date_in.minute, date_in.second]
-                if not time:
-                    return [date_in.year, date_in.month, date_in.day]
+                    return [elt for elt in date_in.timetuple()[:6]]
+            elif isinstance(date_in, time.struct_time):
+                return [elt for elt in date_in[:6]]
             elif isinstance(date_in, list):
                 return date_in
             else:
                 try:
-                    if time:
-                        match = self.datetimecheck(date_in)
-                        if not match:
-                            match = self.datecheck(date_in)
-                    else:
+                    match = self.datetimecheck(date_in)
+                    if not match:
                         match = self.datecheck(date_in)
                     if match:
-                        date_in = datetime(
-                            *[int(elt) for elt in match.groups()])
+                        date_in = self.handle_date_vs_datetime(date_in)
                     else:
                         raise
                     continue  # Pass back to beginning of loop so datetime.date clause returns the date string
@@ -91,18 +96,8 @@ class TimeUtils(object):
 
     def dateparse_to_iso(self, date_time):
         """Parses date_time into iso format"""
-        datelist = self.dateparse(date_time, time=True)
+        datelist = self.dateparse(date_time)
         return datetime(*[int(elt) for elt in datelist]).isoformat()
-
-
-    @staticmethod
-    def handle_date_vs_datetime(time_in):
-        try:
-            out_time = time.strptime(re.sub('-', '/', time_in),
-                              '%Y/%m/%d %H:%M:%S')
-        except ValueError:
-            out_time = time.strptime(re.sub('-', '/', time_in), '%Y/%m/%d')
-        return out_time
 
     def get_epoch_stamps_for_grafana(self, start_time=None, end_time=None):
         """Generates tuple of self.start_time, self.end_time in epoch time
