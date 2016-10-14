@@ -159,15 +159,35 @@ class Efficiency(Reporter):
             print "Report empty"
             return
 
+        epoch_stamps = self.get_epoch_stamps_for_grafana()
+        elist = [elt for elt in epoch_stamps]
+
         table = ""
         for u in report:
+            elist_vo = [elt for elt in elist]
+            elist_vo.append(u.vo.lower())
+            vo_link = 'https://fifemon.fnal.gov/monitor/dashboard/db/' \
+                      'experiment-efficiency-details?' \
+                      'from={0}&to={1}' \
+                      '&var-experiment={2}'.format(*elist_vo)
+
+            vo_html = '<a href="{0}">{1}</a>'.format(vo_link, self.vo)
+
+            elist.append(u.user)
+            user_link = "https://fifemon.fnal.gov/monitor/dashboard/db/" \
+                        "user-efficiency-details?" \
+                        "from={0}&to={1}" \
+                        "&var-user={2}".format(*elist)
+
+            user_html = '<a href="{0}">{1}</a>'.format(user_link, u.user)
+
             table += '<tr><td align="left">{0}</td>' \
-                     '<td align="left">{1}</td>'.format(u.vo.upper(),
+                     '<td align="left">{1}</td>'.format(vo_html,
                                                         u.facility) \
                      + '<td align="left">{0}</td>' \
                        '<td align="right">{1}</td>' \
                        '<td align="right">{2}</td></tr>'.format(
-                u.user,
+                user_html,
                 NiceNum.niceNum(u.hours),
                 u.eff)
 
