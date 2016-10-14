@@ -195,7 +195,7 @@ class Efficiency(Reporter):
         self.text = self.text.replace("$START", self.start_time)
         self.text = self.text.replace("$END", self.end_time)
         self.text = self.text.replace("$TABLE", table)
-        self.text = self.text.replace("$VO", self.vo.upper())
+        self.text = self.text.replace("$VO", self.vo)
 
         if self.verbose:
             with open(self.fn, 'w') as f:
