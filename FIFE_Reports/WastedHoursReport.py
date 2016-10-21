@@ -1,9 +1,23 @@
+#!/usr/bin/python
+
 import sys
 import os
+import inspect
 import traceback
 import json
 import logging
 from elasticsearch_dsl import A, Search
+
+parentdir = os.path.dirname(
+    os.path.dirname(
+        os.path.abspath(
+            inspect.getfile(
+                inspect.currentframe()
+            )
+        )
+    )
+)
+os.sys.path.insert(0, parentdir)
 
 import NiceNum
 import Configuration
@@ -24,7 +38,6 @@ class User:
         :param wall_duration:
         :return:
         """
-#        self.success = [int(njobs), float(wall_duration)]
         self.success = [ex + new for ex, new in
                         zip(self.success, [njobs, wall_duration])]
 
@@ -35,7 +48,6 @@ class User:
         :param wall_duration:
         :return:
         """
-#        self.failure = [int(njobs), float(wall_duration)]
         self.failure = [ex + new for ex, new in
                         zip(self.failure, [njobs, wall_duration])]
 
@@ -86,8 +98,6 @@ class Experiment:
         """
         self.success = [ex + new for ex, new in
                         zip(self.success, [njobs, wall_duration])]
-        # self.success[0] += int(njobs)
-        # self.success[1] += float(wall_duration)
 
     def add_failure(self, njobs, wall_duration):
         """
@@ -96,7 +106,6 @@ class Experiment:
         :param wall_duration:
         :return:
         """
-        # self.failure = [int(njobs), float(wall_duration)]
         self.failure = [ex + new for ex, new in
                         zip(self.failure, [njobs, wall_duration])]
 
@@ -144,7 +153,6 @@ class WastedHoursReport(Reporter):
         self.fn = "user_wasted_hours_report.{0}".format(
             self.end_time.split(" ")[0].replace("/", "-"))
 
-
     def query(self, client):
         """Query method to grab wasted hours info, return query object"""
 
@@ -171,7 +179,6 @@ class WastedHoursReport(Reporter):
             .bucket('group_CommonName', a3)
 
         # Metrics
-        # FIGURE OUT HOW TO TOTAL JOBS
         Metric = Buckets.metric('numJobs', 'sum', field='Count')\
             .metric('WallHours', 'sum',
                     script="(doc['WallDuration'].value*doc['Processors'].value"

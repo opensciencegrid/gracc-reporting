@@ -1,11 +1,23 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 
 import sys
 import os
+import inspect
 import traceback
 import re
 import json
 from elasticsearch_dsl import Q, Search
+
+parentdir = os.path.dirname(
+    os.path.dirname(
+        os.path.abspath(
+            inspect.getfile(
+                inspect.currentframe()
+            )
+        )
+    )
+)
+os.sys.path.insert(0, parentdir)
 
 import TextUtils
 import Configuration

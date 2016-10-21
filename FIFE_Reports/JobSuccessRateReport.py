@@ -1,16 +1,29 @@
+#!/usr/bin/python
+
 import sys
 import os
 import re
 import logging
 from time import sleep
 import traceback
+import inspect
 
 from elasticsearch_dsl import Search, Q
+
+parentdir = os.path.dirname(
+    os.path.dirname(
+        os.path.abspath(
+            inspect.getfile(
+                inspect.currentframe()
+            )
+        )
+    )
+)
+os.sys.path.insert(0, parentdir)
 
 import TextUtils
 import Configuration
 from Reporter import Reporter, runerror
-
 
 class Jobs:
     def __init__(self):
