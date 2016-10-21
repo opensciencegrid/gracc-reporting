@@ -4,7 +4,7 @@ VOS="UBooNE NOvA DUNE Mu2e SeaQuest"
 YESTERDAY=`date --date yesterday +"%F %T"`
 TODAY=`date +"%F %T"`
 
-cd /home/gratia/gracc_email_reports 
+cd /home/gratia/gracc_email_reports/FIFE_Reports
 
 echo "START" `date` >> jobsuccessratereport_run.log
 

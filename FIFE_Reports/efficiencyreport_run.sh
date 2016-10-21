@@ -18,7 +18,7 @@ function set_dates {
 
 vo=$2
 set_dates $1
-cd /home/gratia/gracc_email_reports 
+cd /home/gratia/gracc_email_reports/FIFE_Reports
 echo "START" `date` >> efficiencyreport_run.log
 
 ./EfficiencyReporterPerVO.py -F GPGrid -c efficiency.config -E $vo -s "$starttime" -e "$endtime"
