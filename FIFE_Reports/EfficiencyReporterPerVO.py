@@ -202,6 +202,7 @@ class Efficiency(Reporter):
                 user_html,
                 NiceNum.niceNum(u.hours),
                 u.eff)
+            elist.pop()
 
         self.text = "".join(open("template_efficiency.html").readlines())
         self.text = self.text.replace("$START", self.start_time)
