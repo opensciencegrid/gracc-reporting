@@ -122,33 +122,24 @@ class OIMInfo(object):
         oim_probe_fqdns_list = []
         for resourcename, info in self.resourcedict.iteritems():
             if ast.literal_eval(info['WLCGInteropAcct']):
-                oim_probe_fqdns_list.append(info['FQDN'])
+                oim_probe_fqdns_list.append(info['FQDN'].lower())
         return set(oim_probe_fqdns_list)
 
 
 class ProbeReport(Reporter):
-    def __init__(self, configuration, start, end, vo, template, is_test,
+    def __init__(self, configuration, start, end, template, is_test,
                      verbose, no_email):
         Reporter.__init__(self, configuration, start, end, verbose)
         self.client = self.establish_client()
-        self.probematch = re.compile("(.+):(.+)")  # Test this
-
-    # def establish_client(self):
-    #     """Initialize and return the elasticsearch client"""
-    #     client = Elasticsearch(['https://gracc.opensciencegrid.org/q'],
-    #                            use_ssl=True,
-    #                            # verify_certs = True,
-    #                            # ca_certs = 'gracc_cert/lets-encrypt-x3-cross-signed.pem',
-    #                            # client_cert = 'gracc_cert/gracc-reports-dev.crt',
-    #                            # client_key = 'gracc_cert/gracc-reports-dev.key',
-    #                            timeout=60)
-    #     return client
+        self.probematch = re.compile("(.+):(.+)")
 
     def query(self):
 
+        startdateq = self.dateparse_to_iso(self.start_time)
+
         s = Search(using=self.client, index='gracc.osg.raw*')\
             .filter(Q({
-                "range": {"@received": {"gte": "{0}".format('2016-10-12')}}
+                "range": {"@received": {"gte": "{0}".format(startdateq)}}
             }))
         Bucket = s.aggs.bucket('group_probename', 'terms', field='ProbeName',
                                size=1000000000)
@@ -159,7 +150,7 @@ class ProbeReport(Reporter):
         for proberecord in self.results.group_probename.buckets:
             probename = self.probematch.match(proberecord.key)
             if probename:
-                probelist.append(probename.group(2))
+                probelist.append(probename.group(2).lower())
             else:
                 continue
         return set(probelist)
@@ -188,11 +179,11 @@ def main():
     oim_probe_fqdns = oiminfo.get_fqdns_for_probes()
     print oim_probe_fqdns
 
+    args.start = args.end
 
     esinfo = ProbeReport(args.config,
                            args.start,
                            args.end,
-                           args.vo,
                            args.template,
                            args.is_test,
                            args.verbose,
