@@ -186,7 +186,7 @@ class ProbeReport(Reporter):
 
         try:
             smtpObj = smtplib.SMTP('smtp.fnal.gov')
-            smtpObj.sendmail(emailfrom, [admin_emails], msg.as_string())
+            smtpObj.sendmail(emailfrom, admin_emails, msg.as_string())
             smtpObj.quit()
         except Exception as e:
             print "Error:  unable to send email.\n%s\n" % e
