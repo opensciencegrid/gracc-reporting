@@ -5,6 +5,10 @@ import ast
 import os
 import inspect
 import re
+import smtplib
+import email.utils
+from email.mime.text import MIMEText
+import datetime
 
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Search, Q
@@ -22,7 +26,7 @@ parentdir = os.path.dirname(
 os.sys.path.insert(0, parentdir)
 
 #import TextUtils
-#import Configuration
+import Configuration
 from Reporter import Reporter, runerror
 
 class OIMInfo(object):
@@ -132,6 +136,7 @@ class ProbeReport(Reporter):
         Reporter.__init__(self, configuration, start, end, verbose)
         self.client = self.establish_client()
         self.probematch = re.compile("(.+):(.+)")
+        self.emailfile = 'filetoemail.txt'
 
     def query(self):
 
@@ -155,33 +160,58 @@ class ProbeReport(Reporter):
                 continue
         return set(probelist)
 
-    def generate(self, report=None):
+    def generate(self):
         resultset = self.query()
         response = resultset.execute()
         self.results = response.aggregations
         probes = self.get_probenames()
         return probes
 
-    def generate_report_file(self, report):
-        pass
+    def generate_report_file(self, oimset, report=None):
+        self.esprobes = self.generate()
+        with open(self.emailfile, 'w') as f:
+            for elt in oimset.difference(self.esprobes):
+                f.write('{0}\n'.format(elt))
+        return
 
     def send_report(self, report_type="test"):
-        pass
+        admin_emails = re.split('[; ,]', self.config.get("email", "test_to"))
+        emailfrom = self.config.get("email","from")
+        with open(self.emailfile, 'rb') as fp:
+            msg = MIMEText(fp.read())
 
+        msg['To'] = email.utils.formataddr(('Admins', admin_emails))
+        msg['From'] = email.utils.formataddr(('GRACC Operations', emailfrom))
+        msg['Subject'] = "Gratia Probe report from {0}" \
+            .format(datetime.date.today())
 
+        try:
+            smtpObj = smtplib.SMTP('smtp.fnal.gov')
+            smtpObj.sendmail(emailfrom, [admin_emails], msg.as_string())
+            smtpObj.quit()
+        except Exception as e:
+            print "Error:  unable to send email.\n%s\n" % e
+            raise
+
+        os.unlink(self.emailfile)
+
+        return
 
 
 
 def main():
     args = Reporter.parse_opts()
 
+    config = Configuration.Configuration()
+    config.configure(args.config)
+
     oiminfo = OIMInfo()
     oim_probe_fqdns = oiminfo.get_fqdns_for_probes()
-    print oim_probe_fqdns
+    # print oim_probe_fqdns
 
     args.start = args.end
 
-    esinfo = ProbeReport(args.config,
+    esinfo = ProbeReport(config,
                            args.start,
                            args.end,
                            args.template,
@@ -189,8 +219,8 @@ def main():
                            args.verbose,
                            args.no_email)
 
-    esprobes = esinfo.generate()
-    print esprobes
+    esinfo.generate_report_file(oim_probe_fqdns)
+    esinfo.send_report()
 
 
 if __name__ == '__main__':
