@@ -370,9 +370,9 @@ class JobSuccessRateReporter(Reporter):
 
 
 if __name__ == "__main__":
-    opts, args = Reporter.parse_opts()
+    args = Reporter.parse_opts()
 
-    if opts.debug:
+    if args.debug:
         logging.basicConfig(filename='jobsuccessreport.log',
                             level=logging.DEBUG)
     else:
@@ -382,17 +382,17 @@ if __name__ == "__main__":
             .addHandler(logging.StreamHandler())
 
     config = Configuration.Configuration()
-    config.configure(opts.config)
+    config.configure(args.config)
 
     try:
         r = JobSuccessRateReporter(config, 
-                                   opts.start, 
-                                   opts.end, 
-                                   opts.vo, 
-                                   opts.template, 
-                                   opts.is_test, 
-                                   opts.verbose,
-                                   opts.no_email)
+                                   args.start, 
+                                   args.end, 
+                                   args.vo, 
+                                   args.template, 
+                                   args.is_test, 
+                                   args.verbose,
+                                   args.no_email)
         r.generate()
         r.generate_report_file()
         r.send_report()
