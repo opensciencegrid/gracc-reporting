@@ -247,27 +247,27 @@ class Efficiency(Reporter):
 
 
 if __name__ == "__main__":
-    opts, args = Reporter.parse_opts()
+    args = Reporter.parse_opts()
     try:
         # Set up the configuration
         config = Configuration.Configuration()
-        config.configure(opts.config)
+        config.configure(args.config)
         # Grab VO
-        vo = opts.vo
+        vo = args.vo
         # Grab the limits
-        eff = config.config.get(opts.vo.lower(), "efficiency")
-        min_hours = config.config.get(opts.vo.lower(), "min_hours")
+        eff = config.config.get(args.vo.lower(), "efficiency")
+        min_hours = config.config.get(args.vo.lower(), "min_hours")
 
         # Create an Efficiency object, create a report for the VO, and send it
         e = Efficiency(config,
-                       opts.start,
-                       opts.end,
+                       args.start,
+                       args.end,
                        vo,
-                       opts.verbose,
+                       args.verbose,
                        int(min_hours),
                        float(eff),
-                       opts.is_test,
-                       opts.no_email)
+                       args.is_test,
+                       args.no_email)
         # Run our elasticsearch query, get results as CSV
         resultfile = e.query_to_csv()
 
@@ -284,7 +284,7 @@ if __name__ == "__main__":
 
         # Generate the VO report, send it
         if vo == "FIFE" or vo.lower() in users:
-            r = e.reportVO(users, opts.facility)
+            r = e.reportVO(users, args.facility)
             e.generate_report_file(r)
             e.send_report()
     except Exception as e:
