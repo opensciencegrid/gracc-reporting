@@ -126,26 +126,29 @@ class OIMInfo(object):
         return set(oim_probe_fqdns_list)
 
 
-class ESInfo(object):
-    def __init__(self):
+class ProbeReport(Reporter):
+    def __init__(self, configuration, start, end, vo, template, is_test,
+                     verbose, no_email):
+        Reporter.__init__(self, configuration, start, end, verbose)
         self.client = self.establish_client()
         self.probematch = re.compile("(.+):(.+)")  # Test this
 
-    def establish_client(self):
-        """Initialize and return the elasticsearch client"""
-        client = Elasticsearch(['https://gracc.opensciencegrid.org/q'],
-                               use_ssl=True,
-                               # verify_certs = True,
-                               # ca_certs = 'gracc_cert/lets-encrypt-x3-cross-signed.pem',
-                               # client_cert = 'gracc_cert/gracc-reports-dev.crt',
-                               # client_key = 'gracc_cert/gracc-reports-dev.key',
-                               timeout=60)
-        return client
+    # def establish_client(self):
+    #     """Initialize and return the elasticsearch client"""
+    #     client = Elasticsearch(['https://gracc.opensciencegrid.org/q'],
+    #                            use_ssl=True,
+    #                            # verify_certs = True,
+    #                            # ca_certs = 'gracc_cert/lets-encrypt-x3-cross-signed.pem',
+    #                            # client_cert = 'gracc_cert/gracc-reports-dev.crt',
+    #                            # client_key = 'gracc_cert/gracc-reports-dev.key',
+    #                            timeout=60)
+    #     return client
 
     def query(self):
+
         s = Search(using=self.client, index='gracc.osg.raw*')\
             .filter(Q({
-                "range": {"@received": {"gte": "2016-10-12"}}
+                "range": {"@received": {"gte": "{0}".format('2016-10-12')}}
             }))
         Bucket = s.aggs.bucket('group_probename', 'terms', field='ProbeName',
                                size=1000000000)
@@ -161,22 +164,40 @@ class ESInfo(object):
                 continue
         return set(probelist)
 
-    def generate(self):
+    def generate(self, report=None):
         resultset = self.query()
         response = resultset.execute()
         self.results = response.aggregations
         probes = self.get_probenames()
         return probes
 
+    def generate_report_file(self, report):
+        pass
+
+    def send_report(self, report_type="test"):
+        pass
+
+
 
 
 
 def main():
+    args = Reporter.parse_opts()
+
     oiminfo = OIMInfo()
     oim_probe_fqdns = oiminfo.get_fqdns_for_probes()
     print oim_probe_fqdns
 
-    esinfo = ESInfo()
+
+    esinfo = ProbeReport(args.config,
+                           args.start,
+                           args.end,
+                           args.vo,
+                           args.template,
+                           args.is_test,
+                           args.verbose,
+                           args.no_email)
+
     esprobes = esinfo.generate()
     print esprobes
 

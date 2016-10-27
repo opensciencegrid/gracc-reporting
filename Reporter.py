@@ -1,5 +1,5 @@
 import abc
-import optparse
+import argparse
 from datetime import datetime
 import re
 import smtplib
@@ -8,7 +8,6 @@ from email.mime.text import MIMEText
 from elasticsearch import Elasticsearch
 
 import TextUtils
-from Configuration import checkRequiredArguments
 from IndexPattern import indexpattern_generate
 from TimeUtils import TimeUtils
 
@@ -27,7 +26,8 @@ class Reporter(TimeUtils):
         """
         TimeUtils.__init__(self)
         self.header = []
-        self.config = config.config
+        if config:
+            self.config = config.config
         self.start_time = start
         self.verbose = verbose
         self.end_time = end
@@ -77,41 +77,37 @@ class Reporter(TimeUtils):
     @staticmethod
     def parse_opts():
         """Parses command line options"""
-        usage = "Usage: %prog [options]"
-        parser = optparse.OptionParser(usage)
-        parser.add_option("-c", "--config", dest="config", type="string",
-                          help="report configuration file (required)")
-        parser.add_option("-v", "--verbose",
-                          action="store_true", dest="verbose", default=False,
-                          help="print debug messages to stdout")
-        parser.add_option("-E", "--experiment",
-                          dest="vo", type="string",
-                          help="experiment name")
-        parser.add_option("-F", "--facility",
-                         dest="facility", type="string",
-                         help="facility name")
-        parser.add_option("-T", "--template",
-                          dest="template", type="string",
-                          help="template_file")
-        parser.add_option("-s", "--start", type="string",
-                          dest="start",
-                          help="report start date YYYY/MM/DD HH:mm:SS or YYYY-MM-DD HH:mm:SS (required)")
-        parser.add_option("-e", "--end", type="string",
-                          dest="end",
-                          help="report end date YYYY/MM/DD HH:mm:SS or YYYY-MM-DD HH:mm:SS")
-        parser.add_option("-d", "--dryrun", action="store_true",
-                          dest="is_test", default=False,
-                          help="send emails only to _testers")
-        parser.add_option("-D", "--debug",
-                          action="store_true", dest="debug", default=False,
-                          help="print detailed debug messages to log file")
-        parser.add_option("-n", "--nomail",
-                          action="store_true", dest="no_email", default=False,
-                          help="Do not send the email.  Use this with -v to also get verbose output")
+        parser = argparse.ArgumentParser()
+        parser.add_argument("-c", "--config", dest="config",
+                            default=None, help="report configuration file")
+        parser.add_argument("-v", "--verbose", dest="verbose",
+                            action="store_true", default=False,
+                            help="print debug messages to stdout")
+        parser.add_argument("-E", "--experiment", dest="vo",
+                            help="experiment name", default=None)
+        parser.add_argument("-F", "--facility", dest="facility",
+                            help="facility name", default=None)
+        parser.add_argument("-T", "--template",dest="template",
+                            help="template_file", default=None)
+        parser.add_argument("-s", "--start", dest="start",
+                            help="report start date YYYY/MM/DD HH:mm:SS or "
+                                 "YYYY-MM-DD HH:mm:SS (required)")
+        parser.add_argument("-e", "--end", dest="end",
+                            help="report end date YYYY/MM/DD HH:mm:SS or "
+                                 "YYYY-MM-DD HH:mm:SS")
+        parser.add_argument("-d", "--dryrun", dest="is_test",
+                            action="store_true", default=False,
+                            help="send emails only to _testers")
+        parser.add_argument("-D", "--debug", dest="debug",
+                            action="store_true", default=False,
+                            help="print detailed debug messages to log file")
+        parser.add_argument("-n", "--nomail", dest="no_email",
+                            action="store_true", default=False,
+                            help="Do not send the email.  "
+                                 "Use this with -v to also get verbose output")
 
-        options, arguments = parser.parse_args()
-        checkRequiredArguments(options, parser)
-        return options, arguments
+        arguments = parser.parse_args()
+        return arguments
 
 def runerror(config, error, traceback):
     """Global method to email admins if report run errors out"""
