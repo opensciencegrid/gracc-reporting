@@ -10,7 +10,6 @@ import email.utils
 from email.mime.text import MIMEText
 import datetime
 
-from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Search, Q
 
 
@@ -143,9 +142,9 @@ class ProbeReport(Reporter):
         startdateq = self.dateparse_to_iso(self.start_time)
 
         s = Search(using=self.client, index='gracc.osg.raw*')\
-            .filter(Q({
-                "range": {"@received": {"gte": "{0}".format(startdateq)}}
-            }))
+            .filter(Q({"range": {"@received": {"gte": "{0}".format(startdateq)}}}))\
+            .filter(Q({"term": {"ResourceType": "Batch"}}))
+
         Bucket = s.aggs.bucket('group_probename', 'terms', field='ProbeName',
                                size=1000000000)
         return s
