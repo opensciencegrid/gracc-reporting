@@ -2,7 +2,28 @@ import xml.etree.ElementTree as ET
 from datetime import timedelta, date
 import urllib2
 import ast
+import os
+import inspect
 import re
+
+from elasticsearch import Elasticsearch
+from elasticsearch_dsl import Search, Q
+
+
+parentdir = os.path.dirname(
+    os.path.dirname(
+        os.path.abspath(
+            inspect.getfile(
+                inspect.currentframe()
+            )
+        )
+    )
+)
+os.sys.path.insert(0, parentdir)
+
+#import TextUtils
+#import Configuration
+from Reporter import Reporter, runerror
 
 class OIMInfo(object):
     def __init__(self):
@@ -105,11 +126,59 @@ class OIMInfo(object):
         return set(oim_probe_fqdns_list)
 
 
+class ESInfo(object):
+    def __init__(self):
+        self.client = self.establish_client()
+        self.probematch = re.compile("(.+):(.+)")  # Test this
+
+    def establish_client(self):
+        """Initialize and return the elasticsearch client"""
+        client = Elasticsearch(['https://gracc.opensciencegrid.org/q'],
+                               use_ssl=True,
+                               # verify_certs = True,
+                               # ca_certs = 'gracc_cert/lets-encrypt-x3-cross-signed.pem',
+                               # client_cert = 'gracc_cert/gracc-reports-dev.crt',
+                               # client_key = 'gracc_cert/gracc-reports-dev.key',
+                               timeout=60)
+        return client
+
+    def query(self):
+        s = Search(using=self.client, index='gracc.osg.raw*')\
+            .filter(Q({
+                "range": {"@received": {"gte": "2016-10-12"}}
+            }))
+        Bucket = s.aggs.bucket('group_probename', 'terms', field='ProbeName',
+                               size=1000000000)
+        return s
+
+    def get_probenames(self):
+        probelist = []
+        for proberecord in self.results.group_probename.buckets:
+            probename = self.probematch.match(proberecord.key)
+            if probename:
+                probelist.append(probename.group(2))
+            else:
+                continue
+        return set(probelist)
+
+    def generate(self):
+        resultset = self.query()
+        response = resultset.execute()
+        self.results = response.aggregations
+        probes = self.get_probenames()
+        return probes
+
+
+
 
 def main():
     oiminfo = OIMInfo()
     oim_probe_fqdns = oiminfo.get_fqdns_for_probes()
     print oim_probe_fqdns
+
+    esinfo = ESInfo()
+    esprobes = esinfo.generate()
+    print esprobes
 
 
 if __name__ == '__main__':
