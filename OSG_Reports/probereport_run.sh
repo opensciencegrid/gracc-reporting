@@ -1,6 +1,6 @@
 #!/bin/sh
 
-STARTDATE=`date --date='2 week ago' +"%F %T"`
+STARTDATE=`date --date='2 day ago' +"%F %T"`
 
 cd /home/gratia/gracc_email_reports/OSG_Reports
 
