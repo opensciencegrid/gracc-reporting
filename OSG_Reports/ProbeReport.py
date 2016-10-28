@@ -126,11 +126,11 @@ class OIMInfo(object):
         return returndict
 
     def get_fqdns_for_probes(self):
-        oim_probe_fqdns_list = []
+        oim_probe_dict = {}
         for resourcename, info in self.resourcedict.iteritems():
             if ast.literal_eval(info['WLCGInteropAcct']):
-                oim_probe_fqdns_list.append(info['FQDN'].lower())
-        return set(oim_probe_fqdns_list)
+                oim_probe_dict[info['FQDN']] = info['Resource']
+        return oim_probe_dict
 
 
 class ProbeReport(Reporter):
@@ -170,11 +170,12 @@ class ProbeReport(Reporter):
         probes = self.get_probenames()
         return probes
 
-    def generate_report_file(self, oimset, report=None):
+    def generate_report_file(self, oimdict, report=None):
         self.esprobes = self.generate()
+        oimset = set([key for key in oimdict.keys()])
         with open(self.emailfile, 'w') as f:
             for elt in oimset.difference(self.esprobes):
-                f.write('{0}\n'.format(elt))
+                f.write('{0}\t{1}\n'.format(oimdict[elt], elt))
         return
 
     def send_report(self, report_type="test"):
@@ -209,8 +210,7 @@ def main():
     config.configure(args.config)
 
     oiminfo = OIMInfo()
-    oim_probe_fqdns = oiminfo.get_fqdns_for_probes()
-    # print oim_probe_fqdns
+    oim_probe_fqdn_dict = oiminfo.get_fqdns_for_probes()
 
     startdate = datetime.date.today() - timedelta(days=2)
 
@@ -222,7 +222,8 @@ def main():
                            args.verbose,
                            args.no_email)
 
-    esinfo.generate_report_file(oim_probe_fqdns)
+
+    esinfo.generate_report_file(oim_probe_fqdn_dict)
     esinfo.send_report()
 
 
