@@ -72,6 +72,7 @@ class Efficiency(Reporter):
         Reporter.__init__(self, config, start, end, verbose = False)
         self.no_email = no_email
         self.hour_limit = hour_limit
+        self.logfile = logfile
         self.logger = self.setupgenLogger('efficiencypervo')
         self.vo = vo
         self.eff_limit = eff_limit
