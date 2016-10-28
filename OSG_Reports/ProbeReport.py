@@ -66,6 +66,10 @@ class OIMInfo(object):
         for resourcename_elt in self.root.findall('./ResourceGroup/Resources/Resource'
                                              '/Name'):
             resourcename = resourcename_elt.text
+            activepath = './ResourceGroup/Resources/Resource/' \
+                                     '[Name="{0}"]/Active'.format(resourcename)
+            if not ast.literal_eval(self.root.find(activepath).text):
+                continue
             if resourcename not in self.resourcedict:
                 resource_grouppath = './ResourceGroup/Resources/Resource/' \
                                      '[Name="{0}"]/../..'.format(resourcename)
@@ -208,7 +212,7 @@ def main():
     oim_probe_fqdns = oiminfo.get_fqdns_for_probes()
     # print oim_probe_fqdns
 
-    args.start = args.end
+
 
     esinfo = ProbeReport(config,
                            args.start,
@@ -219,7 +223,7 @@ def main():
                            args.no_email)
 
     esinfo.generate_report_file(oim_probe_fqdns)
-    esinfo.send_report()
+    #esinfo.send_report()
 
 
 if __name__ == '__main__':
