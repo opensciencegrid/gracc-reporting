@@ -25,6 +25,8 @@ import TextUtils
 import Configuration
 from Reporter import Reporter, runerror
 
+logfile = 'jobsuccessratereport.log'
+
 class Jobs:
     def __init__(self):
         self.jobs = {}
@@ -35,7 +37,6 @@ class Jobs:
 
         self.jobs[job.site].append(job)
 
-logfile = 'jobsuccessratereport.log'
 
 class Job:
     def __init__(self, end_time, start_time, jobid, site, host, exit__code):
