@@ -26,6 +26,8 @@ from Reporter import Reporter, runerror
 
 cilogon_match = re.compile('.+CN=UID:(\w+)')
 non_cilogon_match = re.compile('/CN=([\w\s]+)/?.+?')
+logfile = 'efficiencyreport.log'
+
 
 class User(object):
     def __init__(self, info):
@@ -70,6 +72,7 @@ class Efficiency(Reporter):
         Reporter.__init__(self, config, start, end, verbose = False)
         self.no_email = no_email
         self.hour_limit = hour_limit
+        self.logger = self.setupgenLogger('efficiencypervo')
         self.vo = vo
         self.eff_limit = eff_limit
         self.is_test = is_test
@@ -120,16 +123,20 @@ class Efficiency(Reporter):
 
         if self.verbose:
             t = s.to_dict()
-            print json.dumps(t, sort_keys=True, indent=4)
+            self.logger.info(json.dumps(t, sort_keys=True, indent=4))
 
         response = s.execute()
         resultset = response.aggregations
 
         if not response.success():
-            raise Exception('Error accessing ElasticSearch')
+            self.logger.exception('Error accessing ElasticSearch')
+            raise
+        else:
+            self.logger.info('Ran elasticsearch query successfully')
 
         if self.verbose:
             print json.dumps(response.to_dict(), sort_keys=True, indent=4)
+
 
         # Header for file
         header = '{0}\t{1}\t{2}\t{3}\t{4}\n'.format('VO',
@@ -168,7 +175,7 @@ class Efficiency(Reporter):
     def generate_report_file(self, report):
         if len(report) == 0:
             self.no_email = True
-            print "Report empty"
+            self.logger.info("Report empty")
             return
 
         epoch_stamps = self.get_epoch_stamps_for_grafana()
@@ -218,7 +225,7 @@ class Efficiency(Reporter):
     def send_report(self):
         """Generate HTML from report and send the email"""
         if self.no_email:
-            print "Not sending report"
+            self.logger.info("Not sending report")
             return
 
         if self.is_test:
@@ -240,7 +247,7 @@ class Efficiency(Reporter):
 
         if self.verbose:
             os.remove(self.fn)
-            print "Report sent"
+            self.logger.info("Report sent")
 
         return
 
@@ -287,6 +294,8 @@ if __name__ == "__main__":
             e.generate_report_file(r)
             e.send_report()
     except Exception as e:
+        with open(logfile, 'a') as f:
+            f.write(traceback.format_exc())
         print >> sys.stderr, traceback.format_exc()
         runerror(config, e, traceback.format_exc())
         sys.exit(1)
