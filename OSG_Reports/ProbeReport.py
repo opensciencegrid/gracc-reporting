@@ -212,18 +212,18 @@ def main():
     oim_probe_fqdns = oiminfo.get_fqdns_for_probes()
     # print oim_probe_fqdns
 
-
+    startdate = datetime.date.today() - timedelta(days=2)
 
     esinfo = ProbeReport(config,
-                           args.start,
-                           args.end,
+                           startdate,
+                           startdate,
                            args.template,
                            args.is_test,
                            args.verbose,
                            args.no_email)
 
     esinfo.generate_report_file(oim_probe_fqdns)
-    #esinfo.send_report()
+    esinfo.send_report()
 
 
 if __name__ == '__main__':
