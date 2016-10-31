@@ -79,8 +79,8 @@ class JobSuccessRateReporter(Reporter):
         starttimeq = self.dateparse_to_iso(self.start_time)
         endtimeq = self.dateparse_to_iso(self.end_time)
 
+        self.logger.info(self.indexpattern)
         if self.verbose:
-            self.logger.info(self.indexpattern)
             sleep(3)
 
         # Elasticsearch query
@@ -180,7 +180,7 @@ class JobSuccessRateReporter(Reporter):
             self.logger.exception('Error accessing ElasticSearch')
             raise Exception('Error accessing ElasticSearch')
         if len(results) == 1 and len(results[0].strip()) == 0:
-            self.logger.info("Nothing to report")
+            self.logger.warn("Nothing to report")
             return
 
         self.add_to_clusters(results)  # Parse our results and create clusters objects for each
@@ -351,7 +351,7 @@ class JobSuccessRateReporter(Reporter):
 
     def send_report(self):
         if self.no_email:
-            self.logger.info("Not sending email")
+            self.logger.warn("Not sending email")
             return
 
         if self.is_test:
@@ -394,6 +394,7 @@ if __name__ == "__main__":
         r.generate()
         r.generate_report_file()
         r.send_report()
+        print "Job Success Report Execution finished"
     except Exception as e:
         with open(logfile, 'a') as f:
             f.write(traceback.format_exc())

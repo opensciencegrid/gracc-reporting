@@ -122,9 +122,12 @@ class Efficiency(Reporter):
         client = self.establish_client()
         s = self.query(client)
 
+        t = s.to_dict()
         if self.verbose:
-            t = s.to_dict()
-            self.logger.info(json.dumps(t, sort_keys=True, indent=4))
+            print json.dumps(t, sort_keys=True, indent=4)
+            self.logger.debug(json.dumps(t, sort_keys=True))
+        else:
+            self.logger.debug(json.dumps(t, sort_keys=True))
 
         response = s.execute()
         resultset = response.aggregations
@@ -137,7 +140,6 @@ class Efficiency(Reporter):
 
         if self.verbose:
             print json.dumps(response.to_dict(), sort_keys=True, indent=4)
-
 
         # Header for file
         header = '{0}\t{1}\t{2}\t{3}\t{4}\n'.format('VO',
@@ -176,7 +178,7 @@ class Efficiency(Reporter):
     def generate_report_file(self, report):
         if len(report) == 0:
             self.no_email = True
-            self.logger.info("Report empty")
+            self.logger.warn("Report empty")
             return
 
         epoch_stamps = self.get_epoch_stamps_for_grafana()
@@ -227,7 +229,7 @@ class Efficiency(Reporter):
     def send_report(self):
         """Generate HTML from report and send the email"""
         if self.no_email:
-            self.logger.info("Not sending report")
+            self.logger.warn("Not sending report")
             return
 
         if self.is_test:
@@ -296,6 +298,7 @@ if __name__ == "__main__":
             r = e.reportVO(users, args.facility)
             e.generate_report_file(r)
             e.send_report()
+            print "Efficiency Report execution successful"
     except Exception as e:
         with open(logfile, 'a') as f:
             f.write(traceback.format_exc())
