@@ -9,6 +9,8 @@ import smtplib
 import email.utils
 from email.mime.text import MIMEText
 import datetime
+import logging
+import traceback
 
 from elasticsearch_dsl import Search, Q
 
@@ -28,8 +30,14 @@ os.sys.path.insert(0, parentdir)
 import Configuration
 from Reporter import Reporter, runerror
 
+logfile = 'probereport.log'
+
+
 class OIMInfo(object):
-    def __init__(self):
+    def __init__(self, verbose=False):
+        self.verbose = verbose
+        self.logfile = logfile
+        self.logger = self.setupgenLogger("ProbeReport-OIM")
         self.e = None
         self.root = None
         self.resourcedict = {}
@@ -37,9 +45,33 @@ class OIMInfo(object):
         self.xml_file = self.get_file_from_OIM()
         if self.xml_file:
             self.parse()
+            self.logger.info('Successfully parsed OIM file')
 
-    @staticmethod
-    def get_file_from_OIM():
+    def setupgenLogger(self, reportname):
+        # Create Logger
+        logger = logging.getLogger(reportname)
+        logger.setLevel(logging.DEBUG)
+
+        # Console handler - info
+        ch = logging.StreamHandler()
+        if self.verbose:
+            ch.setLevel(logging.INFO)
+        else:
+            ch.setLevel(logging.WARNING)
+
+        # FileHandler
+        fh = logging.FileHandler(self.logfile)
+        fh.setLevel(logging.DEBUG)
+        logfileformat = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        fh.setFormatter(logfileformat)
+
+        logger.addHandler(ch)
+        logger.addHandler(fh)
+
+        return logger
+
+    def get_file_from_OIM(self):
         today = date.today()
         startdate = today - timedelta(days=7)
         rawdateslist = [startdate.month, startdate.day, startdate.year,
@@ -53,15 +85,17 @@ class OIMInfo(object):
 
         try:
             oim_xml = urllib2.urlopen(oim_url)
+            self.logger.info("Got OIM file successfully")
         except (urllib2.HTTPError, urllib2.URLError) as e:
-            print e
+            self.logger.exception(e)
+            # Email too?
 
         return oim_xml
 
     def parse(self):
         self.e = ET.parse(self.xml_file)
         self.root = self.e.getroot()
-        print "Parsing File"
+        self.logger.info("Parsing OIM File")
 
         for resourcename_elt in self.root.findall('./ResourceGroup/Resources/Resource'
                                              '/Name'):
@@ -137,7 +171,12 @@ class ProbeReport(Reporter):
     def __init__(self, configuration, start, end, template, is_test,
                      verbose, no_email):
         Reporter.__init__(self, configuration, start, end, verbose)
-        self.client = self.establish_client()
+        self.logfile = logfile
+        self.logger = self.setupgenLogger("ProbeReport")
+        try:
+            self.client = self.establish_client()
+        except Exception as e:
+            self.logger.exception(e)
         self.probematch = re.compile("(.+):(.+)")
         self.emailfile = 'filetoemail.txt'
 
@@ -161,13 +200,16 @@ class ProbeReport(Reporter):
                 probelist.append(probename.group(2).lower())
             else:
                 continue
+        self.logger.info(','.join(probelist))
         return set(probelist)
 
     def generate(self):
         resultset = self.query()
         response = resultset.execute()
         self.results = response.aggregations
+        self.logger.info("Successfully queried Elasticsearch")
         probes = self.get_probenames()
+        self.logger.info("Successfully analyzed ES data vs. OIM data")
         return probes
 
     def generate_report_file(self, oimdict, report=None):
@@ -176,6 +218,7 @@ class ProbeReport(Reporter):
         with open(self.emailfile, 'w') as f:
             for elt in oimset.difference(self.esprobes):
                 f.write('{0}\t{1}\n'.format(oimdict[elt], elt))
+        self.logger.info("File written ")
         return
 
     def send_report(self, report_type="test"):
@@ -193,15 +236,14 @@ class ProbeReport(Reporter):
             smtpObj = smtplib.SMTP('smtp.fnal.gov')
             smtpObj.sendmail(emailfrom, admin_emails, msg.as_string())
             smtpObj.quit()
+            self.logger.info("Sent Email")
         except Exception as e:
-            print "Error:  unable to send email.\n%s\n" % e
+            self.logger.exception("Error:  unable to send email.\n{0}\n".format(e))
             raise
 
         os.unlink(self.emailfile)
 
         return
-
-
 
 def main():
     args = Reporter.parse_opts()
@@ -209,7 +251,8 @@ def main():
     config = Configuration.Configuration()
     config.configure(args.config)
 
-    oiminfo = OIMInfo()
+    oiminfo = OIMInfo(args.verbose)
+
     oim_probe_fqdn_dict = oiminfo.get_fqdns_for_probes()
 
     startdate = datetime.date.today() - timedelta(days=2)
@@ -225,6 +268,7 @@ def main():
 
     esinfo.generate_report_file(oim_probe_fqdn_dict)
     esinfo.send_report()
+    print 'Probe Report Execution finished'
 
 
 if __name__ == '__main__':
