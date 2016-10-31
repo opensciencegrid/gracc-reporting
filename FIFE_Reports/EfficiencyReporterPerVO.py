@@ -249,7 +249,8 @@ class Efficiency(Reporter):
 
         if self.verbose:
             os.remove(self.fn)
-            self.logger.info("Report sent")
+
+        self.logger.info("Report sent")
 
         return
 
