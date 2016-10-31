@@ -4,6 +4,7 @@ from datetime import datetime
 import re
 import smtplib
 from email.mime.text import MIMEText
+import logging
 
 from elasticsearch import Elasticsearch
 
@@ -34,6 +35,7 @@ class Reporter(TimeUtils):
         self.epochrange = None
         self.indexpattern = indexpattern_generate(self.start_time,
                                                   self.end_time, raw)
+        self.logfile = ('reports.log')
 
     def format_report(self):
         pass
@@ -112,6 +114,28 @@ class Reporter(TimeUtils):
         options, arguments = parser.parse_args()
         checkRequiredArguments(options, parser)
         return options, arguments
+
+    def setupgenLogger(self, reportname):
+        # Create Logger
+        logger = logging.getLogger(reportname)
+        logger.setLevel(logging.DEBUG)
+
+        # Console handler - info
+        ch = logging.StreamHandler()
+        ch.setLevel(logging.INFO)
+
+        # FileHandler
+        fh = logging.FileHandler(self.logfile)
+        fh.setLevel(logging.DEBUG)
+        logfileformat = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        fh.setFormatter(logfileformat)
+
+        logger.addHandler(ch)
+        logger.addHandler(fh)
+
+        return logger
+
 
 def runerror(config, error, traceback):
     """Global method to email admins if report run errors out"""

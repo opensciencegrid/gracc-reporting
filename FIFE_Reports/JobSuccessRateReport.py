@@ -25,6 +25,8 @@ import TextUtils
 import Configuration
 from Reporter import Reporter, runerror
 
+logfile = 'jobsuccessratereport.log'
+
 class Jobs:
     def __init__(self):
         self.jobs = {}
@@ -49,6 +51,8 @@ class Job:
 class JobSuccessRateReporter(Reporter):
     def __init__(self, configuration, start, end, vo, template, is_test, verbose, no_email):
         Reporter.__init__(self, configuration, start, end, verbose)
+        self.logfile = logfile
+        self.logger = self.setupgenLogger("JobSuccessRate")
         self.no_email = no_email
         self.is_test = is_test
         self.vo = vo
@@ -76,7 +80,7 @@ class JobSuccessRateReporter(Reporter):
         endtimeq = self.dateparse_to_iso(self.end_time)
 
         if self.verbose:
-            print >> sys.stdout, self.indexpattern
+            self.logger.info(self.indexpattern)
             sleep(3)
 
         # Elasticsearch query
@@ -173,9 +177,10 @@ class JobSuccessRateReporter(Reporter):
         results = self.generate_result_array(resultset)  # Format our resultset into an array we use later
 
         if not return_code_success:
+            self.logger.exception('Error accessing ElasticSearch')
             raise Exception('Error accessing ElasticSearch')
         if len(results) == 1 and len(results[0].strip()) == 0:
-            print >> sys.stdout, "Nothing to report"
+            self.logger.info("Nothing to report")
             return
 
         self.add_to_clusters(results)  # Parse our results and create clusters objects for each
@@ -342,9 +347,11 @@ class JobSuccessRateReporter(Reporter):
         with open(self.fn, 'w') as f:
             f.write(self.text)
 
+        return
+
     def send_report(self):
         if self.no_email:
-            print "Not sending email"
+            self.logger.info("Not sending email")
             return
 
         if self.is_test:
@@ -365,22 +372,12 @@ class JobSuccessRateReporter(Reporter):
         if os.path.exists(self.fn):
             os.unlink(self.fn)  # Delete HTML file
 
-        print "Sent Report"
+        self.logger.info("Sent Report for {0}".format(self.vo))
         return
 
 
 if __name__ == "__main__":
     opts, args = Reporter.parse_opts()
-
-    if opts.debug:
-        logging.basicConfig(filename='jobsuccessreport.log',
-                            level=logging.DEBUG)
-    else:
-        logging.basicConfig(filename='jobsuccessreport.log',
-                            level=logging.ERROR)
-        logging.getLogger('elasticsearch.trace')\
-            .addHandler(logging.StreamHandler())
-
     config = Configuration.Configuration()
     config.configure(opts.config)
 
@@ -397,6 +394,8 @@ if __name__ == "__main__":
         r.generate_report_file()
         r.send_report()
     except Exception as e:
+        with open(logfile, 'a') as f:
+            f.write(traceback.format_exc())
         print >> sys.stderr, traceback.format_exc()
         runerror(config, e, traceback.format_exc())
         sys.exit(1)
