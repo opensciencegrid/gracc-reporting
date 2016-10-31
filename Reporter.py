@@ -118,7 +118,10 @@ class Reporter(TimeUtils):
 
         # Console handler - info
         ch = logging.StreamHandler()
-        ch.setLevel(logging.INFO)
+        if self.verbose:
+            ch.setLevel(logging.INFO)
+        else:
+            ch.setLevel(logging.WARNING)
 
         # FileHandler
         fh = logging.FileHandler(self.logfile)
