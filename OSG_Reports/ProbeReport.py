@@ -222,6 +222,38 @@ class ProbeReport(Reporter):
         return
 
     def send_report(self, report_type="test"):
+        #
+        # Title: (Site)
+        # Gratia
+        # Probe
+        # Reporting
+        # Failure
+        #
+        # On(Last
+        # Record) (Site)
+        # stopped
+        # reporting
+        # GRACC
+        # records
+        # to
+        # OSG.If
+        # this is due
+        # to
+        # maintenance or a
+        # retirement
+        # of
+        # this
+        # node, please
+        # let
+        # us
+        # know.If
+        # not, please
+        # check
+        # to
+        # see if your
+        # Gratia
+        # reporting is active.
+
         admin_emails = re.split('[; ,]', self.config.get("email", "test_to"))
         emailfrom = self.config.get("email","from")
         with open(self.emailfile, 'rb') as fp:
@@ -264,7 +296,6 @@ def main():
                            args.is_test,
                            args.verbose,
                            args.no_email)
-
 
     esinfo.generate_report_file(oim_probe_fqdn_dict)
     esinfo.send_report()
