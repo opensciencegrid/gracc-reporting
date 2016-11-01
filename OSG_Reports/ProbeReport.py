@@ -10,6 +10,7 @@ import email.utils
 from email.mime.text import MIMEText
 import datetime
 import logging
+import json
 import traceback
 
 from elasticsearch_dsl import Search, Q
@@ -181,7 +182,6 @@ class ProbeReport(Reporter):
         self.emailfile = 'filetoemail.txt'
 
     def query(self):
-
         startdateq = self.dateparse_to_iso(self.start_time)
 
         s = Search(using=self.client, index='gracc.osg.raw*')\
@@ -190,6 +190,7 @@ class ProbeReport(Reporter):
 
         Bucket = s.aggs.bucket('group_probename', 'terms', field='ProbeName',
                                size=1000000000)
+
         return s
 
     def get_probenames(self):
@@ -200,11 +201,18 @@ class ProbeReport(Reporter):
                 probelist.append(probename.group(2).lower())
             else:
                 continue
-        self.logger.info(','.join(probelist))
         return set(probelist)
 
     def generate(self):
         resultset = self.query()
+
+        t = resultset.to_dict()
+        if self.verbose:
+            print json.dumps(t, sort_keys=True, indent=4)
+            self.logger.debug(json.dumps(t, sort_keys=True))
+        else:
+            self.logger.debug(json.dumps(t, sort_keys=True))
+
         response = resultset.execute()
         self.results = response.aggregations
         self.logger.info("Successfully queried Elasticsearch")
@@ -215,11 +223,16 @@ class ProbeReport(Reporter):
     def generate_report_file(self, oimdict, report=None):
         self.esprobes = self.generate()
         oimset = set([key for key in oimdict.keys()])
-        with open(self.emailfile, 'w') as f:
-            for elt in oimset.difference(self.esprobes):
+        for elt in oimset.difference(self.esprobes):
+            with open(self.emailfile, 'w') as f:
                 f.write('{0}\t{1}\n'.format(oimdict[elt], elt))
-        self.logger.info("File written ")
-        return
+
+            yield
+
+
+        # self.logger.info("File written ")
+
+        # return
 
     def send_report(self, report_type="test"):
         #
@@ -273,9 +286,23 @@ class ProbeReport(Reporter):
             self.logger.exception("Error:  unable to send email.\n{0}\n".format(e))
             raise
 
-        os.unlink(self.emailfile)
-
         return
+
+    def send_all_reports(self, oimdict):
+        gen = self.generate_report_file(oimdict)
+        while True:
+            try:
+                gen.next()
+                self.send_report()
+            except StopIteration:
+                os.unlink(self.emailfile)
+                break
+            except Exception as e:
+                self.logger.exception(e)
+
+        self.logger.info('All reports sent')
+        return
+
 
 def main():
     args = Reporter.parse_opts()
@@ -297,8 +324,7 @@ def main():
                            args.verbose,
                            args.no_email)
 
-    esinfo.generate_report_file(oim_probe_fqdn_dict)
-    esinfo.send_report()
+    esinfo.send_all_reports(oim_probe_fqdn_dict)
     print 'Probe Report Execution finished'
 
 
