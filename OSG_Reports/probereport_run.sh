@@ -12,7 +12,7 @@ if [ $? -ne 0 ]
 then
     echo "Error running report.  Please try running the report manually" >> probereport_run.log
 else
-    echo "Sent report" >> probereport_run.log
+    echo "Ran report script" >> probereport_run.log
 fi
 
 
