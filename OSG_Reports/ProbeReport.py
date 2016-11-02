@@ -32,7 +32,6 @@ import Configuration
 from Reporter import Reporter, runerror
 
 logfile = 'probereport.log'
-historyfile = 'probereporthistory.log'
 
 class OIMInfo(object):
     def __init__(self, verbose=False):
@@ -183,6 +182,8 @@ class ProbeReport(Reporter):
         self.probe, self.resource = None, None
         self.no_email = no_email
         self.is_test = is_test
+        self.historyfile = 'probereporthistory.log'
+        self.newhistory = []
 
     def query(self):
         startdateq = self.dateparse_to_iso(self.start_time)
@@ -227,12 +228,21 @@ class ProbeReport(Reporter):
     def generate_report_file(self, oimdict, report=None):
         missingprobes = self.generate(oimdict)
 
-        with open(historyfile, 'a+') as h:
+        with open(self.historyfile, 'r') as h:
             h.seek(0, os.SEEK_SET)
             prev_reported = set([])
 
             for line in h:
-                 prev_reported.add(re.split('\t', line)[0])
+                cutoff = datetime.date.today() - datetime.timedelta(days=7)
+                proberepdate = datetime.date(*self.dateparse(re.split('\t', line)[1].strip())[:3])
+                if proberepdate > cutoff:
+                    # print proberepdate, cutoff, True
+                    self.newhistory.append(line)
+                    curprobe = re.split('\t', line)[0]
+                    prev_reported.add(curprobe)
+                    self.logger.debug("{0} has been reported on in the past"
+                                      " week.  Will not resend report".format(
+                        curprobe))
 
             for elt in missingprobes.difference(prev_reported):
                 with open(self.emailfile, 'w') as f:
@@ -240,8 +250,10 @@ class ProbeReport(Reporter):
                     self.resource = oimdict[elt]
                     f.write(self.emailtext())
 
-                h.write('{0}\t{1}\n'.format(elt, datetime.date.today()))
+                self.newhistory.append('{0}\t{1}\n'.format(elt, datetime.date.today()))
                 yield
+
+        return
 
     def emailsubject(self):
         return "{0} Reporting Account Failure dated {1}"\
@@ -284,6 +296,12 @@ class ProbeReport(Reporter):
 
         return
 
+    def cleanup_history(self):
+        with open(self.historyfile, 'w') as cleanup:
+            for line in self.newhistory:
+                cleanup.write(line)
+        return
+
     def send_all_reports(self, oimdict):
         rep_files = self.generate_report_file(oimdict)
         while True:
@@ -296,6 +314,7 @@ class ProbeReport(Reporter):
                 self.logger.exception(e)
 
         self.logger.info('All reports sent')
+        self.cleanup_history()
         return
 
 
