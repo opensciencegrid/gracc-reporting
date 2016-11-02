@@ -180,6 +180,7 @@ class ProbeReport(Reporter):
             self.logger.exception(e)
         self.probematch = re.compile("(.+):(.+)")
         self.emailfile = 'filetoemail.txt'
+        self.probe, self.resource = None, None
 
     def query(self):
         startdateq = self.dateparse_to_iso(self.start_time)
@@ -203,7 +204,7 @@ class ProbeReport(Reporter):
                 continue
         return set(probelist)
 
-    def generate(self):
+    def generate(self, oimdict):
         resultset = self.query()
 
         t = resultset.to_dict()
@@ -218,55 +219,32 @@ class ProbeReport(Reporter):
         self.logger.info("Successfully queried Elasticsearch")
         probes = self.get_probenames()
         self.logger.info("Successfully analyzed ES data vs. OIM data")
-        return probes
+        oimset = set([key for key in oimdict.keys()])
+        return oimset.difference(probes)
 
     def generate_report_file(self, oimdict, report=None):
-        self.esprobes = self.generate()
-        oimset = set([key for key in oimdict.keys()])
-        for elt in oimset.difference(self.esprobes):
+        missingprobes = self.generate(oimdict)
+        for elt in missingprobes:
             with open(self.emailfile, 'w') as f:
-                f.write('{0}\t{1}\n'.format(oimdict[elt], elt))
-
+                self.probe = elt
+                self.resource = oimdict[elt]
+                f.write(self.emailtext())
             yield
 
+    def emailsubject(self):
+        return "{0} Reporting Account Failure dated {1}"\
+            .format(self.resource, datetime.date.today())
 
-        # self.logger.info("File written ")
-
-        # return
+    def emailtext(self):
+        text= 'The probe {0} installed at {1} has not reported'\
+                    ' GRACC records to OSG for the last two days. If this '\
+                    'is due to maintenance or a retirement of this '\
+                    'node, please let us know.  If not, please check to see '\
+                    'if your Gratia reporting is active.'.format(self.probe,
+                                                                 self.resource)
+        return text
 
     def send_report(self, report_type="test"):
-        #
-        # Title: (Site)
-        # Gratia
-        # Probe
-        # Reporting
-        # Failure
-        #
-        # On(Last
-        # Record) (Site)
-        # stopped
-        # reporting
-        # GRACC
-        # records
-        # to
-        # OSG.If
-        # this is due
-        # to
-        # maintenance or a
-        # retirement
-        # of
-        # this
-        # node, please
-        # let
-        # us
-        # know.If
-        # not, please
-        # check
-        # to
-        # see if your
-        # Gratia
-        # reporting is active.
-
         admin_emails = re.split('[; ,]', self.config.get("email", "test_to"))
         emailfrom = self.config.get("email","from")
         with open(self.emailfile, 'rb') as fp:
@@ -274,8 +252,7 @@ class ProbeReport(Reporter):
 
         msg['To'] = email.utils.formataddr(('Admins', admin_emails))
         msg['From'] = email.utils.formataddr(('GRACC Operations', emailfrom))
-        msg['Subject'] = "Gratia Probe report from {0}" \
-            .format(datetime.date.today())
+        msg['Subject'] = self.emailsubject()
 
         try:
             smtpObj = smtplib.SMTP('smtp.fnal.gov')
