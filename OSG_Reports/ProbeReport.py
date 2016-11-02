@@ -32,7 +32,7 @@ import Configuration
 from Reporter import Reporter, runerror
 
 logfile = 'probereport.log'
-
+historyfile = 'probereporthistory.log'
 
 class OIMInfo(object):
     def __init__(self, verbose=False):
@@ -169,8 +169,8 @@ class OIMInfo(object):
 
 
 class ProbeReport(Reporter):
-    def __init__(self, configuration, start, end, template, is_test,
-                     verbose, no_email):
+    def __init__(self, configuration, start, end, template,
+                     verbose, is_test=False, no_email=False):
         Reporter.__init__(self, configuration, start, end, verbose)
         self.logfile = logfile
         self.logger = self.setupgenLogger("ProbeReport")
@@ -181,6 +181,8 @@ class ProbeReport(Reporter):
         self.probematch = re.compile("(.+):(.+)")
         self.emailfile = 'filetoemail.txt'
         self.probe, self.resource = None, None
+        self.no_email = no_email
+        self.is_test = is_test
 
     def query(self):
         startdateq = self.dateparse_to_iso(self.start_time)
@@ -224,11 +226,18 @@ class ProbeReport(Reporter):
 
     def generate_report_file(self, oimdict, report=None):
         missingprobes = self.generate(oimdict)
+        # if os.path.exists(historyfile):
+        #     filemode = 'a+'
+        # else:
+        #     filemode = 'w'
         for elt in missingprobes:
-            with open(self.emailfile, 'w') as f:
-                self.probe = elt
-                self.resource = oimdict[elt]
-                f.write(self.emailtext())
+            with open(historyfile, 'a+') as h:
+                with open(self.emailfile, 'w') as f:
+                    self.probe = elt
+                    self.resource = oimdict[elt]
+                    f.write(self.emailtext())
+                h.write('{0}\t{1}\n'.format(elt,datetime.date.today()))
+
             yield
 
     def emailsubject(self):
@@ -245,6 +254,12 @@ class ProbeReport(Reporter):
         return text
 
     def send_report(self, report_type="test"):
+        if self.no_email:
+            self.logger.info("no_email flag was used.  Not sending email for "
+                             "this run.\t{0}\t{1}".format(self.resource,
+                                                         self.probe))
+            return
+
         admin_emails = re.split('[; ,]', self.config.get("email", "test_to"))
         emailfrom = self.config.get("email","from")
         with open(self.emailfile, 'rb') as fp:
@@ -258,7 +273,8 @@ class ProbeReport(Reporter):
             smtpObj = smtplib.SMTP('smtp.fnal.gov')
             smtpObj.sendmail(emailfrom, admin_emails, msg.as_string())
             smtpObj.quit()
-            self.logger.info("Sent Email")
+            self.logger.info("Sent Email for {0}".format(self.resource))
+            os.unlink(self.emailfile)
         except Exception as e:
             self.logger.exception("Error:  unable to send email.\n{0}\n".format(e))
             raise
@@ -266,13 +282,12 @@ class ProbeReport(Reporter):
         return
 
     def send_all_reports(self, oimdict):
-        gen = self.generate_report_file(oimdict)
+        rep_files = self.generate_report_file(oimdict)
         while True:
             try:
-                gen.next()
+                rep_files.next()
                 self.send_report()
             except StopIteration:
-                os.unlink(self.emailfile)
                 break
             except Exception as e:
                 self.logger.exception(e)
@@ -297,8 +312,8 @@ def main():
                            startdate,
                            startdate,
                            args.template,
-                           args.is_test,
                            args.verbose,
+                           args.is_test,
                            args.no_email)
 
     esinfo.send_all_reports(oim_probe_fqdn_dict)
