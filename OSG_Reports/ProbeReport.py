@@ -226,19 +226,22 @@ class ProbeReport(Reporter):
 
     def generate_report_file(self, oimdict, report=None):
         missingprobes = self.generate(oimdict)
-        # if os.path.exists(historyfile):
-        #     filemode = 'a+'
-        # else:
-        #     filemode = 'w'
-        for elt in missingprobes:
-            with open(historyfile, 'a+') as h:
+
+        with open(historyfile, 'a+') as h:
+            h.seek(0, os.SEEK_SET)
+            prev_reported = set([])
+
+            for line in h:
+                 prev_reported.add(re.split('\t', line)[0])
+
+            for elt in missingprobes.difference(prev_reported):
                 with open(self.emailfile, 'w') as f:
                     self.probe = elt
                     self.resource = oimdict[elt]
                     f.write(self.emailtext())
-                h.write('{0}\t{1}\n'.format(elt,datetime.date.today()))
 
-            yield
+                h.write('{0}\t{1}\n'.format(elt, datetime.date.today()))
+                yield
 
     def emailsubject(self):
         return "{0} Reporting Account Failure dated {1}"\
