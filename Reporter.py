@@ -35,7 +35,8 @@ class Reporter(TimeUtils):
         self.epochrange = None
         self.indexpattern = indexpattern_generate(self.start_time,
                                                   self.end_time, raw)
-        self.logfile = ('reports.log')
+        self.logfile = ('reports.log')  # Can be overwritten in __init__ method
+                                        # in subclasses
 
     def format_report(self):
         pass
@@ -112,7 +113,15 @@ class Reporter(TimeUtils):
         return arguments
 
     def setupgenLogger(self, reportname):
-        # Create Logger
+        """Creates logger for Reporter class.
+
+        For non-verbose use, use WARNING level (or above)
+        to have messages show up on screen, INFO or DEBUG otherwise.
+
+        For verbose use, use INFO level or above for messages to show on screen
+
+        Returns logging.getLogger object
+        """
         logger = logging.getLogger(reportname)
         logger.setLevel(logging.DEBUG)
 
