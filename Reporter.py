@@ -158,12 +158,11 @@ def runerror(config, error, traceback):
     try:
         s = smtplib.SMTP('smtp.fnal.gov')
         s.sendmail('sbhat@fnal.gov', admin_emails, msg.as_string())
+        s.quit()
         print "Successfully sent error email"
     except Exception as e:
         err = "Error:  unable to send email.\n%s\n" % e
         print err
         raise
-    finally:
-        s.quit()
 
     return None
