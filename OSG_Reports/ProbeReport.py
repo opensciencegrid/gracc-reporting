@@ -331,7 +331,8 @@ class ProbeReport(Reporter):
                                     self.config.get("email", "test_to"))
         else:
             admin_emails = re.split('[; ,]',
-                                    self.config.get("email", "real_to"))
+                                    self.config.get("email", "real_to")) +\
+                           re.split('[; ,]',self.config.get("email", "test_to"))
 
         emailfrom = self.config.get("email","from")
         with open(self.emailfile, 'rb') as fp:
