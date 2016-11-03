@@ -368,15 +368,12 @@ class ProbeReport(Reporter):
         """The higher level method that controls the generation and sending
         of the probe report using other methods in this class."""
         rep_files = self.generate_report_file(oimdict)
-        while True:
-            try:
-                rep_files.next()
+
+        try:
+            for file in rep_files:
                 self.send_report()
-            except StopIteration:
-                # After we reach the last iteration of the generator
-                break
-            except Exception as e:
-                self.logger.exception(e)
+        except Exception as e:
+            self.logger.exception(e)
 
         self.logger.info('All reports sent')
         self.cleanup_history()
