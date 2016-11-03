@@ -259,7 +259,7 @@ class ProbeReport(Reporter):
 
         probes = self.get_probenames()
         self.logger.info("Successfully analyzed ES data vs. OIM data")
-        oimset = set([key for key in oimdict.keys()])
+        oimset = set([key for key in oimdict])
 
         return oimset.difference(probes)
 
@@ -370,7 +370,7 @@ class ProbeReport(Reporter):
         rep_files = self.generate_report_file(oimdict)
 
         try:
-            for file in rep_files:
+            for _ in rep_files:
                 self.send_report()
         except Exception as e:
             self.logger.exception(e)
