@@ -219,7 +219,7 @@ class ProbeReport(Reporter):
             .filter(Q({"range": {"@received": {"gte": "{0}".format(startdateq)}}}))\
             .filter(Q({"term": {"ResourceType": "Batch"}}))
 
-        Bucket = s.aggs.bucket('group_probename', 'terms', field='ProbeName',
+        s.aggs.bucket('group_probename', 'terms', field='ProbeName',
                                size=1000000000)
 
         return s
