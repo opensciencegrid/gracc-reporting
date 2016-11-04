@@ -86,7 +86,7 @@ class OSGPerSiteReporter(Reporter):
         for vo in voset:
             for site, vos in results_dict.iteritems():
                 if vo not in vos:
-                    results_dict[site][vo] = ''
+                    results_dict[site][vo] = 0
 
         voset = sorted(voset)
 
@@ -109,7 +109,7 @@ class OSGPerSiteReporter(Reporter):
             # results_dict[site] = listnew
                         # for vo,walldur in vos.iteritems():
                 # print "\tVO: {0}, Wall Hours: {1}".format(vo, walldur)
-        self.header = self.header + self.voset
+        self.header = self.header + voset
         print results_dict
 
     def send_report(self, report_type="test"):
