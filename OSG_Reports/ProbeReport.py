@@ -224,6 +224,10 @@ class ProbeReport(Reporter):
 
         return s
 
+    def lastreportquery(self):
+        """Build a method that builds an ES query and then gets the stats like in testquery.json in this dir.  Want to grab the max date"""
+        pass
+
     def get_probenames(self):
         """Function that parses the results of the elasticsearch query and
         parses the ProbeName field for the FQDN of the probename
@@ -303,10 +307,14 @@ class ProbeReport(Reporter):
 
         return
 
-    def emailsubject(self):
+    def emailsubject(self, reminder=False):
         """Format the subject for our emails"""
-        return "{0} Reporting Account Failure dated {1}"\
-            .format(self.resource, datetime.date.today())
+        if reminder:
+            remindertext = 'REMINDER: '
+        else:
+            remindertext = ''
+        return "{0}{1} Reporting Account Failure dated {2}"\
+            .format(remindertext, self.resource, datetime.date.today())
 
     def emailtext(self):
         """Format the text for our emails"""
