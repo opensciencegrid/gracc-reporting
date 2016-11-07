@@ -350,7 +350,6 @@ class ProbeReport(Reporter):
                     'if your Gratia reporting is active.'.format(self.probe,
                                                                  self.resource,
                                                                  self.lastreport_date)
-        print text
         return text
 
     def send_report(self, report_type="test"):
