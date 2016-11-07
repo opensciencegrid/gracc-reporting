@@ -324,16 +324,14 @@ class ProbeReport(Reporter):
                     *self.dateparse(re.split('\t', line)[1].strip())[:3])
 
                 curprobe = re.split('\t', line)[0]
+                prev_reported.add(curprobe)
 
                 if proberepdate > cutoff:
                     self.newhistory.append(line)   # Append line to new history
-                    prev_reported.add(curprobe)
                     prev_reported_recent.add(curprobe)
                     self.logger.debug("{0} has been reported on in the past"
                                       " week.  Will not resend report".format(
                         curprobe))
-                else:
-                    prev_reported.add(curprobe)
 
             assert prev_reported.issuperset(prev_reported_recent)
             prev_reported_old = prev_reported.difference(prev_reported_recent)
