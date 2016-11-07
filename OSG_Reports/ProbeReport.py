@@ -207,6 +207,7 @@ class ProbeReport(Reporter):
         self.is_test = is_test
         self.historyfile = 'probereporthistory.log'
         self.newhistory = []
+        self.reminder = False
 
     def query(self):
         """Query that's sent to elasticsearch to get ProbeNames that have
@@ -314,6 +315,7 @@ class ProbeReport(Reporter):
 
         with open(self.historyfile, 'r') as h:
             prev_reported = set()
+            prev_reported_recent = set()
             for line in h:
                 # Cutoff is a week ago, probrepdate is last report date for
                 # a probe
@@ -321,21 +323,34 @@ class ProbeReport(Reporter):
                 proberepdate = datetime.date(
                     *self.dateparse(re.split('\t', line)[1].strip())[:3])
 
+                curprobe = re.split('\t', line)[0]
+
                 if proberepdate > cutoff:
                     self.newhistory.append(line)   # Append line to new history
-                    curprobe = re.split('\t', line)[0]
                     prev_reported.add(curprobe)
+                    prev_reported_recent.add(curprobe)
                     self.logger.debug("{0} has been reported on in the past"
                                       " week.  Will not resend report".format(
                         curprobe))
+                else:
+                    prev_reported.add(curprobe)
+
+            assert prev_reported.issuperset(prev_reported_recent)
+            prev_reported_old = prev_reported.difference(prev_reported_recent)
+            assert prev_reported.issuperset(prev_reported_old)
 
             self.lastreportinit()
-
-            for elt in missingprobes.difference(prev_reported):
-                # Only operate on probes that weren't previously reported
+            for elt in missingprobes.difference(prev_reported_recent):
+                # Only operate on probes that weren't reported in the last week
                 self.probe = elt
                 self.resource = oimdict[elt]
                 self.lastreport_date = self.lastreportquery()
+
+                if self.probe in prev_reported_old:
+                    self.reminder = True    # Reminder flag
+                else:
+                    self.reminder = False
+
                 with open(self.emailfile, 'w') as f:
                     # Generate email file
                     f.write(self.emailtext())
@@ -347,9 +362,9 @@ class ProbeReport(Reporter):
 
         return
 
-    def emailsubject(self, reminder=False):
+    def emailsubject(self):
         """Format the subject for our emails"""
-        if reminder:
+        if self.reminder:
             remindertext = 'REMINDER: '
         else:
             remindertext = ''
