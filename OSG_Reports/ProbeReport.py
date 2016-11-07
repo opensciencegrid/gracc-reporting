@@ -225,11 +225,24 @@ class ProbeReport(Reporter):
 
         return s
 
+    def lastreportinit(self):
+        """Reset the start/end times for the ES query and generate a new
+        index pattern based on those"""
+        self.start_time = datetime.date.today().replace(
+            day=1) - timedelta(days=1)
+        self.end_time = datetime.date.today()
+        self.indexpattern = self.indexpattern_generate()
+        return
+
     def lastreportquery(self):
         """Queries ES to find the last time that a probe reported in.
         Returns a string with either that time or a string indicating that
         it has been over a month.
         """
+        self.start_time = datetime.date.today().replace(day=1)-timedelta(days=1)
+        self.end_time = datetime.date.today()
+        self.indexpattern = self.indexpattern_generate()
+
         ls = Search(using=self.client, index=self.indexpattern)\
             .filter(Q({"range":{"@received":{"gte":"now-1M"}}}))\
             .filter(Q({"term":{"ResourceType":"Batch"}}))\
@@ -275,6 +288,7 @@ class ProbeReport(Reporter):
 
         t = resultset.to_dict()
         if self.verbose:
+            print self.indexpattern
             print json.dumps(t, sort_keys=True, indent=4)
             self.logger.debug(json.dumps(t, sort_keys=True))
         else:
@@ -314,6 +328,8 @@ class ProbeReport(Reporter):
                     self.logger.debug("{0} has been reported on in the past"
                                       " week.  Will not resend report".format(
                         curprobe))
+
+            self.lastreportinit()
 
             for elt in missingprobes.difference(prev_reported):
                 # Only operate on probes that weren't previously reported
