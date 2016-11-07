@@ -200,6 +200,7 @@ class ProbeReport(Reporter):
         except Exception as e:
             self.logger.exception(e)
         self.probematch = re.compile("(.+):(.+)")
+        self.estimeformat = re.compile("(.+)T(.+)\.\d+Z")
         self.emailfile = 'filetoemail.txt'
         self.probe, self.resource = None, None
         self.no_email = no_email
@@ -215,7 +216,7 @@ class ProbeReport(Reporter):
         """
         startdateq = self.dateparse_to_iso(self.start_time)
 
-        s = Search(using=self.client, index='gracc.osg.raw*')\
+        s = Search(using=self.client, index=self.indexpattern)\
             .filter(Q({"range": {"@received": {"gte": "{0}".format(startdateq)}}}))\
             .filter(Q({"term": {"ResourceType": "Batch"}}))
 
@@ -225,8 +226,30 @@ class ProbeReport(Reporter):
         return s
 
     def lastreportquery(self):
-        """Build a method that builds an ES query and then gets the stats like in testquery.json in this dir.  Want to grab the max date"""
-        pass
+        """Queries ES to find the last time that a probe reported in.
+        Returns a string with either that time or a string indicating that
+        it has been over a month.
+        """
+        ls = Search(using=self.client, index=self.indexpattern)\
+            .filter(Q({"range":{"@received":{"gte":"now-1M"}}}))\
+            .filter(Q({"term":{"ResourceType":"Batch"}}))\
+            .filter(Q({"term":{"ProbeName":"{0}".format(self.probe)}}))
+
+        ls.aggs.bucket('group_probename', 'terms', field='ProbeName',
+                               size=1000000000)\
+            .metric('datemax', 'max', field='@received')
+
+        aggs = ls.execute().aggregations
+        buckets = aggs.group_probename.buckets
+        if buckets:
+            try:
+                rawdate = buckets[0]['datemax'].value_as_string
+                return "{0} at {1}".format(*self.estimeformat.match(rawdate)
+                                                 .groups())
+            except Exception as e:
+                self.logger.exception(e)
+        else:
+            return "over 1 month ago"
 
     def get_probenames(self):
         """Function that parses the results of the elasticsearch query and
@@ -294,10 +317,11 @@ class ProbeReport(Reporter):
 
             for elt in missingprobes.difference(prev_reported):
                 # Only operate on probes that weren't previously reported
+                self.probe = elt
+                self.resource = oimdict[elt]
+                self.lastreport_date = self.lastreportquery()
                 with open(self.emailfile, 'w') as f:
                     # Generate email file
-                    self.probe = elt
-                    self.resource = oimdict[elt]
                     f.write(self.emailtext())
 
                 # Append line to new history
@@ -319,11 +343,14 @@ class ProbeReport(Reporter):
     def emailtext(self):
         """Format the text for our emails"""
         text= 'The probe {0} installed at {1} has not reported'\
-                    ' GRACC records to OSG for the last two days. If this '\
+                    ' GRACC records to OSG for the last two days. The last ' \
+                    'date we received a record from {0} was {2}.  If this '\
                     'is due to maintenance or a retirement of this '\
                     'node, please let us know.  If not, please check to see '\
                     'if your Gratia reporting is active.'.format(self.probe,
-                                                                 self.resource)
+                                                                 self.resource,
+                                                                 self.lastreport_date)
+        print text
         return text
 
     def send_report(self, report_type="test"):
