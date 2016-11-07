@@ -16,7 +16,8 @@ from TimeUtils import TimeUtils
 class Reporter(TimeUtils):
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, config, start, end=None, verbose=False, raw=True):
+    def __init__(self, config, start, end=None, verbose=False, raw=True,
+                 template=False, is_test=False, no_email=False):
         """Constructor for OSGReporter
         Args:
                 config(Configuration) - configuration file
@@ -30,16 +31,20 @@ class Reporter(TimeUtils):
         if config:
             self.config = config.config
         self.start_time = start
-        self.verbose = verbose
         self.end_time = end
+        self.verbose = verbose
+        self.no_email = no_email
+        self.is_test = is_test
         self.epochrange = None
-        self.indexpattern = indexpattern_generate(self.start_time,
-                                                  self.end_time, raw)
+        self.indexpattern = self.indexpattern_generate(raw)
         self.logfile = ('reports.log')  # Can be overwritten in __init__ method
                                         # in subclasses
 
     def format_report(self):
         pass
+
+    def indexpattern_generate(self, raw=True):
+        return indexpattern_generate(self.start_time, self.end_time, raw)
 
     @staticmethod
     def establish_client():
