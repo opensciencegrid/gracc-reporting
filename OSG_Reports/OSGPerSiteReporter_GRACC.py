@@ -47,6 +47,8 @@ class OSGPerSiteReporter(Reporter):
             self.client = self.establish_client()
         except Exception as e:
             self.logger.exception(e)
+        self.title = 'VOs Usage of OSG Sites: {0} - {1}'.format(
+            self.start_time, self.end_time)
 
     def query(self):
         startdate = self.dateparse_to_iso(self.start_time)
@@ -56,9 +58,9 @@ class OSGPerSiteReporter(Reporter):
             .filter(Q({"range": {"@received": {"gte": "{0}".format(startdate), "lt":"{0}".format(enddate)}}}))\
             .filter('term', ResourceType="Batch")
 
-        s.aggs.bucket('site_bucket', 'terms', field='Site', size=1000000000)\
-            .bucket('vo_bucket', 'terms', field='VOName', size=1000000000)\
-            .metric('sum_wall_dur', 'sum', field='WallDuration')
+        s.aggs.bucket('vo_bucket', 'terms', field='VOName', size=1000000000)\
+              .bucket('site_bucket', 'terms', field='Site', size=1000000000)\
+              .metric('sum_wall_dur', 'sum', field='WallDuration')
 
         return s
 
@@ -66,12 +68,12 @@ class OSGPerSiteReporter(Reporter):
         qresults = self.query().execute()
         results = qresults.aggregations
 
-        for site_bucket in results.site_bucket.buckets:
-            site = site_bucket['key']
-            for vo_bucket in site_bucket.vo_bucket.buckets:
-                vo = vo_bucket['key']
-                wallsec = vo_bucket['sum_wall_dur']['value']
-                yield [site, vo, wallsec]
+        for vo_bucket in results.vo_bucket.buckets:
+            vo = vo_bucket['key']
+            for site_bucket in vo_bucket.site_bucket.buckets:
+                site = site_bucket['key']
+                wallsec = site_bucket['sum_wall_dur']['value']
+                yield [vo, site, wallsec]
 
     def generate_report_file(self):
         results_dict = {}
@@ -81,39 +83,46 @@ class OSGPerSiteReporter(Reporter):
             results_dict[item[0]][item[1].upper()] = \
                 int(round(item[2]/3600.,0))
 
-        voset = set([vo for vos in results_dict.itervalues() for vo in vos])
+        siteset = set([site for sites in results_dict.itervalues() for site in sites])
 
-        for vo in voset:
-            for site, vos in results_dict.iteritems():
-                if vo not in vos:
-                    results_dict[site][vo] = 0
+        for site in siteset:
+            for vo, sites in results_dict.iteritems():
+                if site not in sites:
+                    results_dict[vo][site] = 0
 
-        voset = sorted(voset)
+        siteset = sorted(siteset)
 
-        for site, vos in results_dict.iteritems():
-            print "Site: {0}".format(site)
-            for vo in voset:
-                print "\tVO: {0}, Wall Hours: {1}".format(vo, vos[vo])
+        for vo, sites in results_dict.iteritems():
+            print "VO: {0}".format(vo)
+            for site in siteset:
+                print "\tSite: {0}, Wall Hours: {1}".format(site, sites[site])
 
-        for site, vos in results_dict.iteritems():
-            print "Site: {0}".format(site)
+        for vo, sites in results_dict.iteritems():
+            # print "Site: {0}".format(site)
             listnew = []
-            results_dict[site] = [vos[vo] for vo in voset]
-            results_dict[site].insert(0,sum(results_dict[site]))
+            results_dict[vo] = [sites[site] for site in siteset]
+            results_dict[vo].insert(0,sum(results_dict[vo]))
             # Need to calculate total, put it in the beginning
-            print voset
-            print results_dict[site]
+            # print siteset
+            # print results_dict[vo]
             # for vo in voset:
             #     print "\tVO: {0}, Wall Hours: {1}".format(vo, vos[vo])
             #     listnew.append(vos[vo])
             # results_dict[site] = listnew
                         # for vo,walldur in vos.iteritems():
                 # print "\tVO: {0}, Wall Hours: {1}".format(vo, walldur)
-        self.header = self.header + voset
-        print results_dict
 
-    def send_report(self, report_type="test"):
-        pass
+        volist = sorted(list(results_dict.keys()))
+
+        results_dict['Site'] = [site for site in siteset]
+        results_dict['Total'] = [0 for site in siteset]     # for now
+
+        self.header = self.header + volist
+        # print results_dict
+        return results_dict
+
+    def format_report(self):
+        return self.generate_report_file()
 
 
 def main():
@@ -131,8 +140,9 @@ def main():
                               is_test=args.is_test,
                               no_email=args.no_email)
 
-        osgreport.generate_report_file()
-
+        # osgreport.generate_report_file()
+        # print osgreport.format_report()
+        osgreport.send_report("siteusage")
         print 'OSG Per Site Report Execution finished'
     except Exception as e:
         with open(logfile, 'a') as f:

@@ -78,7 +78,6 @@ class Reporter(TimeUtils):
         """Method to generate the report class"""
         pass
 
-    @abc.abstractmethod
     def send_report(self, report_type="test"):
         """Send reports as ascii, csv, html attachements """
         text = {}
