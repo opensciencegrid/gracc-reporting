@@ -69,6 +69,7 @@ class JobSuccessRateReporter(Reporter):
         self.text = ''
         self.fn = "{0}-jobrate.{1}".format(self.vo.lower(),
                                     self.start_time.replace("/", "-"))
+        self.isvoconfig = self.config.has_section(self.vo.lower())
 
     def query(self, client):
         """Method that actually queries elasticsearch"""
@@ -196,6 +197,11 @@ class JobSuccessRateReporter(Reporter):
         job_table = ""
 
         job_table_cl_count = 0
+        try:
+            num_clusters = int(self.config.get(self.vo.lower(), 'num_clusters'))
+        except:
+            num_clusters = 100
+
         # Look in clusters, figure out whether job failed or succeded, categorize appropriately,
         # and generate HTML line for total jobs failed by cluster
         for cid, cdict in self.clusters.iteritems():
@@ -209,7 +215,7 @@ class JobSuccessRateReporter(Reporter):
                 failures.append(job)
             if total_jobs_failed == 0:
                 continue
-            if job_table_cl_count < 100:  # Limit number of clusters shown in report to 100.
+            if job_table_cl_count < num_clusters:  # Limit number of clusters shown in report based on config file
                 job_table += '\n<tr><td align = "left">{0}</td>' \
                              '<td align = "right">{1}</td>' \
                              '<td align = "right">{2}</td>' \
@@ -221,36 +227,45 @@ class JobSuccessRateReporter(Reporter):
                                                 total_jobs,
                                                 total_jobs_failed)
                 # Generate HTML line for each failed job
+                jcount = 0
+                try:
+                    jobs_per_cluster = int(self.config.get(self.vo.lower(), 'jobs_per_cluster'))
+                except:
+                    jobs_per_cluster = 1e6
                 for job in failures:
-                    # Generate link for each job
-                    job_link_parts = [elt for elt in
-                                      self.get_job_parts_from_jobid(job.jobid)]
-                    timestamps_exact = self.get_epoch_stamps_for_grafana(
-                        start_time=job.start_time, end_time=job.end_time)
-                    padding = 300000        # milliseconds
-                    timestamps_padded = (timestamps_exact[0]-padding,
-                                         timestamps_exact[1]+padding)
-                    job_link_parts.extend(timestamps_padded)
-                    job_link = 'https://fifemon.fnal.gov/monitor/dashboard/db' \
-                               '/job-cluster-summary?var-cluster={0}' \
-                               '&var-schedd={1}&from={2}&to={3}'.format(
-                        *job_link_parts)
-                    job_html = '<a href="{0}">{1}</a>'.format(job_link,
-                                                              job.jobid)
+                    if jcount < jobs_per_cluster:
+                        # Generate link for each job for a certain number of jobs
+                        job_link_parts = [elt for elt in
+                                          self.get_job_parts_from_jobid(job.jobid)]
+                        timestamps_exact = self.get_epoch_stamps_for_grafana(
+                            start_time=job.start_time, end_time=job.end_time)
+                        padding = 300000        # milliseconds
+                        timestamps_padded = (timestamps_exact[0]-padding,
+                                             timestamps_exact[1]+padding)
+                        job_link_parts.extend(timestamps_padded)
+                        job_link = 'https://fifemon.fnal.gov/monitor/dashboard/db' \
+                                   '/job-cluster-summary?var-cluster={0}' \
+                                   '&var-schedd={1}&from={2}&to={3}'.format(
+                            *job_link_parts)
+                        job_html = '<a href="{0}">{1}</a>'.format(job_link,
+                                                                  job.jobid)
 
-                    job_table += '\n<tr><td></td><td></td><td></td><td></td>' \
-                                 '<td align = "left">{0}</td>'\
-                                 '<td align = "left">{1}</td>' \
-                                 '<td align = "left">{2}</td>' \
-                                 '<td align = "right">{3}</td>'\
-                                 '<td align = "right">{4}</td>' \
-                                 '<td align = "right">{5}</td></tr>'.format(
-                        job_html,
-                        job.start_time,
-                        job.end_time,
-                        job.site,
-                        job.host,
-                        job.exit_code)
+                        job_table += '\n<tr><td></td><td></td><td></td><td></td>' \
+                                     '<td align = "left">{0}</td>'\
+                                     '<td align = "left">{1}</td>' \
+                                     '<td align = "left">{2}</td>' \
+                                     '<td align = "right">{3}</td>'\
+                                     '<td align = "right">{4}</td>' \
+                                     '<td align = "right">{5}</td></tr>'.format(
+                            job_html,
+                            job.start_time,
+                            job.end_time,
+                            job.site,
+                            job.host,
+                            job.exit_code)
+                        jcount += 1
+                    else:
+                        break
                 job_table_cl_count += 1
 
         total_jobs = 0
@@ -330,12 +345,20 @@ class JobSuccessRateReporter(Reporter):
             divopen = ''
             divclose = ''
 
+        if self.isvoconfig:
+            numclusterheader = 'Failed Job Details ({0} clusters shown here,' \
+                         ' {1} per cluster)'.format(num_clusters,
+                                                    jobs_per_cluster)
+        else:
+            numclusterheader = 'Failed Job Details (100 clusters shown here)'
+
         # Grab HTML template, replace variables shown
         self.text = "".join(open(self.template).readlines())
         self.text = self.text.replace("$START", self.start_time)
         self.text = self.text.replace("$END", self.end_time)
         self.text = self.text.replace("$TABLE_SUMMARY", table_summary)
         self.text = self.text.replace("$DIVOPEN", divopen)
+        self.text = self.text.replace("$NUMCLUSTERHEADER", numclusterheader)
         self.text = self.text.replace("$TABLE_JOBS", job_table)
         self.text = self.text.replace("$DIVCLOSE", divclose)
         self.text = self.text.replace("$TABLE", table)
