@@ -69,12 +69,11 @@ class JobSuccessRateReporter(Reporter):
         self.text = ''
         self.fn = "{0}-jobrate.{1}".format(self.vo.lower(),
                                     self.start_time.replace("/", "-"))
-        self.isvoconfig = self.config.has_section(self.vo.lower())
 
     def query(self, client):
         """Method that actually queries elasticsearch"""
         # Set up our search parameters
-        voq = self.config.get("query", "{0}_voname".format(self.vo.lower()))
+        voq = self.config.get(self.vo.lower(), "voname".format(self.vo.lower()))
         productioncheck = '*Role=Production*'
 
         starttimeq = self.dateparse_to_iso(self.start_time)
@@ -345,7 +344,7 @@ class JobSuccessRateReporter(Reporter):
             divopen = ''
             divclose = ''
 
-        if self.isvoconfig:
+        if jobs_per_cluster < 1000:
             numclusterheader = 'Failed Job Details ({0} clusters shown here,' \
                          ' {1} per cluster)'.format(num_clusters,
                                                     jobs_per_cluster)
