@@ -196,6 +196,7 @@ class JobSuccessRateReporter(Reporter):
         job_table = ""
 
         job_table_cl_count = 0
+        num_clusters = int(self.config.get(self.vo.lower(), 'num_clusters'))
         # Look in clusters, figure out whether job failed or succeded, categorize appropriately,
         # and generate HTML line for total jobs failed by cluster
         for cid, cdict in self.clusters.iteritems():
@@ -209,7 +210,7 @@ class JobSuccessRateReporter(Reporter):
                 failures.append(job)
             if total_jobs_failed == 0:
                 continue
-            if job_table_cl_count < 100:  # Limit number of clusters shown in report to 100.
+            while job_table_cl_count < num_clusters:  # Limit number of clusters shown in report based on config file
                 job_table += '\n<tr><td align = "left">{0}</td>' \
                              '<td align = "right">{1}</td>' \
                              '<td align = "right">{2}</td>' \
@@ -221,36 +222,41 @@ class JobSuccessRateReporter(Reporter):
                                                 total_jobs,
                                                 total_jobs_failed)
                 # Generate HTML line for each failed job
+                jcount = 0
+                jobs_per_cluster = int(self.config.get(self.vo.lower(), 'jobs_per_cluster'))
                 for job in failures:
-                    # Generate link for each job
-                    job_link_parts = [elt for elt in
-                                      self.get_job_parts_from_jobid(job.jobid)]
-                    timestamps_exact = self.get_epoch_stamps_for_grafana(
-                        start_time=job.start_time, end_time=job.end_time)
-                    padding = 300000        # milliseconds
-                    timestamps_padded = (timestamps_exact[0]-padding,
-                                         timestamps_exact[1]+padding)
-                    job_link_parts.extend(timestamps_padded)
-                    job_link = 'https://fifemon.fnal.gov/monitor/dashboard/db' \
-                               '/job-cluster-summary?var-cluster={0}' \
-                               '&var-schedd={1}&from={2}&to={3}'.format(
-                        *job_link_parts)
-                    job_html = '<a href="{0}">{1}</a>'.format(job_link,
-                                                              job.jobid)
+                    while jcount < jobs_per_cluster:
+                        # Generate link for each job for a certain number of jobs
+                        job_link_parts = [elt for elt in
+                                          self.get_job_parts_from_jobid(job.jobid)]
+                        timestamps_exact = self.get_epoch_stamps_for_grafana(
+                            start_time=job.start_time, end_time=job.end_time)
+                        padding = 300000        # milliseconds
+                        timestamps_padded = (timestamps_exact[0]-padding,
+                                             timestamps_exact[1]+padding)
+                        job_link_parts.extend(timestamps_padded)
+                        job_link = 'https://fifemon.fnal.gov/monitor/dashboard/db' \
+                                   '/job-cluster-summary?var-cluster={0}' \
+                                   '&var-schedd={1}&from={2}&to={3}'.format(
+                            *job_link_parts)
+                        job_html = '<a href="{0}">{1}</a>'.format(job_link,
+                                                                  job.jobid)
 
-                    job_table += '\n<tr><td></td><td></td><td></td><td></td>' \
-                                 '<td align = "left">{0}</td>'\
-                                 '<td align = "left">{1}</td>' \
-                                 '<td align = "left">{2}</td>' \
-                                 '<td align = "right">{3}</td>'\
-                                 '<td align = "right">{4}</td>' \
-                                 '<td align = "right">{5}</td></tr>'.format(
-                        job_html,
-                        job.start_time,
-                        job.end_time,
-                        job.site,
-                        job.host,
-                        job.exit_code)
+                        job_table += '\n<tr><td></td><td></td><td></td><td></td>' \
+                                     '<td align = "left">{0}</td>'\
+                                     '<td align = "left">{1}</td>' \
+                                     '<td align = "left">{2}</td>' \
+                                     '<td align = "right">{3}</td>'\
+                                     '<td align = "right">{4}</td>' \
+                                     '<td align = "right">{5}</td></tr>'.format(
+                            job_html,
+                            job.start_time,
+                            job.end_time,
+                            job.site,
+                            job.host,
+                            job.exit_code)
+                        jcount += 1
+
                 job_table_cl_count += 1
 
         total_jobs = 0
