@@ -69,6 +69,7 @@ class JobSuccessRateReporter(Reporter):
         self.text = ''
         self.fn = "{0}-jobrate.{1}".format(self.vo.lower(),
                                     self.start_time.replace("/", "-"))
+        self.isvoconfig = self.config.has_section(self.vo.lower())
 
     def query(self, client):
         """Method that actually queries elasticsearch"""
@@ -196,7 +197,11 @@ class JobSuccessRateReporter(Reporter):
         job_table = ""
 
         job_table_cl_count = 0
-        num_clusters = int(self.config.get(self.vo.lower(), 'num_clusters'))
+        try:
+            num_clusters = int(self.config.get(self.vo.lower(), 'num_clusters'))
+        except:
+            num_clusters = 100
+
         # Look in clusters, figure out whether job failed or succeded, categorize appropriately,
         # and generate HTML line for total jobs failed by cluster
         for cid, cdict in self.clusters.iteritems():
@@ -210,7 +215,7 @@ class JobSuccessRateReporter(Reporter):
                 failures.append(job)
             if total_jobs_failed == 0:
                 continue
-            while job_table_cl_count < num_clusters:  # Limit number of clusters shown in report based on config file
+            if job_table_cl_count < num_clusters:  # Limit number of clusters shown in report based on config file
                 job_table += '\n<tr><td align = "left">{0}</td>' \
                              '<td align = "right">{1}</td>' \
                              '<td align = "right">{2}</td>' \
@@ -223,9 +228,12 @@ class JobSuccessRateReporter(Reporter):
                                                 total_jobs_failed)
                 # Generate HTML line for each failed job
                 jcount = 0
-                jobs_per_cluster = int(self.config.get(self.vo.lower(), 'jobs_per_cluster'))
+                try:
+                    jobs_per_cluster = int(self.config.get(self.vo.lower(), 'jobs_per_cluster'))
+                except:
+                    jobs_per_cluster = 1e6
                 for job in failures:
-                    while jcount < jobs_per_cluster:
+                    if jcount < jobs_per_cluster:
                         # Generate link for each job for a certain number of jobs
                         job_link_parts = [elt for elt in
                                           self.get_job_parts_from_jobid(job.jobid)]
@@ -256,7 +264,8 @@ class JobSuccessRateReporter(Reporter):
                             job.host,
                             job.exit_code)
                         jcount += 1
-
+                    else:
+                        break
                 job_table_cl_count += 1
 
         total_jobs = 0
@@ -336,12 +345,20 @@ class JobSuccessRateReporter(Reporter):
             divopen = ''
             divclose = ''
 
+        if self.isvoconfig:
+            numclusterheader = 'Failed Job Details ({0} clusters shown here,' \
+                         ' {1} per cluster)'.format(num_clusters,
+                                                    jobs_per_cluster)
+        else:
+            numclusterheader = 'Failed Job Details (100 clusters shown here)'
+
         # Grab HTML template, replace variables shown
         self.text = "".join(open(self.template).readlines())
         self.text = self.text.replace("$START", self.start_time)
         self.text = self.text.replace("$END", self.end_time)
         self.text = self.text.replace("$TABLE_SUMMARY", table_summary)
         self.text = self.text.replace("$DIVOPEN", divopen)
+        self.text = self.text.replace("$NUMCLUSTERHEADER", numclusterheader)
         self.text = self.text.replace("$TABLE_JOBS", job_table)
         self.text = self.text.replace("$DIVCLOSE", divclose)
         self.text = self.text.replace("$TABLE", table)
