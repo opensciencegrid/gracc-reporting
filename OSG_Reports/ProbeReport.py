@@ -271,12 +271,12 @@ class ProbeReport(Reporter):
 
         Returns a set of these probenames
         """
-        probelist = []
-        for proberecord in self.results.group_probename.buckets:
-            probename = self.probematch.match(proberecord.key)
-            if probename:
-                probelist.append(probename.group(2).lower())
-        return set(probelist)
+        proberecords = (rec for rec in self.results.group_probename.buckets)
+        probenames = (self.probematch.match(proberecord.key)
+                      for proberecord in proberecords)
+        probes = (probename.group(2).lower()
+                  for probename in probenames if probename)
+        return set(probes)
 
     def generate(self, oimdict):
         """Higher-level method that calls the lower-level functions to
