@@ -301,7 +301,7 @@ class ProbeReport(Reporter):
 
         probes = self.get_probenames()
         self.logger.info("Successfully analyzed ES data vs. OIM data")
-        oimset = set([key for key in oimdict])
+        oimset = set((key for key in oimdict))
 
         return oimset.difference(probes)
 
@@ -312,6 +312,7 @@ class ProbeReport(Reporter):
 
         Yields if there are emails to send, returns otherwise"""
         missingprobes = self.generate(oimdict)
+        cutoff = datetime.date.today() - datetime.timedelta(days=7)
 
         with open(self.historyfile, 'r') as h:
             prev_reported = set()
@@ -319,7 +320,6 @@ class ProbeReport(Reporter):
             for line in h:
                 # Cutoff is a week ago, probrepdate is last report date for
                 # a probe
-                cutoff = datetime.date.today() - datetime.timedelta(days=7)
                 proberepdate = datetime.date(
                     *self.dateparse(re.split('\t', line)[1].strip())[:3])
 
