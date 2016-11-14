@@ -3,7 +3,7 @@
 import sys
 import os
 import re
-import logging
+import ast
 from time import sleep
 import traceback
 import inspect
@@ -139,7 +139,6 @@ class JobSuccessRateReporter(Reporter):
                     host=realhost,
                     exitcode=hit['Resource_ExitCode']
                 )
-                # results.append(outstr)
                 if self.verbose:
                     print >> sys.stdout, outstr
                 yield outstr
@@ -147,7 +146,6 @@ class JobSuccessRateReporter(Reporter):
                 # We want to ignore records where one of the above keys isn't listed in the ES document.
                 # This is consistent with how the old MySQL report behaved.
                 pass
-        # return results
 
 
     def add_to_clusters(self):
@@ -193,13 +191,6 @@ class JobSuccessRateReporter(Reporter):
             add_clusters.send(line)
             resultscount += 1
 
-        # results = self.generate_result_array(resultset)  # Format our resultset into an array we use later
-
-        # if len(results) == 1 and len(results[0].strip()) == 0:
-        #     self.logger.info("Nothing to report")
-        #     return
-
-        # self.add_to_clusters(results)  # Parse our results and create clusters objects for each
         return
 
     def generate_report_file(self):
@@ -210,6 +201,11 @@ class JobSuccessRateReporter(Reporter):
             return
         table_summary = ""
         job_table = ""
+
+        try:
+            self.limit_sites = ast.literal_eval(self.config.get(self.volower(), 'limit_sites'))
+        except:
+            self.limit_sites = False
 
         job_table_cl_count = 0
         try:
@@ -285,6 +281,7 @@ class JobSuccessRateReporter(Reporter):
 
         total_jobs = 0
 
+        site_failed_dict = {}
         # Compile count of failed jobs, calculate job success rate
         for key, jobs in self.run.jobs.items():
             failed = 0
@@ -308,24 +305,60 @@ class JobSuccessRateReporter(Reporter):
                                                                     total,
                                                                     failed,
                                                                     round((total - failed) * 100. / total, 1))
-            table += '\n<tr><td align = "left">{0}</td>' \
-                     '<td align = "right">{1}</td>' \
-                     '<td align = "right">{2}</td>'\
-                     '<td align = "right">{3}</td>' \
-                     '<td></td><td></td><td></td></tr>'.format(
-                key,
-                total,
-                failed,
-                round((total - failed) * 100. / total, 1))
+            site_failed_dict[key] = {}
+            site_failed_dict[key]['FailedJobs'] = failed
+            if 'HTMLLines' not in site_failed_dict[key]:
+                site_failed_dict[key]['HTMLLines'] = \
+                    '\n<tr><td align = "left">{0}</td>' \
+                         '<td align = "right">{1}</td>' \
+                         '<td align = "right">{2}</td>'\
+                         '<td align = "right">{3}</td>' \
+                         '<td></td><td></td><td></td></tr>'.format(
+                    key,
+                    total,
+                    failed,
+                    round((total - failed) * 100. / total, 1))
+
+            # table += '\n<tr><td align = "left">{0}</td>' \
+            #          '<td align = "right">{1}</td>' \
+            #          '<td align = "right">{2}</td>'\
+            #          '<td align = "right">{3}</td>' \
+            #          '<td></td><td></td><td></td></tr>'.format(
+            #     key,
+            #     total,
+            #     failed,
+            #     round((total - failed) * 100. / total, 1))
             for host, errors in failures.items():
                 for code, count in errors.items():
-                    table += '\n<tr><td></td><td></td><td></td><td></td>' \
+                    site_failed_dict[key]['HTMLLines'] += \
+                    '\n<tr><td></td><td></td><td></td><td></td>' \
                              '<td align = "left">{0}</td>'\
                              '<td align = "right">{1}</td>' \
                              '<td align = "right">{2}</td></tr>'.format(
                         host,
                         code,
                         count)
+                    # table += '\n<tr><td></td><td></td><td></td><td></td>' \
+                    #          '<td align = "left">{0}</td>' \
+                    #          '<td align = "right">{1}</td>' \
+                    #          '<td align = "right">{2}</td></tr>'.format(
+                    #     host,
+                    #     code,
+                    #     count)
+
+        faildict = {key: item['FailedJobs']
+                    for key, item in site_failed_dict.iteritems()}
+
+        if self.limit_sites:
+            try:
+                # Take top ten failed nodes in descending order
+                failkeys = (site[0] for site in sorted(faildict.iteritems())[:-11:-1])
+            except:
+                failkeys = (site[0] for site in sorted(faildict.iteritems())[::-1])
+        else:
+            failkeys = (site[0] for site in sorted(faildict.iteritems())[::-1])
+
+        table += ''.join(str(site_failed_dict[site]['HTMLLines']) for site in failkeys)
 
         table += '\n<tr><td align = "left">Total</td>' \
                  '<td align = "right">{0}</td>' \
