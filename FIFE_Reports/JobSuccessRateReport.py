@@ -194,7 +194,7 @@ class JobSuccessRateReporter(Reporter):
         return
 
     def generate_report_file(self):
-        table = ""
+        """This is the function that creates the report HTML file"""
         total_failed = 0
         if len(self.run.jobs) == 0:
             self.no_email = True
@@ -213,8 +213,9 @@ class JobSuccessRateReporter(Reporter):
         except:
             num_clusters = 100
 
-        # Look in clusters, figure out whether job failed or succeded, categorize appropriately,
-        # and generate HTML line for total jobs failed by cluster
+        # Look in clusters, figure out whether job failed or succeeded,
+        # categorize appropriately, and generate HTML line for total jobs
+        # failed by cluster
         for cid, cdict in self.clusters.iteritems():
             total_jobs = len(cdict['jobs'])
             failures = []
@@ -314,20 +315,11 @@ class JobSuccessRateReporter(Reporter):
                          '<td align = "right">{2}</td>'\
                          '<td align = "right">{3}</td>' \
                          '<td></td><td></td><td></td></tr>'.format(
-                    key,
-                    total,
-                    failed,
-                    round((total - failed) * 100. / total, 1))
+                        key,
+                        total,
+                        failed,
+                        round((total - failed) * 100. / total, 1))
 
-            # table += '\n<tr><td align = "left">{0}</td>' \
-            #          '<td align = "right">{1}</td>' \
-            #          '<td align = "right">{2}</td>'\
-            #          '<td align = "right">{3}</td>' \
-            #          '<td></td><td></td><td></td></tr>'.format(
-            #     key,
-            #     total,
-            #     failed,
-            #     round((total - failed) * 100. / total, 1))
             for host, errors in failures.items():
                 for code, count in errors.items():
                     site_failed_dict[key]['HTMLLines'] += \
@@ -338,27 +330,20 @@ class JobSuccessRateReporter(Reporter):
                         host,
                         code,
                         count)
-                    # table += '\n<tr><td></td><td></td><td></td><td></td>' \
-                    #          '<td align = "left">{0}</td>' \
-                    #          '<td align = "right">{1}</td>' \
-                    #          '<td align = "right">{2}</td></tr>'.format(
-                    #     host,
-                    #     code,
-                    #     count)
 
-        faildict = {key: item['FailedJobs']
-                    for key, item in site_failed_dict.iteritems()}
+        faildict = {key: item['FailedJobs'] for key, item in site_failed_dict.iteritems()}
 
         if self.limit_sites:
             try:
-                # Take top ten failed nodes in descending order
+                # Take top ten failed sites in descending order
                 failkeys = (site[0] for site in sorted(faildict.iteritems())[:-11:-1])
-            except:
+            except IndexError:
+                # Take all sites in descending order
                 failkeys = (site[0] for site in sorted(faildict.iteritems())[::-1])
         else:
             failkeys = (site[0] for site in sorted(faildict.iteritems())[::-1])
 
-        table += ''.join(str(site_failed_dict[site]['HTMLLines']) for site in failkeys)
+        table = ''.join(str(site_failed_dict[site]['HTMLLines']) for site in failkeys)
 
         table += '\n<tr><td align = "left">Total</td>' \
                  '<td align = "right">{0}</td>' \
