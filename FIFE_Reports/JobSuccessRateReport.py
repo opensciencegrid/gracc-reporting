@@ -103,8 +103,8 @@ class JobSuccessRateReporter(Reporter):
         return self.jobpattern.match(jobid).groups()
 
     def generate_result_array(self, resultset):
-        # Compile results into array
-        # results = []
+        """Generator.  Compiles results from resultset into array.  Yields each
+        line."""
         for hit in resultset.scan():
             try:
                 # Parse userid
@@ -147,9 +147,10 @@ class JobSuccessRateReporter(Reporter):
                 # This is consistent with how the old MySQL report behaved.
                 pass
 
-
     def add_to_clusters(self):
-        # Grab each line in results, instantiate Job class for each one, and add to clusters
+        """Generator function/coroutine.  For each line fed in, will
+        instantiate Job class for each one, add to Jobs class dictionary,
+        and add to clusters.  Then waits for next line"""
         while True:
             line = yield
             tmp = line.split('\t')
@@ -171,6 +172,9 @@ class JobSuccessRateReporter(Reporter):
                 self.clusters[clusterid]['jobs'].append(job)
 
     def generate(self):
+        """Main driver of activity in report.  Runs the ES query, checks for
+        success, and then runs routines to generate the results lines, parse
+        those lines to add to Job, Jobs, and clusters structures."""
         client = self.establish_client()
         resultset = self.query(client)  # Generate Search object for ES
         response = resultset.execute()  # Execute that Search
@@ -180,6 +184,7 @@ class JobSuccessRateReporter(Reporter):
             self.logger.exception('Error accessing ElasticSearch')
             raise Exception('Error accessing ElasticSearch')
 
+        # Add all of our results to the clusters dictionary
         resultscount = 0
         add_clusters = self.add_to_clusters()
         add_clusters.send(None)
@@ -406,6 +411,7 @@ class JobSuccessRateReporter(Reporter):
         return
 
     def send_report(self):
+        """Method to send emails of report file to intended recipients."""
         if self.no_email:
             self.logger.info("Not sending email")
             return
@@ -431,6 +437,12 @@ class JobSuccessRateReporter(Reporter):
         self.logger.info("Sent Report for {0}".format(self.vo))
         return
 
+    def run_report(self):
+        """Method that runs all of the applicable actions in this class."""
+        self.generate()
+        self.generate_report_file()
+        self.send_report()
+
 
 if __name__ == "__main__":
     opts, args = Reporter.parse_opts()
@@ -446,9 +458,7 @@ if __name__ == "__main__":
                                    opts.is_test, 
                                    opts.verbose,
                                    opts.no_email)
-        r.generate()
-        r.generate_report_file()
-        r.send_report()
+        r.run_report()
     except Exception as e:
         with open(logfile, 'a') as f:
             f.write(traceback.format_exc())
