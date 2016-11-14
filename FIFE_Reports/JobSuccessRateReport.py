@@ -104,7 +104,7 @@ class JobSuccessRateReporter(Reporter):
 
     def generate_result_array(self, resultset):
         # Compile results into array
-        results = []
+        # results = []
         for hit in resultset.scan():
             try:
                 # Parse userid
@@ -139,18 +139,21 @@ class JobSuccessRateReporter(Reporter):
                     host=realhost,
                     exitcode=hit['Resource_ExitCode']
                 )
-                results.append(outstr)
+                # results.append(outstr)
                 if self.verbose:
                     print >> sys.stdout, outstr
+                yield outstr
             except KeyError:
                 # We want to ignore records where one of the above keys isn't listed in the ES document.
                 # This is consistent with how the old MySQL report behaved.
                 pass
-        return results
+        # return results
 
-    def add_to_clusters(self, results):
+
+    def add_to_clusters(self):
         # Grab each line in results, instantiate Job class for each one, and add to clusters
-        for line in results:
+        while True:
+            line = yield
             tmp = line.split('\t')
             start_time = tmp[0].strip().replace('T', ' ').replace('Z', '')
             end_time = tmp[1].strip().replace('T', ' ').replace('Z', '')
@@ -158,32 +161,45 @@ class JobSuccessRateReporter(Reporter):
             jobid = tmp[3].strip()
             site = tmp[4].strip()
             if site == "NULL":
-                continue
-            host = tmp[5].strip()
-            status = int(tmp[6].strip())
-            job = Job(end_time, start_time, jobid, site, host, status)
-            self.run.add_job(site, job)
-            clusterid = jobid.split(".")[0]
-            if clusterid not in self.clusters:
-                self.clusters[clusterid] = {'userid': userid, 'jobs': []}
-            self.clusters[clusterid]['jobs'].append(job)
-        return
+                pass
+            else:
+                host = tmp[5].strip()
+                status = int(tmp[6].strip())
+                job = Job(end_time, start_time, jobid, site, host, status)
+                self.run.add_job(site, job)
+                clusterid = jobid.split(".")[0]
+                if clusterid not in self.clusters:
+                    self.clusters[clusterid] = {'userid': userid, 'jobs': []}
+                self.clusters[clusterid]['jobs'].append(job)
 
     def generate(self):
         client = self.establish_client()
         resultset = self.query(client)  # Generate Search object for ES
         response = resultset.execute()  # Execute that Search
         return_code_success = response.success()  # True if the elasticsearch query completed without errors
-        results = self.generate_result_array(resultset)  # Format our resultset into an array we use later
 
         if not return_code_success:
             self.logger.exception('Error accessing ElasticSearch')
             raise Exception('Error accessing ElasticSearch')
-        if len(results) == 1 and len(results[0].strip()) == 0:
-            self.logger.info("Nothing to report")
-            return
 
-        self.add_to_clusters(results)  # Parse our results and create clusters objects for each
+        resultscount = 0
+        add_clusters = self.add_to_clusters()
+        add_clusters.send(None)
+        for line in self.generate_result_array(resultset):
+            if resultscount == 0:
+                if len(line.strip()) == 0:
+                    self.logger.info("Nothing to report")
+                    break
+            add_clusters.send(line)
+            resultscount += 1
+
+        # results = self.generate_result_array(resultset)  # Format our resultset into an array we use later
+
+        # if len(results) == 1 and len(results[0].strip()) == 0:
+        #     self.logger.info("Nothing to report")
+        #     return
+
+        # self.add_to_clusters(results)  # Parse our results and create clusters objects for each
         return
 
     def generate_report_file(self):
