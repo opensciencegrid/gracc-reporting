@@ -343,6 +343,10 @@ class JobSuccessRateReporter(Reporter):
                         code,
                         count)
 
+        # If gratia-main-osg ever upgrades python to 2.7+, replace the next
+        # three uncommented lines with the following line:
+        # faildict = {key: item['FailedJobs'] for key, item in site_failed_dict.iteritems()}
+
         faildict = {}
         for key, item in site_failed_dict.iteritems():
             faildict[key] = item['FailedJobs']
