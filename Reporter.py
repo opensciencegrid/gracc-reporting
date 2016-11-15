@@ -12,6 +12,16 @@ import TextUtils
 from IndexPattern import indexpattern_generate
 from TimeUtils import TimeUtils
 
+class ContextFilter(logging.Filter):
+    """This is a class to inject contextual information into the record"""
+    def __init__(self, vo):
+        self.vo = vo
+
+    def filter(self, record):
+        """Add vo to record"""
+        record.vo = self.vo
+        return True
+
 
 class Reporter(TimeUtils):
     __metaclass__ = abc.ABCMeta
@@ -140,8 +150,16 @@ class Reporter(TimeUtils):
         # FileHandler
         fh = logging.FileHandler(self.logfile)
         fh.setLevel(logging.DEBUG)
-        logfileformat = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+
+        try:
+            f = ContextFilter(self.vo)
+            fh.addFilter(f)
+            logfileformat = logging.Formatter(
+                "%(asctime)s - %(name)s - %(levelname)s - %(vo)s - %(message)s")
+        except NameError:
+            logfileformat = logging.Formatter(
+                "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+
         fh.setFormatter(logfileformat)
 
         logger.addHandler(ch)
@@ -154,7 +172,7 @@ def runerror(config, error, traceback):
     """Global method to email admins if report run errors out"""
     admin_emails = re.split('[; ,]', config.config.get("email", "test_to"))
 
-    msg = MIMEText("ERROR: {0}\n\nTRACEBACK: {1}".format(error, traceback))
+    msg = MIMEText("ERROR: {0}\n\n{1}".format(error, traceback))
     msg['Subject'] = "ERROR PRODUCING REPORT: Date Generated {0}".format(
         datetime.now())
     msg['From'] = 'sbhat@fnal.gov'

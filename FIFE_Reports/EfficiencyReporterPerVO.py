@@ -6,6 +6,7 @@ import inspect
 import traceback
 import re
 import json
+import datetime
 from elasticsearch_dsl import Q, Search
 
 parentdir = os.path.dirname(
@@ -72,9 +73,9 @@ class Efficiency(Reporter):
         Reporter.__init__(self, config, start, end, verbose = False)
         self.no_email = no_email
         self.hour_limit = hour_limit
+        self.vo = vo
         self.logfile = logfile
         self.logger = self.setupgenLogger('efficiencypervo')
-        self.vo = vo
         self.eff_limit = eff_limit
         self.is_test = is_test
         self.verbose = verbose
@@ -229,7 +230,9 @@ class Efficiency(Reporter):
     def send_report(self):
         """Generate HTML from report and send the email"""
         if self.no_email:
-            self.logger.warn("Not sending report")
+            self.logger.info("Not sending report")
+            if self.verbose:
+                os.remove(self.fn)
             return
 
         if self.is_test:
@@ -298,11 +301,20 @@ if __name__ == "__main__":
             r = e.reportVO(users, args.facility)
             e.generate_report_file(r)
             e.send_report()
-            print "Efficiency Report execution successful"
+
+        if os.path.exists(resultfile):
+            os.unlink(resultfile)
+
+        print "Efficiency Report execution successful"
+
     except Exception as e:
+        errstring = '{0}: Error running Efficiency Report for {1}. ' \
+                    '{2}'.format(datetime.datetime.now(),
+                                              args.vo,
+                                              traceback.format_exc())
         with open(logfile, 'a') as f:
-            f.write(traceback.format_exc())
-        print >> sys.stderr, traceback.format_exc()
-        runerror(config, e, traceback.format_exc())
+            f.write(errstring)
+        print >> sys.stderr, errstring
+        runerror(config, e, errstring)
         sys.exit(1)
     sys.exit(0)
