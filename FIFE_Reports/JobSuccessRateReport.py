@@ -7,6 +7,7 @@ import ast
 from time import sleep
 import traceback
 import inspect
+import datetime
 
 from elasticsearch_dsl import Search, Q
 
@@ -51,11 +52,11 @@ class Job:
 class JobSuccessRateReporter(Reporter):
     def __init__(self, configuration, start, end, vo, template, is_test, verbose, no_email):
         Reporter.__init__(self, configuration, start, end, verbose)
+        self.vo = vo
         self.logfile = logfile
         self.logger = self.setupgenLogger("JobSuccessRate")
         self.no_email = no_email
         self.is_test = is_test
-        self.vo = vo
         self.template = template
         self.title = "Production Jobs Success Rate {0} - {1}".format(self.start_time, self.end_time)
         self.run = Jobs()
@@ -473,9 +474,13 @@ if __name__ == "__main__":
                                    opts.no_email)
         r.run_report()
     except Exception as e:
+        errstring = '{0}: Error running Job Success Rate Report for {1}. ' \
+                    '{2}'.format(datetime.datetime.now(),
+                                              opts.vo,
+                                              traceback.format_exc())
         with open(logfile, 'a') as f:
-            f.write(traceback.format_exc())
-        print >> sys.stderr, traceback.format_exc()
-        runerror(config, e, traceback.format_exc())
+            f.write(errstring)
+        print >> sys.stderr, errstring
+        runerror(config, e, errstring)
         sys.exit(1)
     sys.exit(0)
