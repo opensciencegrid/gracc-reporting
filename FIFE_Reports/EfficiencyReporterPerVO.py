@@ -6,6 +6,7 @@ import inspect
 import traceback
 import re
 import json
+import datetime
 from elasticsearch_dsl import Q, Search
 
 parentdir = os.path.dirname(
@@ -297,9 +298,13 @@ if __name__ == "__main__":
             e.generate_report_file(r)
             e.send_report()
     except Exception as e:
+        errstring = '{0}: Error running Job Success Rate Report for {1}. ' \
+                    '{2}'.format(datetime.datetime.now(),
+                                              opts.vo,
+                                              traceback.format_exc())
         with open(logfile, 'a') as f:
-            f.write(traceback.format_exc())
-        print >> sys.stderr, traceback.format_exc()
-        runerror(config, e, traceback.format_exc())
+            f.write(errstring)
+        print >> sys.stderr, errstring
+        runerror(config, e, errstring)
         sys.exit(1)
     sys.exit(0)
