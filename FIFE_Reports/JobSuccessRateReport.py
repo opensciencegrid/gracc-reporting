@@ -185,10 +185,6 @@ class JobSuccessRateReporter(Reporter):
             self.logger.exception('Error accessing ElasticSearch')
             raise Exception('Error accessing ElasticSearch')
 
-        if len(results) == 1 and len(results[0].strip()) == 0:
-            self.logger.warn("Nothing to report")
-            return
-
         # Add all of our results to the clusters dictionary
         resultscount = 0
         add_clusters = self.add_to_clusters()
