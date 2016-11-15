@@ -229,6 +229,8 @@ class Efficiency(Reporter):
         """Generate HTML from report and send the email"""
         if self.no_email:
             self.logger.info("Not sending report")
+            if self.verbose:
+                os.remove(self.fn)
             return
 
         if self.is_test:

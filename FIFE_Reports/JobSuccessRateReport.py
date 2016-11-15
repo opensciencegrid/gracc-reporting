@@ -428,6 +428,8 @@ class JobSuccessRateReporter(Reporter):
         """Method to send emails of report file to intended recipients."""
         if self.no_email:
             self.logger.info("Not sending email")
+            if os.path.exists(self.fn):
+                os.unlink(self.fn)  # Delete HTML file
             return
 
         if self.is_test:
