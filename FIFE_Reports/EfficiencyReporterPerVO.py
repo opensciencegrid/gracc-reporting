@@ -297,6 +297,10 @@ if __name__ == "__main__":
             r = e.reportVO(users, opts.facility)
             e.generate_report_file(r)
             e.send_report()
+
+        if os.path.exists(resultfile):
+            os.unlink(resultfile)
+
     except Exception as e:
         errstring = '{0}: Error running Job Success Rate Report for {1}. ' \
                     '{2}'.format(datetime.datetime.now(),
