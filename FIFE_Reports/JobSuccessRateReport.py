@@ -343,7 +343,9 @@ class JobSuccessRateReporter(Reporter):
                         code,
                         count)
 
-        faildict = {key: item['FailedJobs'] for key, item in site_failed_dict.iteritems()}
+        faildict = {}
+        for key, item in site_failed_dict.iteritems():
+            faildict[key] = item['FailedJobs']
 
         if self.limit_sites:
             try:
