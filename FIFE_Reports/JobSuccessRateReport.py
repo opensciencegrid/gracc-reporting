@@ -213,14 +213,24 @@ class JobSuccessRateReporter(Reporter):
             self.limit_sites = False
 
         job_table_cl_count = 0
+
+        # Grab config values
         try:
             num_clusters = int(self.config.get(self.vo.lower(), 'num_clusters'))
         except:
             num_clusters = 100
 
+        try:
+            jobs_per_cluster = int(
+                self.config.get(self.vo.lower(), 'jobs_per_cluster'))
+        except:
+            jobs_per_cluster = 1e6
+
+
         # Look in clusters, figure out whether job failed or succeeded,
         # categorize appropriately, and generate HTML line for total jobs
         # failed by cluster
+
         for cid, cdict in self.clusters.iteritems():
             total_jobs = len(cdict['jobs'])
             failures = []
@@ -245,10 +255,7 @@ class JobSuccessRateReporter(Reporter):
                                                 total_jobs_failed)
                 # Generate HTML line for each failed job
                 jcount = 0
-                try:
-                    jobs_per_cluster = int(self.config.get(self.vo.lower(), 'jobs_per_cluster'))
-                except:
-                    jobs_per_cluster = 1e6
+
                 for job in failures:
                     if jcount < jobs_per_cluster:
                         # Generate link for each job for a certain number of jobs
