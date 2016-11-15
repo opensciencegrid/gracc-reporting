@@ -156,7 +156,7 @@ class Reporter(TimeUtils):
             fh.addFilter(f)
             logfileformat = logging.Formatter(
                 "%(asctime)s - %(name)s - %(levelname)s - %(vo)s - %(message)s")
-        except NameError:
+        except (NameError, AttributeError):
             logfileformat = logging.Formatter(
                 "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
