@@ -306,26 +306,29 @@ class ProbeReport(Reporter):
         return oimset.difference(probes)
 
     def getprev_reported_probes(self):
-        prev_reported = set()
-        prev_reported_recent = set()
+        """Generator function that yields the probes from the previously
+        reported file, as well as whether the previous reporte date was recent
+        or not.  'Recent' is defined in the ::cutoff:: variable.
+        """
+        # Cutoff is a week ago, probrepdate is last report date for
+        # a probe
         cutoff = datetime.date.today() - datetime.timedelta(days=7)
         with open(self.historyfile, 'r') as h:
             for line in h:
-                # Cutoff is a week ago, probrepdate is last report date for
-                # a probe
                 proberepdate = datetime.date(
                     *self.dateparse(re.split('\t', line)[1].strip())[:3])
-
                 curprobe = re.split('\t', line)[0]
-                prev_reported.add(curprobe)
 
                 if proberepdate > cutoff:
                     self.newhistory.append(line)  # Append line to new history
-                    prev_reported_recent.add(curprobe)
                     self.logger.debug("{0} has been reported on in the past"
                                       " week.  Will not resend report".format(
                         curprobe))
-        return prev_reported, prev_reported_recent
+                    prev_reported_recent = True
+                else:
+                    prev_reported_recent = False
+
+                yield curprobe, prev_reported_recent
 
     def generate_report_file(self, oimdict, report=None):
         """Generator function that generates the report files to send in email.
@@ -336,26 +339,12 @@ class ProbeReport(Reporter):
         missingprobes = self.generate(oimdict)
 
         if os.path.exists(self.historyfile):
-            prev_reported, prev_reported_recent = self.getprev_reported_probes()
-            # prev_reported = set()
-            # prev_reported_recent = set()
-            # cutoff = datetime.date.today() - datetime.timedelta(days=7)
-            # with open(self.historyfile, 'r') as h:
-            #     for line in h:
-            #         # Cutoff is a week ago, probrepdate is last report date for
-            #         # a probe
-            #         proberepdate = datetime.date(
-            #             *self.dateparse(re.split('\t', line)[1].strip())[:3])
-            #
-            #         curprobe = re.split('\t', line)[0]
-            #         prev_reported.add(curprobe)
-            #
-            #         if proberepdate > cutoff:
-            #             self.newhistory.append(line)   # Append line to new history
-            #             prev_reported_recent.add(curprobe)
-            #             self.logger.debug("{0} has been reported on in the past"
-            #                               " week.  Will not resend report".format(
-            #                 curprobe))
+            prev_reported = set()
+            prev_reported_recent = set()
+            for curprobe, is_recent_probe in self.getprev_reported_probes():
+                prev_reported.add(curprobe)
+                if is_recent_probe:
+                    prev_reported_recent.add(curprobe)
         else:
             prev_reported = set()
             prev_reported_recent = set()
