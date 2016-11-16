@@ -2,11 +2,11 @@
 
 STARTDATE=`date --date='2 day ago' +"%F %T"`
 
-cd /home/gratia/gracc_email_reports/OSG_Reports
+# cd /home/gratia/gracc_email_reports/OSG_Reports
+cd /cloud/login/sbhat/EmailReports/OSG_Reports
 
 #echo "START" `date` >> probereport_run.log
 
-#python ProbeReport.py -e "$STARTDATE"
 python ProbeReport.py -c probereport.config -d 
 
 if [ $? -ne 0 ]
