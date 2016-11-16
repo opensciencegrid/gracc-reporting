@@ -305,18 +305,11 @@ class ProbeReport(Reporter):
 
         return oimset.difference(probes)
 
-    def generate_report_file(self, oimdict, report=None):
-        """Generator function that generates the report files to send in email.
-        This is where we exclude sending emails for those probes we've reported
-        on in the last week.
-
-        Yields if there are emails to send, returns otherwise"""
-        missingprobes = self.generate(oimdict)
+    def getprev_reported_probes(self):
+        prev_reported = set()
+        prev_reported_recent = set()
         cutoff = datetime.date.today() - datetime.timedelta(days=7)
-
         with open(self.historyfile, 'r') as h:
-            prev_reported = set()
-            prev_reported_recent = set()
             for line in h:
                 # Cutoff is a week ago, probrepdate is last report date for
                 # a probe
@@ -327,36 +320,70 @@ class ProbeReport(Reporter):
                 prev_reported.add(curprobe)
 
                 if proberepdate > cutoff:
-                    self.newhistory.append(line)   # Append line to new history
+                    self.newhistory.append(line)  # Append line to new history
                     prev_reported_recent.add(curprobe)
                     self.logger.debug("{0} has been reported on in the past"
                                       " week.  Will not resend report".format(
                         curprobe))
+        return prev_reported, prev_reported_recent
 
-            assert prev_reported.issuperset(prev_reported_recent)
-            prev_reported_old = prev_reported.difference(prev_reported_recent)
-            assert prev_reported.issuperset(prev_reported_old)
+    def generate_report_file(self, oimdict, report=None):
+        """Generator function that generates the report files to send in email.
+        This is where we exclude sending emails for those probes we've reported
+        on in the last week.
 
-            self.lastreportinit()
-            for elt in missingprobes.difference(prev_reported_recent):
-                # Only operate on probes that weren't reported in the last week
-                self.probe = elt
-                self.resource = oimdict[elt]
-                self.lastreport_date = self.lastreportquery()
+        Yields if there are emails to send, returns otherwise"""
+        missingprobes = self.generate(oimdict)
 
-                if self.probe in prev_reported_old:
-                    self.reminder = True    # Reminder flag
-                else:
-                    self.reminder = False
+        if os.path.exists(self.historyfile):
+            prev_reported, prev_reported_recent = self.getprev_reported_probes()
+            # prev_reported = set()
+            # prev_reported_recent = set()
+            # cutoff = datetime.date.today() - datetime.timedelta(days=7)
+            # with open(self.historyfile, 'r') as h:
+            #     for line in h:
+            #         # Cutoff is a week ago, probrepdate is last report date for
+            #         # a probe
+            #         proberepdate = datetime.date(
+            #             *self.dateparse(re.split('\t', line)[1].strip())[:3])
+            #
+            #         curprobe = re.split('\t', line)[0]
+            #         prev_reported.add(curprobe)
+            #
+            #         if proberepdate > cutoff:
+            #             self.newhistory.append(line)   # Append line to new history
+            #             prev_reported_recent.add(curprobe)
+            #             self.logger.debug("{0} has been reported on in the past"
+            #                               " week.  Will not resend report".format(
+            #                 curprobe))
+        else:
+            prev_reported = set()
+            prev_reported_recent = set()
 
-                with open(self.emailfile, 'w') as f:
-                    # Generate email file
-                    f.write(self.emailtext())
+        assert prev_reported.issuperset(prev_reported_recent)
+        prev_reported_old = prev_reported.difference(prev_reported_recent)
+        assert prev_reported.issuperset(prev_reported_old)
 
-                # Append line to new history
-                self.newhistory.append('{0}\t{1}\n'.format(
-                    elt, datetime.date.today()))
-                yield
+        self.lastreportinit()
+        for elt in missingprobes.difference(prev_reported_recent):
+            # Only operate on probes that weren't reported in the last week
+            self.probe = elt
+            self.resource = oimdict[elt]
+            self.lastreport_date = self.lastreportquery()
+
+            if self.probe in prev_reported_old:
+                self.reminder = True    # Reminder flag
+            else:
+                self.reminder = False
+
+            with open(self.emailfile, 'w') as f:
+                # Generate email file
+                f.write(self.emailtext())
+
+            # Append line to new history
+            self.newhistory.append('{0}\t{1}\n'.format(
+                elt, datetime.date.today()))
+            yield
 
         return
 
