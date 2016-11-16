@@ -403,6 +403,8 @@ class ProbeReport(Reporter):
             self.logger.info("no_email flag was used.  Not sending email for "
                              "this run.\t{0}\t{1}".format(self.resource,
                                                          self.probe))
+            if os.path.exists(self.emailfile):
+                os.unlink(self.emailfile)
             return
 
         if self.is_test:
