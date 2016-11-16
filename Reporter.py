@@ -61,7 +61,7 @@ class Reporter(TimeUtils):
         """Initialize and return the elasticsearch client"""
         client = Elasticsearch(['https://gracc.opensciencegrid.org/q'],
                                use_ssl=True,
-                               # verify_certs = True,
+                               verify_certs = False,
                                # ca_certs = 'gracc_cert/lets-encrypt-x3-cross-signed.pem',
                                # client_cert = 'gracc_cert/gracc-reports-dev.crt',
                                # client_key = 'gracc_cert/gracc-reports-dev.key',
