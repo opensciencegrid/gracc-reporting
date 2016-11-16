@@ -408,12 +408,10 @@ class ProbeReport(Reporter):
             return
 
         if self.is_test:
-            admin_emails = re.split('[; ,]',
-                                    self.config.get("email", "test_to"))
+            admin_emails = self.config.get("email", "test_to")
         else:
-            admin_emails = re.split('[; ,]',
-                                    self.config.get("email", "real_to")) +\
-                           re.split('[; ,]',self.config.get("email", "test_to"))
+            admin_emails = self.config.get("email", "real_to") + ',' + \
+                           self.config.get("email", "test_to")
 
         emailfrom = self.config.get("email","from")
         with open(self.emailfile, 'rb') as fp:
