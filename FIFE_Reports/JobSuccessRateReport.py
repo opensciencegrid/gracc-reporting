@@ -426,18 +426,21 @@ class JobSuccessRateReporter(Reporter):
 
     def send_report(self):
         """Method to send emails of report file to intended recipients."""
-        if self.no_email:
-            self.logger.info("Not sending email")
-            if os.path.exists(self.fn):
-                os.unlink(self.fn)  # Delete HTML file
-            return
 
         if self.is_test:
             emails = re.split('[; ,]', self.config.get("email", "test_to"))
         else:
-            emails = re.split('[; ,]', self.config.get("email",
-                                                       "{0}_email".format(self.vo.lower())))\
-                    + re.split('[: ,]', self.config.get("email", "test_to"))
+            emails = re.split('[; ,]', self.config.get("email", "{0}_email".format(self.vo.lower()))
+                    + ',' + self.config.get("email", "test_to"))
+
+        if self.no_email:
+            self.logger.info("Not sending email")
+            self.logger.info("Would have sent emails to {0}.".format(
+                ', '.join(emails)))
+            if os.path.exists(self.fn):
+                os.unlink(self.fn)  # Delete HTML file
+            return
+
 
         TextUtils.sendEmail(([], emails),
                             "{0} Production Jobs Success Rate on the OSG Sites ({1} - {2})".format(

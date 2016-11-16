@@ -397,33 +397,39 @@ class ProbeReport(Reporter):
                                                                  self.lastreport_date)
         return text
 
-    def send_report(self, report_type="test"):
+    def send_report(self, report_type="ProbeReport"):
         """Send our emails"""
+        if self.is_test:
+            emails = re.split('[; ,]',self.config.get("email", "test_to"))
+        else:
+            emails = re.split('[; ,]', self.config.get("email", "real_to") +
+                              ',' + self.config.get("email", "test_to"))
+
+        emailfrom = self.config.get("email", "from")
+
         if self.no_email:
             self.logger.info("no_email flag was used.  Not sending email for "
                              "this run.\t{0}\t{1}".format(self.resource,
                                                          self.probe))
+            self.logger.info("Would have sent emails to {0}.".format(
+                ', '.join(emails)))
             if os.path.exists(self.emailfile):
                 os.unlink(self.emailfile)
+
             return
 
-        if self.is_test:
-            admin_emails = self.config.get("email", "test_to")
-        else:
-            admin_emails = self.config.get("email", "real_to") + ',' + \
-                           self.config.get("email", "test_to")
 
-        emailfrom = self.config.get("email","from")
+
         with open(self.emailfile, 'rb') as fp:
             msg = MIMEText(fp.read())
 
-        msg['To'] = email.utils.formataddr(('Admins', admin_emails))
+        msg['To'] = ', '.join(emails)
         msg['From'] = email.utils.formataddr(('GRACC Operations', emailfrom))
         msg['Subject'] = self.emailsubject()
 
         try:
             smtpObj = smtplib.SMTP('smtp.fnal.gov')
-            smtpObj.sendmail(emailfrom, admin_emails, msg.as_string())
+            smtpObj.sendmail(emailfrom, emails, msg.as_string())
             smtpObj.quit()
             self.logger.info("Sent Email for {0}".format(self.resource))
             os.unlink(self.emailfile)

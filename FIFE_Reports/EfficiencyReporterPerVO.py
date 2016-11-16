@@ -69,16 +69,16 @@ class User(object):
 
 class Efficiency(Reporter):
     def __init__(self, config, start, end, vo, verbose, hour_limit, eff_limit,
-                 is_test, no_email):
+                 is_test, no_email=False):
         Reporter.__init__(self, config, start, end, verbose = False)
         self.no_email = no_email
         self.hour_limit = hour_limit
         self.vo = vo
+        self.verbose = verbose
         self.logfile = logfile
         self.logger = self.setupgenLogger('efficiencypervo')
         self.eff_limit = eff_limit
         self.is_test = is_test
-        self.verbose = verbose
         self.text = ''
         self.fn = "{0}-efficiency.{1}".format(self.vo.lower(),
                                          self.start_time.replace("/", "-"))
@@ -229,17 +229,22 @@ class Efficiency(Reporter):
 
     def send_report(self):
         """Generate HTML from report and send the email"""
+        if self.is_test:
+            emails = re.split('[; ,]', self.config.get("email", "test_to"))
+        else:
+            emails = re.split('[; ,]', self.config.get(self.vo.lower(), "email") +
+                              ',' + self.config.get("email", "test_to"))
+
         if self.no_email:
             self.logger.info("Not sending report")
+            self.logger.info("Would have sent emails to {0}.".format(
+                ', '.join(emails)))
             if self.verbose:
                 os.remove(self.fn)
             return
 
-        if self.is_test:
-            emails = re.split('[; ,]', self.config.get("email", "test_to"))
-        else:
-            emails = re.split('[; ,]', self.config.get(self.vo.lower(), "email")) + \
-                     re.split('[; ,]', self.config.get("email", "test_to"))
+
+
         TextUtils.sendEmail(
                             ([], emails),
                             "{0} Jobs with Low Efficiency ({1}) "
@@ -282,6 +287,7 @@ if __name__ == "__main__":
                        float(eff),
                        args.is_test,
                        args.no_email)
+
         # Run our elasticsearch query, get results as CSV
         resultfile = e.query_to_csv()
 
