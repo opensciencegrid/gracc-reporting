@@ -306,19 +306,13 @@ class WastedHoursReport(Reporter):
 
 
 if __name__ == "__main__":
-    opts, args = Reporter.parse_opts()
-
-    if opts.debug:
-        logging.basicConfig(filename='wastedhoursreport.log', level=logging.DEBUG)
-    else:
-        logging.basicConfig(filename='wastedhoursreport.log', level=logging.ERROR)
-        logging.getLogger('elasticsearch.trace').addHandler(logging.StreamHandler())
+    args = Reporter.parse_opts()
 
     config = Configuration.Configuration()
-    config.configure(opts.config)
+    config.configure(args.config)
 
     try:
-        report = WastedHoursReport(config, opts.start, opts.end, opts.is_test, opts.verbose)
+        report = WastedHoursReport(config, args.start, args.end, args.is_test, args.verbose)
         report.generate()
         report.generate_report_file()
         report.send_report()
