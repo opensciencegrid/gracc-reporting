@@ -7,7 +7,7 @@ import traceback
 import re
 import json
 import datetime
-from elasticsearch_dsl import Q, Search
+from elasticsearch_dsl import Search
 
 parentdir = os.path.dirname(
     os.path.dirname(
@@ -25,51 +25,11 @@ import Configuration
 import NiceNum
 from Reporter import Reporter, runerror
 
-cilogon_match = re.compile('.+CN=UID:(\w+)')
-non_cilogon_match = re.compile('/CN=([\w\s]+)/?.+?')
 logfile = 'efficiencyreport.log'
-
-
-class User(object):
-    def __init__(self, info):
-        """Take CSV as described below and assigns to it the attributes vo, facility, email, user, hours, eff
-        CSV format DARKSIDE, Fermigrid,
-        /CN = fifegrid/CN = batch/CN = Shawn S. Westerdale/CN = UID:shawest,
-        13411.2019444, 0.969314375191
-        New CSV format 'uboone', 'GPGrid', '/CN=fifegrid/CN=batch/CN=Elena Gramellini/CN=UID:elenag', '1337.86666667', '0.857747616437'
-        """
-        tmp = info.split(',')
-        self.vo = tmp[0].lower()
-        self.facility = tmp[1]
-        self.email, self.user = self.parseCN(tmp[2])
-        self.hours = int(float(tmp[3]))
-        self.eff = round(float(tmp[4]), 2)
-
-    def parseCN(self, cn):
-        """Parse the CN to grab the email address and user"""
-        m = cilogon_match.match(cn)      # CILogon certs
-        if m:
-            email = '{0}@fnal.gov'.format(m.group(1))
-        else:
-            email = ""
-            # Non-CILogon Certs (note - this matches what we did before, but
-            # we might need to change it in the future
-            m = non_cilogon_match.match(cn)
-        user = m.group(1)
-        return email, user
-
-    def dump(self):
-        print "{0:>10}, {1:>20}, {2:>20}, {3}, {4}".format(
-            self.vo,
-            self.facility,
-            self.user,
-            int(self.hours),
-            round(self.eff, 2))
-
 
 class Efficiency(Reporter):
     def __init__(self, config, start, end, vo, verbose, hour_limit, eff_limit,
-                 is_test, no_email=False):
+                 facility, is_test=False, no_email=False):
         Reporter.__init__(self, config, start, end, verbose = False)
         self.no_email = no_email
         self.hour_limit = hour_limit
@@ -78,14 +38,32 @@ class Efficiency(Reporter):
         self.logfile = logfile
         self.logger = self.setupgenLogger('efficiencypervo')
         self.eff_limit = eff_limit
+        self.facility = facility
         self.is_test = is_test
         self.text = ''
+        self.table = ''
         self.fn = "{0}-efficiency.{1}".format(self.vo.lower(),
                                          self.start_time.replace("/", "-"))
+        self.cilogon_match = re.compile('.+CN=UID:(\w+)')
+        self.non_cilogon_match = re.compile('/CN=([\w\s]+)/?.+?')
 
-    def query(self, client):
-        """Method to query Elasticsearch cluster for EfficiencyReport
-        information"""
+    @staticmethod
+    def calc_eff(wallhours, cpusec):
+        """Calculate the efficiency given the wall hours and cputime in seconds.  Returns percentage"""
+        return (cpusec / 3600) / wallhours
+
+    def parseCN(self, cn):
+        """Parse the CN to grab the username"""
+        m = self.cilogon_match.match(cn)  # CILogon certs
+        if m:
+            pass
+        else:
+            m = self.non_cilogon_match.match(cn)
+        user = m.group(1)
+        return user
+
+    def query(self):
+        """Method to query Elasticsearch cluster for EfficiencyReport information"""
         # Gather parameters, format them for the query
         starttimeq = self.dateparse_to_iso(self.start_time)
         endtimeq = self.dateparse_to_iso(self.end_time)
@@ -93,36 +71,30 @@ class Efficiency(Reporter):
         wildcardProbeNameq = 'condor:fifebatch?.fnal.gov'
 
         # Elasticsearch query and aggregations
-        s = Search(using = client, index = self.indexpattern)\
-                   .query("wildcard", VOName=wildcardVOq)\
-                   .query("wildcard", ProbeName=wildcardProbeNameq)\
-                   .filter("range", EndTime={"gte" : starttimeq, "lt" : endtimeq})\
-                   .filter(Q({"range" : {"WallDuration": {"gt": 0}}}))\
-                   .filter(Q({"term": {"Host_description" : "GPGrid"}}))\
-                   .filter(Q({"term" : {"ResourceType" : "Payload"}}))[0:0]
-                    # Size 0 to return only aggregations
+        s = Search(using=self.establish_client(), index=self.indexpattern) \
+            .query("wildcard", VOName=wildcardVOq) \
+            .query("wildcard", ProbeName=wildcardProbeNameq) \
+            .filter("range", EndTime={"gte": starttimeq, "lt": endtimeq}) \
+            .filter("range", WallDuration={"gt": 0}) \
+            .filter("term", Host_description="GPGrid") \
+            .filter("term", ResourceType="Payload")[0:0]
+        # Size 0 to return only aggregations
 
-        Bucket = s.aggs.bucket('group_VOname', 'terms', field='ReportableVOName')\
-                .bucket('group_HostDescription', 'terms', field='Host_description')\
-                .bucket('group_commonName', 'terms', field='CommonName')
+        # Bucket aggs
+        Bucket = s.aggs.bucket('group_VOName', 'terms', field='ReportableVOName') \
+            .bucket('group_HostDescription', 'terms', field='Host_description') \
+            .bucket('group_CommonName', 'terms', field='CommonName')
 
-        Metric = Bucket.metric('Process_times_WallDur', 'sum',
-                               script="(doc['WallDuration'].value*doc['Processors'].value)")\
-                .metric('WallHours', 'sum',
-                        script="(doc['WallDuration'].value*doc['Processors'].value)/3600")\
-                .metric('CPUDuration', 'sum', field='CpuDuration')
+        # Metric aggs
+        Bucket.metric('WallHours', 'sum',
+                      script="(doc['WallDuration'].value*doc['Processors'].value)/3600") \
+            .metric('CPUDuration_sec', 'sum', field='CpuDuration')
 
         return s
 
-    def query_to_csv(self):
-        """Returns a csv file with aggregated data from query to
-        Elasticsearch"""
-        outfile = 'efficiency.csv'
-
-        # Initialize the elasticsearch client
-        client = self.establish_client()
-        s = self.query(client)
-
+    def run_query(self):
+        """Execute the query and check the status code before returning the response"""
+        s = self.query()
         t = s.to_dict()
         if self.verbose:
             print json.dumps(t, sort_keys=True, indent=4)
@@ -130,105 +102,89 @@ class Efficiency(Reporter):
         else:
             self.logger.debug(json.dumps(t, sort_keys=True))
 
-        response = s.execute()
-        resultset = response.aggregations
+        try:
+            response = s.execute()
+            if not response.success():
+                raise
 
-        if not response.success():
-            self.logger.exception('Error accessing ElasticSearch')
-            raise
-        else:
+            if self.verbose:
+                print json.dumps(response.to_dict(), sort_keys=True, indent=4)
+
+            results = response.aggregations
             self.logger.info('Ran elasticsearch query successfully')
+            return results
+        except Exception as e:
+            self.logger.exception("Error accessing Elasticsearch")
+            sys.exit(1)
 
-        if self.verbose:
-            print json.dumps(response.to_dict(), sort_keys=True, indent=4)
+    def parse_lines(self):
+        """For each set of dn, wall hours, cpu time, this gets username, calculates efficiency, and sends to
+        HTML formatter"""
+        html_formatter = self.generate_report_lines()
+        html_formatter.send(None)
+        while True:
+            dn, wallhrs, cputime = yield
+            user = self.parseCN(dn)
+            eff = self.calc_eff(wallhrs, cputime)
+            if eff < self.eff_limit:
+                if self.verbose:
+                    print "{0}\t{1}\t{2}%".format(user, wallhrs, round(eff*100, 1))
+                html_formatter.send((user, wallhrs, eff))
 
-        # Header for file
-        header = '{0}\t{1}\t{2}\t{3}\t{4}\n'.format('VO',
-                                             'Host Description',
-                                             'Common Name',
-                                             'Wall Hours',
-                                             'Efficiency')
-
-        # Write everything to the outfile
-        with open(outfile, 'w') as f:
-            f.write(header)
-            for per_vo in resultset.group_VOname.buckets:
-                for per_hostdesc in per_vo.group_HostDescription.buckets:
-                    for per_CN in per_hostdesc.group_commonName.buckets:
-                        outstring = '{0},{1},{2},{3},{4}\n'.format(self.vo,
-                                                                  per_hostdesc.key,
-                                                                  per_CN.key,
-                                                                  per_CN.WallHours.value,
-                                                                  (per_CN.CPUDuration.value / 3600) / per_CN.WallHours.value)
-                        f.write(outstring)
-
-        return outfile
-
-    def reportVO(self, users, facility):
-        """Method to generate report for VO from users dictionary"""
-        if self.vo == "FIFE":
-            records = [rec for rec in users.values()]
-        else:
-            records = users[self.vo.lower()]
-        info = [rec for rec in records
-                if ((rec.hours > self.hour_limit and rec.eff < self.eff_limit)
-                    and (facility == "all" or rec.facility == facility))
-                ]
-        return sorted(info, key=lambda user: user.eff)
-
-    def generate_report_file(self, report):
-        if len(report) == 0:
-            self.no_email = True
-            self.logger.warn("Report empty")
-            return
+    def generate_report_lines(self):
+        """This generates an HTML line from the raw data line and sends it to the tablebuilder"""
+        tablebuilder = self.generate_data_table()
+        tablebuilder.send(None)
 
         epoch_stamps = self.get_epoch_stamps_for_grafana()
         elist = [elt for elt in epoch_stamps]
+        elist_vo = [elt for elt in elist]
+        elist_vo.append(self.vo.lower())
 
-        table = ""
-        for u in report:
-            elist_vo = [elt for elt in elist]
-            elist_vo.append(u.vo.lower())
-            vo_link = 'https://fifemon.fnal.gov/monitor/dashboard/db/' \
-                      'experiment-efficiency-details?' \
-                      'from={0}&to={1}' \
-                      '&var-experiment={2}'.format(*elist_vo)
+        vo_link = 'https://fifemon.fnal.gov/monitor/dashboard/db/' \
+                  'experiment-efficiency-details?' \
+                  'from={0}&to={1}' \
+                  '&var-experiment={2}'.format(*elist_vo)
+        vo_html = '<a href="{0}">{1}</a>'.format(vo_link, self.vo)
 
-            vo_html = '<a href="{0}">{1}</a>'.format(vo_link, self.vo)
+        while True:
+            user, wallhrs, eff = yield
 
-            elist.append(u.user)
+            elist.append(user)
             user_link = "https://fifemon.fnal.gov/monitor/dashboard/db/" \
                         "user-efficiency-details?" \
                         "from={0}&to={1}" \
                         "&var-user={2}".format(*elist)
+            user_html = '<a href="{0}">{1}</a>'.format(user_link, user)
 
-            user_html = '<a href="{0}">{1}</a>'.format(user_link, u.user)
-
-            table += '<tr><td align="left">{0}</td>' \
-                     '<td align="left">{1}</td>'.format(vo_html,
-                                                        u.facility) \
-                     + '<td align="left">{0}</td>' \
-                       '<td align="right">{1}</td>' \
-                       '<td align="right">{2}</td></tr>'.format(
-                user_html,
-                NiceNum.niceNum(u.hours),
-                u.eff)
             elist.pop()
+            htmlline = '<tr><td align="left">{0}</td>' \
+                       '<td align="left">{1}</td>'.format(vo_html, self.facility) \
+                        + '<td align="left">{0}</td>' \
+                          '<td align="right">{1}</td>' \
+                          '<td align="right">{2}</td></tr>'.format(user_html,
+                                                                   NiceNum.niceNum(wallhrs),
+                                                                   round(float(eff), 2))
+            tablebuilder.send(htmlline)
 
+    def generate_data_table(self):
+        """This compiles the data table lines and creates the table text (HTML) string"""
+        self.table = ""
+        while True:
+            newline = yield
+            self.table += newline
+
+    def generate_report_file(self):
+        """Takes the HTML template and inserts the appropriate information to generate the final report file"""
         self.text = "".join(open("template_efficiency.html").readlines())
         self.text = self.text.replace("$START", self.start_time)
         self.text = self.text.replace("$END", self.end_time)
-        self.text = self.text.replace("$TABLE", table)
         self.text = self.text.replace("$VO", self.vo)
-
-        if self.verbose:
-            with open(self.fn, 'w') as f:
-                f.write(self.text)
-
+        self.text = self.text.replace("$TABLE", self.table)
         return
 
     def send_report(self):
-        """Generate HTML from report and send the email"""
+        """Sends the HTML report file in an email (or doesn't if self.no_email is set to True)"""
         if self.is_test:
             emails = re.split('[; ,]', self.config.get("email", "test_to"))
         else:
@@ -239,11 +195,7 @@ class Efficiency(Reporter):
             self.logger.info("Not sending report")
             self.logger.info("Would have sent emails to {0}.".format(
                 ', '.join(emails)))
-            if self.verbose:
-                os.remove(self.fn)
             return
-
-
 
         TextUtils.sendEmail(
                             ([], emails),
@@ -257,24 +209,47 @@ class Efficiency(Reporter):
                             ("GRACC Operations", "sbhat@fnal.gov"),
                             "smtp.fnal.gov")
 
-        if self.verbose:
-            os.remove(self.fn)
-
         self.logger.info("Report sent for {0}".format(self.vo))
 
+        return
+
+    def run_report(self):
+        """Handles the data flow throughout the report generation.  Runs the query, generates the HTML report,
+        and sends the email"""
+        results = self.run_query()
+        pline = self.parse_lines()
+        pline.send(None)
+
+        vos = (vo for vo in results.group_VOName.buckets)
+        hostdesc = (hd for vo in vos for hd in vo.group_HostDescription.buckets)
+        cns = (cn for hd in hostdesc for cn in hd.group_CommonName.buckets)
+
+        for cn in cns:
+            if cn.WallHours.value > self.hour_limit:
+                pline.send((cn.key, cn.WallHours.value, cn.CPUDuration_sec.value))
+
+        if not self.table:
+            self.no_email = True
+            self.logger.warn("Report empty for {0}".format(self.vo))
+            return
+
+        self.generate_report_file()
+        self.send_report()
         return
 
 
 if __name__ == "__main__":
     args = Reporter.parse_opts()
+
+    # Set up the configuration
+    config = Configuration.Configuration()
+    config.configure(args.config)
+
     try:
-        # Set up the configuration
-        config = Configuration.Configuration()
-        config.configure(args.config)
         # Grab VO
         vo = args.vo
         # Grab the limits
-        eff = config.config.get(args.vo.lower(), "efficiency")
+        repeff = config.config.get(args.vo.lower(), "efficiency")
         min_hours = config.config.get(args.vo.lower(), "min_hours")
 
         # Create an Efficiency object, create a report for the VO, and send it
@@ -284,40 +259,17 @@ if __name__ == "__main__":
                        vo,
                        args.verbose,
                        int(min_hours),
-                       float(eff),
+                       float(repeff),
+                       args.facility,
                        args.is_test,
                        args.no_email)
-
-        # Run our elasticsearch query, get results as CSV
-        resultfile = e.query_to_csv()
-
-        # For each line returned, create a User object, and add the User and
-        # their vo to the users dict
-        with open(resultfile, 'r') as file:
-            f = file.readlines()
-        users = {}
-        for line in f[1:]:
-            u = User(line)
-            if u.vo not in users:
-                users[u.vo] = []
-            users[u.vo].append(u)
-
-        # Generate the VO report, send it
-        if vo == "FIFE" or vo.lower() in users:
-            r = e.reportVO(users, args.facility)
-            e.generate_report_file(r)
-            e.send_report()
-
-        if os.path.exists(resultfile):
-            os.unlink(resultfile)
+        e.run_report()
 
         print "Efficiency Report execution successful"
 
     except Exception as e:
         errstring = '{0}: Error running Efficiency Report for {1}. ' \
-                    '{2}'.format(datetime.datetime.now(),
-                                              args.vo,
-                                              traceback.format_exc())
+                    '{2}'.format(datetime.datetime.now(), args.vo, traceback.format_exc())
         with open(logfile, 'a') as f:
             f.write(errstring)
         print >> sys.stderr, errstring
