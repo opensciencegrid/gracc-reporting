@@ -243,7 +243,7 @@ class ProbeReport(Reporter):
         ls = Search(using=self.client, index=self.indexpattern)\
             .filter(Q({"range":{"@received":{"gte":"now-1M"}}}))\
             .filter("term", ResourceType="Batch")\
-            .filter("wildcard", ProbeName="*{0}".format(self.probe))
+            .filter("wildcard", ProbeName="*:{0}".format(self.probe))
 
         ls.aggs.bucket('group_probename', 'terms', field='ProbeName',
                                size=1000000000)\
@@ -298,7 +298,6 @@ class ProbeReport(Reporter):
         probes = self.get_probenames()
         self.logger.info("Successfully analyzed ES data vs. OIM data")
         oimset = set((key for key in oimdict))
-
         return oimset.difference(probes)
 
     def getprev_reported_probes(self):
