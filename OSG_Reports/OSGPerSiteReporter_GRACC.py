@@ -115,10 +115,10 @@ class OSGPerSiteReporter(Reporter):
         volist = sorted(list(results_dict.keys()))
 
         results_dict['Site'] = [site for site in siteset]
-        results_dict['Total'] = [0 for site in siteset]     # for now
+        results_dict['Total'] = [0 for _ in siteset]     # for now
 
         self.header = self.header + volist
-        # print results_dict
+        print results_dict
         return results_dict
 
     def format_report(self):
@@ -140,9 +140,9 @@ def main():
                               is_test=args.is_test,
                               no_email=args.no_email)
 
-        # osgreport.generate_report_file()
+        osgreport.generate_report_file()
         # print osgreport.format_report()
-        osgreport.send_report("siteusage")
+        # osgreport.send_report("siteusage")
         print 'OSG Per Site Report Execution finished'
     except Exception as e:
         with open(logfile, 'a') as f:
