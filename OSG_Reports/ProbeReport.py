@@ -219,7 +219,7 @@ class ProbeReport(Reporter):
 
         s = Search(using=self.client, index=self.indexpattern)\
             .filter(Q({"range": {"@received": {"gte": "{0}".format(startdateq)}}}))\
-            .filter(Q({"term": {"ResourceType": "Batch"}}))
+            .filter("term", ResourceType="Batch")
 
         s.aggs.bucket('group_probename', 'terms', field='ProbeName',
                                size=1000000000)
@@ -240,10 +240,6 @@ class ProbeReport(Reporter):
         Returns a string with either that time or a string indicating that
         it has been over a month.
         """
-        self.start_time = datetime.date.today().replace(day=1)-timedelta(days=1)
-        self.end_time = datetime.date.today()
-        self.indexpattern = self.indexpattern_generate()
-
         ls = Search(using=self.client, index=self.indexpattern)\
             .filter(Q({"range":{"@received":{"gte":"now-1M"}}}))\
             .filter("term", ResourceType="Batch")\
@@ -387,14 +383,12 @@ class ProbeReport(Reporter):
 
     def emailtext(self):
         """Format the text for our emails"""
-        text= 'The probe {0} installed at {1} has not reported'\
-                    ' GRACC records to OSG for the last two days. The last ' \
-                    'date we received a record from {0} was {2}.  If this '\
-                    'is due to maintenance or a retirement of this '\
-                    'node, please let us know.  If not, please check to see '\
-                    'if your Gratia reporting is active.'.format(self.probe,
-                                                                 self.resource,
-                                                                 self.lastreport_date)
+        text = 'The probe installed on {0} at {1} has not reported'\
+               ' GRACC records to OSG for the last two days. The last ' \
+               'date we received a record from {0} was {2}.  If this '\
+               'is due to maintenance or a retirement of this '\
+               'node, please let us know.  If not, please check to see '\
+               'if your Gratia reporting is active.'.format(self.probe, self.resource, self.lastreport_date)
         return text
 
     def send_report(self, report_type="ProbeReport"):
@@ -417,8 +411,6 @@ class ProbeReport(Reporter):
                 os.unlink(self.emailfile)
 
             return
-
-
 
         with open(self.emailfile, 'rb') as fp:
             msg = MIMEText(fp.read())
