@@ -117,8 +117,10 @@ class FlockingReport(Reporter):
             print e, "Error accessing Elasticsearch"
             sys.exit(1)
 
-    def generate_report_file(self, report=None):
-        """Takes data from query response and parses it to send to other functions for processing"""
+    def generate(self):
+        """Higher-level method that calls the lower-level functions to
+        generate the raw data for this report.
+        """
         pline = self.printline()
         pline.send(None)
 
@@ -134,8 +136,11 @@ class FlockingReport(Reporter):
                     for project in projects:
                         pline.send((sitekey, vokey, probekey, project.key, project.WallHours.value))
 
-    def send_report(self, report_type="osgflocking"):
-        pass
+    def generate_report_file(self, report=None):
+        """Takes data from query response and parses it to send to other functions for processing
+        Will handle HTML vs. csv file generation."""
+
+
 
     @staticmethod
     def printline():
@@ -145,8 +150,11 @@ class FlockingReport(Reporter):
             site, vo, probe, project, wallhours = yield
             print "{0}\t{1}\t{2}\t{3}\t{4}".format(vo, site, probe, project, wallhours)
 
-    def run_report(self):
+    def send_report(self, report_type="osgflocking"):
+        pass
 
+    def run_report(self):
+        """Higher level method to handle the process flow of the report being run"""
         self.generate_report_file()
 
 
