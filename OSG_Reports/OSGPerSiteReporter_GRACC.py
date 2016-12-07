@@ -55,7 +55,7 @@ class OSGPerSiteReporter(Reporter):
         enddate = self.dateparse_to_iso(self.end_time)
 
         s = Search(using=self.client, index='gracc.osg.summary*') \
-            .filter(Q({"range": {"@received": {"gte": "{0}".format(startdate), "lt":"{0}".format(enddate)}}}))\
+            .filter("range", EndTime={"gte": "{0}".format(startdate), "lt":"{0}".format(enddate)})\
             .filter('term', ResourceType="Batch")
 
         s.aggs.bucket('vo_bucket', 'terms', field='VOName', size=1000000000)\
