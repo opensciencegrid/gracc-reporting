@@ -70,6 +70,10 @@ class JobSuccessRateReporter(Reporter):
         self.text = ''
         self.fn = "{0}-jobrate.{1}".format(self.vo.lower(),
                                     self.start_time.replace("/", "-"))
+        try:
+            self.limit_sites = ast.literal_eval(self.config.get(self.vo.lower(), 'limit_sites'))
+        except:
+            self.limit_sites = False
 
     def query(self, client):
         """Method that actually queries elasticsearch"""
@@ -208,10 +212,6 @@ class JobSuccessRateReporter(Reporter):
         table_summary = ""
         job_table = ""
 
-        try:
-            self.limit_sites = ast.literal_eval(self.config.get(self.volower(), 'limit_sites'))
-        except:
-            self.limit_sites = False
 
         job_table_cl_count = 0
 
@@ -260,18 +260,24 @@ class JobSuccessRateReporter(Reporter):
                 for job in failures:
                     if jcount < jobs_per_cluster:
                         # Generate link for each job for a certain number of jobs
-                        job_link_parts = [elt for elt in
+                        try:
+                            job_link_parts = [elt for elt in
                                           self.get_job_parts_from_jobid(job.jobid)]
-                        timestamps_exact = self.get_epoch_stamps_for_grafana(
-                            start_time=job.start_time, end_time=job.end_time)
-                        padding = 300000        # milliseconds
-                        timestamps_padded = (timestamps_exact[0]-padding,
-                                             timestamps_exact[1]+padding)
-                        job_link_parts.extend(timestamps_padded)
-                        job_link = 'https://fifemon.fnal.gov/monitor/dashboard/db' \
-                                   '/job-cluster-summary?var-cluster={0}' \
-                                   '&var-schedd={1}&from={2}&to={3}'.format(
-                            *job_link_parts)
+                            timestamps_exact = self.get_epoch_stamps_for_grafana(
+                                start_time=job.start_time, end_time=job.end_time)
+                            padding = 300000  # milliseconds
+                            timestamps_padded = (timestamps_exact[0] - padding,
+                                                 timestamps_exact[1] + padding)
+                            job_link_parts.extend(timestamps_padded)
+                            job_link = 'https://fifemon.fnal.gov/monitor/dashboard/db' \
+                                       '/job-cluster-summary?var-cluster={0}' \
+                                       '&var-schedd={1}&from={2}&to={3}'.format(
+                                *job_link_parts)
+                        except AttributeError:
+                            # If jobID doesn't match the pattern
+                            job_link = 'https://fifemon.fnal.gov/monitor/dashboard/db/' \
+                                        'experiment-overview?var-experiment={0}'.format(self.vo)
+
                         job_html = '<a href="{0}">{1}</a>'.format(job_link,
                                                                   job.jobid)
 
