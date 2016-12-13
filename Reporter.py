@@ -2,6 +2,7 @@ import abc
 import argparse
 from datetime import datetime
 import re
+import os
 import smtplib
 from email.mime.text import MIMEText
 import logging
@@ -84,16 +85,30 @@ class Reporter(TimeUtils):
         return sorted(agg.buckets, key=key)
 
     def send_report(self, report_type="test"):
-        """Send reports as ascii, csv, html attachements """
+        """Send reports as ascii, csv, html attachments """
         text = {}
         content = self.format_report()
+
+        if self.is_test:
+            emails = re.split('[; ,]', self.config.get("email", "test_to"))
+        else:
+            emails = re.split('[; ,]', self.config.get("email", "%s_to" % (report_type,))
+                              + ',' + self.config.get("email", "test_to"))
+            names = self.config.get("email",
+                                    "%s_realname" % (report_type,)).split(",")
+
+        if self.no_email:
+            print "no_email flag was used.  Not sending email for this run."
+            print "Would have sent emails to {0}.".format(', '.join(emails))
+            return
+
+        emailfrom = self.config.get("email", "from")
+
         print "header", self.header
         emailReport = TextUtils.TextUtils(self.header)
         text["text"] = emailReport.printAsTextTable("text", content)
         text["csv"] = emailReport.printAsTextTable("csv", content)
         text["html"] = "<html><body><h2>%s</h2><table border=1>%s</table></body></html>" % (self.title, emailReport.printAsTextTable("html", content),)
-        emails = self.config.get("email", "%s_to" % (report_type,)).split(",")
-        names = self.config.get("email", "%s_realname" % (report_type,)).split(",")
         TextUtils.sendEmail((names, emails), self.title, text, ("Gratia Operation", self.config.get("email", "from")), self.config.get("email", "smtphost"))
 
     @staticmethod

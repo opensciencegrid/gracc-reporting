@@ -35,8 +35,9 @@ def key_to_lower(bucket):
 
 class OSGReporter(Reporter):
     def __init__(self, config, report_type, limit, start, end=None, isSum=True,
-                 verbose=False):
-        Reporter.__init__(self, config, start, end, verbose, raw=False)
+                 verbose=False, no_email=False, is_test=False):
+        Reporter.__init__(self, config, start, end, verbose, raw=False,
+                          no_email=no_email, is_test=is_test)
         self.header = ["Project Name", "PI", "Institution", "Field of Science",
                      "Wall Hours"]
         self.logfile = logfile
@@ -173,10 +174,12 @@ if __name__=="__main__":
                         args.start,
                         args.end,
                         True,
-                        args.verbose)
+                        args.verbose,
+                        args.is_test,
+                        args.no_email)
         r.run_report()
         r.send_report("Project")
-        r.logger.info("OSG Project Report sent successfully")
+        r.logger.info("OSG Project Report executed successfully")
     except Exception as e:
         with open(logfile, 'a') as f:
             f.write(traceback.format_exc())
