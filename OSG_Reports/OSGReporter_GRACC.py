@@ -3,6 +3,7 @@
 import os
 import inspect
 import re
+import json
 import traceback
 import sys
 
@@ -46,6 +47,7 @@ class OSGReporter(Reporter):
         except Exception as e:
             self.logger.exception(e)
         self.report_type = report_type
+        self.logger.info("Report Type: {0}".format(self.report_type))
         self.limit = limit
         self.isSum = isSum
 
@@ -86,15 +88,25 @@ class OSGReporter(Reporter):
                     .bucket("group_FOS", "terms", field="FieldOfScience")
         Bucket.metric("CoreHours_sum", "sum", field="CoreHours")
 
+
         return s
 
     def runquery(self):
         """Execute the query and check the status code before returning the response"""
+        resultset = self.query()
+        t = resultset.to_dict()
+        if self.verbose:
+            print json.dumps(t, sort_keys=True, indent=4)
+            self.logger.debug(json.dumps(t, sort_keys=True))
+        else:
+            self.logger.debug(json.dumps(t, sort_keys=True))
+
         try:
-            response = self.query().execute()
+            response = resultset.execute()
             if not response.success():
                 raise
             results = response.aggregations
+            self.logger.debug("Elasticsearch query executed successfully")
             return results
         except Exception as e:
             print e, "Error accessing Elasticsearch"
@@ -164,6 +176,7 @@ if __name__=="__main__":
                         args.verbose)
         r.run_report()
         r.send_report("Project")
+        r.logger.info("OSG Project Report sent successfully")
     except Exception as e:
         with open(logfile, 'a') as f:
             f.write(traceback.format_exc())
