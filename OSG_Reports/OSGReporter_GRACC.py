@@ -13,6 +13,7 @@ from email.mime.text import MIMEText
 import datetime
 import logging
 import json
+import operator
 import traceback
 import sys
 
@@ -35,6 +36,14 @@ from Reporter import Reporter, runerror
 
 logfile = 'osgreporter.log'
 
+
+def key_to_lower(bucket):
+    return bucket.key.lower()
+
+
+# Note:  When https://github.com/opensciencegrid/gracc-request/pull/43 is done,
+# I'll have to change the name of the OIM project fields to OIM_blah.
+
 class OSGReporter(Reporter):
     def __init__(self, config, report_type, limit, start, end=None, isSum=True,
                  verbose=False):
@@ -42,6 +51,7 @@ class OSGReporter(Reporter):
         self.header=["Project Name","PI","Institution","Field of Science","Wall Hours"]
         self.logfile = logfile
         self.logger = self.setupgenLogger("ProbeReport")
+
         try:
             self.client = self.establish_client()
         except Exception as e:
@@ -49,12 +59,16 @@ class OSGReporter(Reporter):
         self.report_type = report_type
         self.limit = limit
         self.isSum = isSum
+
         if self.report_type == "OSG":
             self.title = "{0}-Direct Projects {1} - {2}".format(
                 self.report_type, self.start_time, self.end_time)
-        if self.report_type == "XD":
+        elif self.report_type == "XD":
             self.title = "OSG-{0} Projects {1} - {2}".format(
-            self.report_type, self.start_time, self.end_time)
+                self.report_type, self.start_time, self.end_time)
+        else:
+            self.title = "{0} Projects {1} - {2}".format(
+                self.report_type, self.start_time, self.end_time)
 
     def query(self):
         """Method to query Elasticsearch cluster for OSGReporter information"""
@@ -77,7 +91,7 @@ class OSGReporter(Reporter):
         # Size 0 to return only aggregations
         # Bucket, metric aggs
         Bucket = s.aggs.bucket("group_ProjectName", "terms", field="ProjectName",
-                               size=1000000000)\
+                               size=1000000000, order={"_term":"asc"})\
                     .bucket("group_PIName", "terms", field="PIName")\
                     .bucket("group_Organization", "terms", field="Organization")\
                     .bucket("group_FOS", "terms", field="FieldOfScience")
@@ -97,23 +111,38 @@ class OSGReporter(Reporter):
             print e, "Error accessing Elasticsearch"
             sys.exit(1)
 
-
     def run_report(self):
         """Takes data from query response and parses it to send to other functions for processing"""
+        freport = self.generate_report_file()
+        freport.send(None)
+
         results = self.runquery()
-        for pname_bucket in results.group_ProjectName.buckets:
+
+        # for pname_bucket in results.group_ProjectName.buckets:
+        #     pname = pname_bucket.key
+        #     # print pname
+        #     for pi_bucket in pname_bucket.group_PIName.buckets:
+        #         pi= pi_bucket.key
+        #         # print pi
+        #         for org_bucket in pi_bucket.group_Organization.buckets:
+        #             org = org_bucket.key
+        #             # print org
+        #             for fos_bucket in org_bucket.group_FOS.buckets:
+        #                 fos = fos_bucket.key
+        #                 print pname, pi, org, fos, fos_bucket.CoreHours_sum.value
+
+        for pname_bucket in self.sorted_buckets(results.group_ProjectName, key=key_to_lower):
             pname = pname_bucket.key
             # print pname
             for pi_bucket in pname_bucket.group_PIName.buckets:
-                pi= pi_bucket.key
+                pi = pi_bucket.key
                 # print pi
                 for org_bucket in pi_bucket.group_Organization.buckets:
                     org = org_bucket.key
                     # print org
                     for fos_bucket in org_bucket.group_FOS.buckets:
                         fos = fos_bucket.key
-                        print pname, pi, org, fos, fos_bucket.CoreHours_sum.value
-
+                        freport.send((pname, pi, org, fos, fos_bucket.CoreHours_sum.value))
 
 
             # p = self.pnc.getProject(projectname.key, self.report_type)
@@ -132,15 +161,32 @@ class OSGReporter(Reporter):
 
 
 
-    def generate_report_file(self, report):
-        pass
-
+    def generate_report_file(self, report=None):
+        self.report = {}
+        for name in self.header:
+            if name not in self.report:
+                self.report[name] = []
+        try:
+            while True:
+                pname, pi, org, fos, wallhrs = yield
+                self.report["Project Name"].append(pname)
+                self.report["PI"].append(pi)
+                self.report["Institution"].append(org)
+                self.report["Field of Science"].append(fos)
+                self.report["Wall Hours"].append(wallhrs)
+        except GeneratorExit:
+            self.report["Project Name"].append("Total")
+            self.report["PI"].append("")
+            self.report["Institution"].append("")
+            self.report["Field of Science"].append("")
+            self.report["Wall Hours"].append(sum(self.report["Wall Hours"]))
+        return
+            
     def format_report(self):
-        report = {}
+        return self.report
+        
 
 
-    def send_report(self, report_type="test"):
-        pass
 
 
 if __name__=="__main__":
@@ -159,6 +205,8 @@ if __name__=="__main__":
                         True,
                         args.verbose)
         r.run_report()
+        r.send_report("Project")
+        # r.format_report()
         # r.sendReport("project")
 
     except Exception as e:
