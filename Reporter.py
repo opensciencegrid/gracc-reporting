@@ -5,6 +5,7 @@ import re
 import smtplib
 from email.mime.text import MIMEText
 import logging
+import operator
 
 from elasticsearch import Elasticsearch
 
@@ -77,6 +78,10 @@ class Reporter(TimeUtils):
     def generate_report_file(self, report):
         """Method to generate the report class"""
         pass
+
+    @staticmethod
+    def sorted_buckets(agg, key=operator.attrgetter('key')):
+        return sorted(agg.buckets, key=key)
 
     def send_report(self, report_type="test"):
         """Send reports as ascii, csv, html attachements """
