@@ -91,11 +91,12 @@ class Reporter(TimeUtils):
 
         if self.is_test:
             emails = re.split('[; ,]', self.config.get("email", "test_to"))
+            names = re.split('[; ,]', self.config.get("email", "test_realname"))
         else:
             emails = re.split('[; ,]', self.config.get("email", "%s_to" % (report_type,))
                               + ',' + self.config.get("email", "test_to"))
-            names = self.config.get("email",
-                                    "%s_realname" % (report_type,)).split(",")
+            names = re.split('[; ,]', self.config.get("email",
+                                    "%s_realname" % (report_type,)))
 
         if self.no_email:
             print "no_email flag was used.  Not sending email for this run."

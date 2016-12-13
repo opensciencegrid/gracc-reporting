@@ -173,10 +173,11 @@ if __name__=="__main__":
                         args.limit,
                         args.start,
                         args.end,
-                        True,
-                        args.verbose,
-                        args.is_test,
-                        args.no_email)
+                        isSum=True,
+                        verbose=args.verbose,
+                        is_test=args.is_test,
+                        no_email=args.no_email)
+        print args.no_email
         r.run_report()
         r.send_report("Project")
         r.logger.info("OSG Project Report executed successfully")
