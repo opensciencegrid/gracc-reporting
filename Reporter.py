@@ -78,7 +78,6 @@ class Reporter(TimeUtils):
         """Method to generate the report class"""
         pass
 
-    @abc.abstractmethod
     def send_report(self, report_type="test"):
         """Send reports as ascii, csv, html attachements """
         text = {}
@@ -101,18 +100,24 @@ class Reporter(TimeUtils):
         parser.add_argument("-v", "--verbose", dest="verbose",
                             action="store_true", default=False,
                             help="print debug messages to stdout")
-        parser.add_argument("-E", "--experiment", dest="vo",
-                            help="experiment name", default=None)
-        parser.add_argument("-F", "--facility", dest="facility",
-                            help="facility name", default=None)
-        parser.add_argument("-T", "--template",dest="template",
-                            help="template_file", default=None)
         parser.add_argument("-s", "--start", dest="start",
                             help="report start date YYYY/MM/DD HH:mm:SS or "
                                  "YYYY-MM-DD HH:mm:SS (required)")
         parser.add_argument("-e", "--end", dest="end",
                             help="report end date YYYY/MM/DD HH:mm:SS or "
                                  "YYYY-MM-DD HH:mm:SS")
+        parser.add_argument("-E", "--experiment", dest="vo",
+                            help="experiment name", default=None)
+        parser.add_argument("-F", "--facility", dest="facility",
+                            help="facility name", default=None)
+        parser.add_argument("-T", "--template",dest="template",
+                            help="template_file", default=None)
+        parser.add_argument("-r", "--report-type", dest = "report_type",
+                            help="Report type (name of Campus Grid): e.g. "
+                                "XD, OSG or OSG-Connect", default="OSG")
+        parser.add_argument("-l", "--limit", dest="limit",
+                            help="Do not report about entity with WallHours"
+                                 "less than this number", type=int, default=1)
         parser.add_argument("-d", "--dryrun", dest="is_test",
                             action="store_true", default=False,
                             help="send emails only to _testers")
