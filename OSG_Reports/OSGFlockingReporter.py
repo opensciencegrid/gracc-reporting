@@ -46,8 +46,8 @@ class FlockingReport(Reporter):
         """Method to query Elasticsearch cluster for EfficiencyReport
         information"""
         # Gather parameters, format them for the query
-        starttimeq = self.start_time
-        endtimeq = self.end_time
+        starttimeq = self.dateparse_to_iso(self.start_time)
+        endtimeq = self.dateparse_to_iso(self.end_time)
 
         print self.indexpattern
 
@@ -75,10 +75,9 @@ class FlockingReport(Reporter):
             .bucket('group_ProbeName', 'terms', field='ProbeName') \
             .bucket('group_ProjectName', 'terms', field='ProjectName', missing='N/A')
 
-
         # Metric aggs
-        Bucket.metric('WallHours', 'sum',
-                    script="(doc['WallDuration'].value*doc['Processors'].value)/3600")
+        Bucket.metric("CoreHours_sum", "sum", field="CoreHours")
+
         return s
 
 #
@@ -121,8 +120,8 @@ class FlockingReport(Reporter):
         """Higher-level method that calls the lower-level functions to
         generate the raw data for this report.
         """
-        pline = self.printline()
-        pline.send(None)
+        # pline = self.printline()
+        # pline.send(None)
 
         results = self.run_query()
 
@@ -134,20 +133,19 @@ class FlockingReport(Reporter):
                     probekey = probe.key
                     projects = (project for project in probe.group_ProjectName.buckets)
                     for project in projects:
-                        pline.send((sitekey, vokey, probekey, project.key, project.WallHours.value))
+                        yield (sitekey, vokey, probekey, project.key, project.CoreHours_sum.value)
 
     def generate_report_file(self, report=None):
         """Takes data from query response and parses it to send to other functions for processing
         Will handle HTML vs. csv file generation."""
+        pass
 
 
-
-    @staticmethod
-    def printline():
+    def printlines(self):
         """Coroutine to print each line to stdout"""
         print "{0}\t{1}\t{2}\t{3}\t{4}".format("VOName", "SiteName", "ProbeName", "ProjectName", "Wall Hours")
-        while True:
-            site, vo, probe, project, wallhours = yield
+        for linetuple in self.generate():
+            site, vo, probe, project, wallhours = linetuple
             print "{0}\t{1}\t{2}\t{3}\t{4}".format(vo, site, probe, project, wallhours)
 
     def send_report(self, report_type="osgflocking"):
@@ -155,9 +153,11 @@ class FlockingReport(Reporter):
 
     def run_report(self):
         """Higher level method to handle the process flow of the report being run"""
-        self.generate_report_file()
+        self.printlines()
 
 
+    def format_report(self):
+        report = {}
 
 
 
@@ -189,7 +189,7 @@ def main():
 
     except Exception as e:
         errstring = '{0}: Error running OSG Flocking Report. ' \
-                    '{2}'.format(datetime.datetime.now(), traceback.format_exc())
+                    '{1}'.format(datetime.datetime.now(), traceback.format_exc())
         with open(logfile, 'a') as f:
             f.write(errstring)
         print >> sys.stderr, errstring
