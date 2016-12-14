@@ -136,6 +136,7 @@ class FlockingReport(Reporter):
                     probekey = probe.key
                     projects = (project for project in probe.group_ProjectName.buckets)
                     for project in projects:
+                        # print "WHOA!"
                         yield (sitekey, vokey, probekey, project.key, project.CoreHours_sum.value)
 
     def generate_report_file(self, report=None):
@@ -150,9 +151,6 @@ class FlockingReport(Reporter):
         for linetuple in self.generate():
             site, vo, probe, project, wallhours = linetuple
             print "{0}\t{1}\t{2}\t{3}\t{4}".format(vo, site, probe, project, wallhours)
-
-    def send_report(self, report_type="osgflocking"):
-        pass
 
     def run_report(self):
         """Higher level method to handle the process flow of the report being run"""
