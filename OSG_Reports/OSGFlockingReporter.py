@@ -34,7 +34,7 @@ class FlockingReport(Reporter):
                      verbose=False, is_test=False, no_email=False):
         Reporter.__init__(self, configuration, start, end, verbose, raw=False)
         self.logfile = logfile
-        self.logger = self.setupgenLogger("ProbeReport")
+        self.logger = self.setupgenLogger("FlockingReport")
         try:
             self.client = self.establish_client()
         except Exception as e:
