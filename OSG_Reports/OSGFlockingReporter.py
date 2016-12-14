@@ -41,6 +41,9 @@ class FlockingReport(Reporter):
             self.logger.exception(e)
         self.no_email = no_email
         self.is_test = is_test
+        self.title = "OSG Flocking Report"
+        self.header = ["VOName", "SiteName", "ProbeName", "ProjectName",
+                       "Wall Hours"]
 
     def query(self):
         """Method to query Elasticsearch cluster for EfficiencyReport
@@ -153,11 +156,28 @@ class FlockingReport(Reporter):
 
     def run_report(self):
         """Higher level method to handle the process flow of the report being run"""
-        self.printlines()
+        return self.printlines()
 
 
     def format_report(self):
         report = {}
+        for name in self.header:
+            if name not in report:
+                report[name] = []
+
+        for result_tuple in self.generate():
+            vo, site, probe, project, wallhours = result_tuple
+            if self.verbose:
+                print "{0}\t{1}\t{2}\t{3}\t{4}".format(vo, site, probe,
+                                                       project, wallhours)
+            report["VOName"].append(vo)
+            report["SiteName"].append(site)
+            report["ProbeName"].append(probe)
+            report["ProjectName"].append(project)
+            report["Wall Hours"].append(wallhours)
+
+        return report
+
 
 
 
@@ -182,8 +202,8 @@ def main():
                            verbose=args.verbose,
                            is_test=args.is_test,
                            no_email=args.no_email)
-
-        f.run_report()
+        # f.generate()
+        f.send_report("Flocking")
 
         print "OSG Flocking Report execution successful"
 
