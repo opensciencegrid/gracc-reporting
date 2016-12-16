@@ -86,8 +86,7 @@ class Efficiency(Reporter):
             .bucket('group_CommonName', 'terms', field='CommonName')
 
         # Metric aggs
-        Bucket.metric('WallHours', 'sum',
-                      script="(doc['WallDuration'].value*doc['Processors'].value)/3600") \
+        Bucket.metric('WallHours', 'sum', field='CoreHours') \
             .metric('CPUDuration_sec', 'sum', field='CpuDuration')
 
         return s
