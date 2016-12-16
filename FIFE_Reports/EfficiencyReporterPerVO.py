@@ -114,7 +114,7 @@ class Efficiency(Reporter):
             return results
         except Exception as e:
             self.logger.exception("Error accessing Elasticsearch")
-            sys.exit(1)
+            raise
 
     def parse_lines(self):
         """For each set of dn, wall hours, cpu time, this gets username, calculates efficiency, and sends to
