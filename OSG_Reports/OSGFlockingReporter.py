@@ -32,11 +32,12 @@ class FlockingReport(Reporter):
     """Class to generate the probe report"""
     def __init__(self, configuration, start, end, template=False,
                      verbose=False, is_test=False, no_email=False):
-        Reporter.__init__(self, configuration, start, end=end,
+        report='FlockingReport'
+        # self.logfile = logfile
+        Reporter.__init__(self, report, configuration, start, end=end,
                           template=template, verbose=verbose,
-                          no_email=no_email, raw=False)
-        self.logfile = logfile
-        self.logger = self.setupgenLogger("FlockingReport")
+                          no_email=no_email, raw=False, logfile=logfile)
+        # self.logger = self.setupgenLogger("FlockingReport")
         self.verbose = verbose
         try:
             self.client = self.establish_client()
@@ -86,22 +87,6 @@ class FlockingReport(Reporter):
         Bucket.metric("CoreHours_sum", "sum", field="CoreHours")
 
         return s
-
-#
-# def parseCN(cn):
-#     """Parse the CN to grab the email address and user"""
-#     m = cilogon_match.match(cn)      # CILogon certs
-#     if m:
-#         pass
-#     else:
-#         m = non_cilogon_match.match(cn)
-#     user = m.group(1)
-#     return user
-
-#
-# def calc_eff(wallhours, cpusec):
-#     """Calculate the efficiency given the wall hours and cputime in seconds.  Returns percentage"""
-#     return round(((cpusec / 3600) / wallhours) * 100, 1)
 
     def run_query(self):
         """Execute the query and check the status code before returning the response"""
@@ -154,12 +139,11 @@ class FlockingReport(Reporter):
     #         site, vo, probe, project, wallhours = linetuple
     #         print "{0}\t{1}\t{2}\t{3}\t{4}".format(vo, site, probe, project, wallhours)
 
-    def run_report(self):
-        """Higher level method to handle the process flow of the report being run"""
-        return self.printlines()
-
 
     def format_report(self):
+        """Takes the results from the elasticsearch query and returns a dict
+        that can be used by the Reporter.send_report method to generate HTML,
+        CSV, and plain text output"""
         report = {}
         for name in self.header:
             if name not in report:
@@ -177,6 +161,10 @@ class FlockingReport(Reporter):
             report["Wall Hours"].append(wallhours)
 
         return report
+
+    def run_report(self):
+        """Higher level method to handle the process flow of the report being run"""
+        self.send_report(report_type="Flocking", title=self.title)
 
 
 
@@ -203,9 +191,7 @@ def main():
                            is_test=args.is_test,
                            no_email=args.no_email,
                            template=args.template)
-        # f.generate()
-        f.send_report(report_type="Flocking", title=f.title)
-
+        f.run_report()
         print "OSG Flocking Report execution successful"
 
     except Exception as e:

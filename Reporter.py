@@ -2,7 +2,7 @@ import abc
 import argparse
 from datetime import datetime
 import re
-import os
+import sys
 import smtplib
 from email.mime.text import MIMEText
 import logging
@@ -28,8 +28,9 @@ class ContextFilter(logging.Filter):
 class Reporter(TimeUtils):
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, config, start, end=None, verbose=False, raw=True,
-                 template=False, is_test=False, no_email=False, title=None):
+    def __init__(self, report, config, start, end=None, verbose=False,
+                 raw=True, template=False, is_test=False, no_email=False,
+                 title=None, logfile=None):
         """Constructor for OSGReporter
         Args:
                 config(Configuration) - configuration file
@@ -50,80 +51,11 @@ class Reporter(TimeUtils):
         self.template = template
         self.epochrange = None
         self.indexpattern = self.indexpattern_generate(raw)
-        self.logfile = ('reports.log')  # Can be overwritten in __init__ method
-                                        # in subclasses
-
-    def format_report(self):
-        pass
-
-    def indexpattern_generate(self, raw=True):
-        return indexpattern_generate(self.start_time, self.end_time, raw)
-
-    @staticmethod
-    def establish_client():
-        """Initialize and return the elasticsearch client"""
-        client = Elasticsearch(['https://gracc.opensciencegrid.org/q'],
-                               use_ssl=True,
-                               verify_certs = False,
-                               # ca_certs = 'gracc_cert/lets-encrypt-x3-cross-signed.pem',
-                               # client_cert = 'gracc_cert/gracc-reports-dev.crt',
-                               # client_key = 'gracc_cert/gracc-reports-dev.key',
-                               timeout=60)
-        return client
-
-    @abc.abstractmethod
-    def query(self):
-        """Method to define subclass Elasticsearch query"""
-        pass
-
-    @abc.abstractmethod
-    def generate_report_file(self, report):
-        """Method to generate the report class"""
-        pass
-
-    @staticmethod
-    def sorted_buckets(agg, key=operator.attrgetter('key')):
-        return sorted(agg.buckets, key=key)
-
-    def send_report(self, report_type=None, title=None):
-        """Send reports as ascii, csv, html attachments """
-        text = {}
-        content = self.format_report()
-
-        if self.is_test:
-            emails = re.split('[; ,]', self.config.get("email", "test_to"))
-            names = re.split('[; ,]', self.config.get("email", "test_realname"))
+        if logfile:
+            self.logfile = logfile
         else:
-            emails = re.split('[; ,]', self.config.get("email", "%s_to" % (report_type,))
-                              + ',' + self.config.get("email", "test_to"))
-            names = re.split('[; ,]', self.config.get("email",
-                                    "%s_realname" % (report_type,)))
-
-        if self.no_email:
-            print "no_email flag was used.  Not sending email for this run."
-            print "Would have sent emails to {0}.".format(', '.join(emails))
-            return
-
-        emailfrom = self.config.get("email", "from")
-
-        emailReport = TextUtils.TextUtils(self.header)
-        text["text"] = emailReport.printAsTextTable("text", content)
-        text["csv"] = emailReport.printAsTextTable("csv", content)
-        if self.template:
-            with open(self.template, 'r') as t:
-                htmltext= "".join(t.readlines())
-            if title:
-                htmltext = htmltext.replace('$TITLE', title)
-            text["html"] = htmltext.replace('$TABLE', emailReport.printAsTextTable("html", content))
-        else:
-            text["html"] = "<html><body><h2>%s</h2><table border=1>%s</table></body></html>" % (self.title, emailReport.printAsTextTable("html", content),)
-
-        if title:
-            TextUtils.sendEmail((names, emails), title, text, ("GRACC Operations", self.config.get("email", "from")), self.config.get("email", "smtphost"))
-        else:
-            TextUtils.sendEmail((names, emails), "GRACC Report", text, (
-            "GRACC Operations", self.config.get("email", "from")),
-                                self.config.get("email", "smtphost"))
+            self.logfile = ('reports.log')
+        self.logger = self.setupgenLogger(reportname=report)
 
     @staticmethod
     def parse_opts():
@@ -166,6 +98,11 @@ class Reporter(TimeUtils):
         arguments = parser.parse_args()
         return arguments
 
+    def indexpattern_generate(self, raw=True):
+        """Returns the Elasticsearch index pattern based on the class
+        variables of start time and end time, and the flag raw."""
+        return indexpattern_generate(self.start_time, self.end_time, raw)
+
     def setupgenLogger(self, reportname):
         """Creates logger for Reporter class.
 
@@ -205,6 +142,94 @@ class Reporter(TimeUtils):
         logger.addHandler(fh)
 
         return logger
+
+    @staticmethod
+    def establish_client():
+        """Initialize and return the elasticsearch client"""
+        client = Elasticsearch(['https://gracc.opensciencegrid.org/q'],
+                               use_ssl=True,
+                               verify_certs=False,
+                               # ca_certs = 'gracc_cert/lets-encrypt-x3-cross-signed.pem',
+                               # client_cert = 'gracc_cert/gracc-reports-dev.crt',
+                               # client_key = 'gracc_cert/gracc-reports-dev.key',
+                               timeout=60)
+        return client
+
+    @abc.abstractmethod
+    def query(self):
+        """Method to define report's Elasticsearch query. Must be overridden"""
+        pass
+
+    def generate_report_file(self, report):
+        """Method to generate the report file, if format_report below is not
+        used."""
+        pass
+
+    @staticmethod
+    def sorted_buckets(agg, key=operator.attrgetter('key')):
+        """Sorts the Elasticsearch Aggregation buckets based on the key you
+        specify"""
+        return sorted(agg.buckets, key=key)
+
+    def format_report(self):
+        """Method to be overridden by reports that need simultaneous
+        CSV and HTML generation"""
+        pass
+
+    def send_report(self, report_type=None, title=None):
+        """Send reports as ascii, csv, html attachments."""
+        text = {}
+        content = self.format_report()
+
+        if not content:
+            self.logger.error("There is no content being passed to generate a "
+                              "report file")
+            sys.exit(1)
+
+        if title:
+            use_title = title
+        else:
+            use_title = "GRACC Report"
+
+        if self.is_test:
+            emails = re.split('[; ,]', self.config.get("email", "test_to"))
+            names = re.split('[; ,]', self.config.get("email", "test_realname"))
+        else:
+            emails = re.split('[; ,]', self.config.get("email", "{0}_to".format(report_type))
+                              + ',' + self.config.get("email", "test_to"))
+            names = re.split('[; ,]', self.config.get("email",
+                                    "{0}_realname".format(report_type)))
+
+        if self.no_email:
+            print "no_email flag was used.  Not sending email for this run."
+            print "Would have sent emails to {0}.".format(', '.join(emails))
+            return
+
+        emailfrom = self.config.get("email", "from")
+
+        emailReport = TextUtils.TextUtils(self.header)
+        text["text"] = emailReport.printAsTextTable("text", content)
+        text["csv"] = emailReport.printAsTextTable("csv", content)
+        htmldata = emailReport.printAsTextTable("html", content)
+
+        if self.template:
+            with open(self.template, 'r') as t:
+                htmltext= "".join(t.readlines())
+            htmltext = htmltext.replace('$TITLE', use_title)
+            text["html"] = htmltext.replace('$TABLE', htmldata)
+        else:
+            text["html"] = "<html><body><h2>{0}</h2><table border=1>{1}</table></body></html>".format(use_title, htmldata)
+
+        TextUtils.sendEmail((names, emails), use_title, text,
+                            ("GRACC Operations", emailfrom),
+                            self.config.get("email", "smtphost"))
+        return
+
+    @abc.abstractmethod
+    def run_report(self):
+        """Method within report that actually runs the various other methods
+        in the Reporter and report-specific class.  Must be overridden."""
+        pass
 
 
 def runerror(config, error, traceback):
