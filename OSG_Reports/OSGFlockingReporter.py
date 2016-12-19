@@ -44,7 +44,7 @@ class FlockingReport(Reporter):
             self.logger.exception(e)
         self.no_email = no_email
         self.is_test = is_test
-        self.title = "OSG Flocking Report"
+        self.title = "OSG Flocking: Usage of OSG Sites {0} - {1}".format(self.start_time, self.end_time)
         self.header = ["VOName", "SiteName", "ProbeName", "ProjectName",
                        "Wall Hours"]
 
@@ -204,7 +204,7 @@ def main():
                            no_email=args.no_email,
                            template=args.template)
         # f.generate()
-        f.send_report("Flocking")
+        f.send_report(report_type="Flocking", title=f.title)
 
         print "OSG Flocking Report execution successful"
 

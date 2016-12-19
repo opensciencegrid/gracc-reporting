@@ -29,7 +29,7 @@ class Reporter(TimeUtils):
     __metaclass__ = abc.ABCMeta
 
     def __init__(self, config, start, end=None, verbose=False, raw=True,
-                 template=False, is_test=False, no_email=False):
+                 template=False, is_test=False, no_email=False, title=None):
         """Constructor for OSGReporter
         Args:
                 config(Configuration) - configuration file
@@ -85,7 +85,7 @@ class Reporter(TimeUtils):
     def sorted_buckets(agg, key=operator.attrgetter('key')):
         return sorted(agg.buckets, key=key)
 
-    def send_report(self, report_type="test"):
+    def send_report(self, report_type=None, title=None):
         """Send reports as ascii, csv, html attachments """
         text = {}
         content = self.format_report()
@@ -106,18 +106,24 @@ class Reporter(TimeUtils):
 
         emailfrom = self.config.get("email", "from")
 
-        print "header", self.header
         emailReport = TextUtils.TextUtils(self.header)
         text["text"] = emailReport.printAsTextTable("text", content)
         text["csv"] = emailReport.printAsTextTable("csv", content)
         if self.template:
-            print "TEMPLATE!!"
             with open(self.template, 'r') as t:
                 htmltext= "".join(t.readlines())
+            if title:
+                htmltext = htmltext.replace('$TITLE', title)
             text["html"] = htmltext.replace('$TABLE', emailReport.printAsTextTable("html", content))
         else:
             text["html"] = "<html><body><h2>%s</h2><table border=1>%s</table></body></html>" % (self.title, emailReport.printAsTextTable("html", content),)
-        TextUtils.sendEmail((names, emails), self.title, text, ("Gratia Operation", self.config.get("email", "from")), self.config.get("email", "smtphost"))
+
+        if title:
+            TextUtils.sendEmail((names, emails), title, text, ("GRACC Operations", self.config.get("email", "from")), self.config.get("email", "smtphost"))
+        else:
+            TextUtils.sendEmail((names, emails), "GRACC Report", text, (
+            "GRACC Operations", self.config.get("email", "from")),
+                                self.config.get("email", "smtphost"))
 
     @staticmethod
     def parse_opts():
