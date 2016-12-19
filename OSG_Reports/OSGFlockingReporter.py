@@ -32,9 +32,12 @@ class FlockingReport(Reporter):
     """Class to generate the probe report"""
     def __init__(self, configuration, start, end, template=False,
                      verbose=False, is_test=False, no_email=False):
-        Reporter.__init__(self, configuration, start, end, verbose, raw=False)
+        Reporter.__init__(self, configuration, start, end=end,
+                          template=template, verbose=verbose,
+                          no_email=no_email, raw=False)
         self.logfile = logfile
         self.logger = self.setupgenLogger("FlockingReport")
+        self.verbose = verbose
         try:
             self.client = self.establish_client()
         except Exception as e:
@@ -46,13 +49,14 @@ class FlockingReport(Reporter):
                        "Wall Hours"]
 
     def query(self):
-        """Method to query Elasticsearch cluster for EfficiencyReport
+        """Method to query Elasticsearch cluster for Flocking Report
         information"""
         # Gather parameters, format them for the query
         starttimeq = self.dateparse_to_iso(self.start_time)
         endtimeq = self.dateparse_to_iso(self.end_time)
 
-        print self.indexpattern
+        if self.verbose:
+            self.logger.info(self.indexpattern)
 
         # Elasticsearch query and aggregations
         s = Search(using=self.client, index=self.indexpattern) \
@@ -117,14 +121,12 @@ class FlockingReport(Reporter):
             return results
         except Exception as e:
             print e, "Error accessing Elasticsearch"
-            sys.exit(1)
+            raise
 
     def generate(self):
         """Higher-level method that calls the lower-level functions to
         generate the raw data for this report.
         """
-        # pline = self.printline()
-        # pline.send(None)
 
         results = self.run_query()
 
@@ -145,12 +147,12 @@ class FlockingReport(Reporter):
         pass
 
 
-    def printlines(self):
-        """Coroutine to print each line to stdout"""
-        print "{0}\t{1}\t{2}\t{3}\t{4}".format("VOName", "SiteName", "ProbeName", "ProjectName", "Wall Hours")
-        for linetuple in self.generate():
-            site, vo, probe, project, wallhours = linetuple
-            print "{0}\t{1}\t{2}\t{3}\t{4}".format(vo, site, probe, project, wallhours)
+    # def printlines(self):
+    #     """Coroutine to print each line to stdout"""
+    #     print "{0}\t{1}\t{2}\t{3}\t{4}".format("VOName", "SiteName", "ProbeName", "ProjectName", "Wall Hours")
+    #     for linetuple in self.generate():
+    #         site, vo, probe, project, wallhours = linetuple
+    #         print "{0}\t{1}\t{2}\t{3}\t{4}".format(vo, site, probe, project, wallhours)
 
     def run_report(self):
         """Higher level method to handle the process flow of the report being run"""
@@ -199,7 +201,8 @@ def main():
                            args.end,
                            verbose=args.verbose,
                            is_test=args.is_test,
-                           no_email=args.no_email)
+                           no_email=args.no_email,
+                           template=args.template)
         # f.generate()
         f.send_report("Flocking")
 

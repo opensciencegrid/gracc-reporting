@@ -47,6 +47,7 @@ class Reporter(TimeUtils):
         self.verbose = verbose
         self.no_email = no_email
         self.is_test = is_test
+        self.template = template
         self.epochrange = None
         self.indexpattern = self.indexpattern_generate(raw)
         self.logfile = ('reports.log')  # Can be overwritten in __init__ method
@@ -109,7 +110,13 @@ class Reporter(TimeUtils):
         emailReport = TextUtils.TextUtils(self.header)
         text["text"] = emailReport.printAsTextTable("text", content)
         text["csv"] = emailReport.printAsTextTable("csv", content)
-        text["html"] = "<html><body><h2>%s</h2><table border=1>%s</table></body></html>" % (self.title, emailReport.printAsTextTable("html", content),)
+        if self.template:
+            print "TEMPLATE!!"
+            with open(self.template, 'r') as t:
+                htmltext= "".join(t.readlines())
+            text["html"] = htmltext.replace('$TABLE', emailReport.printAsTextTable("html", content))
+        else:
+            text["html"] = "<html><body><h2>%s</h2><table border=1>%s</table></body></html>" % (self.title, emailReport.printAsTextTable("html", content),)
         TextUtils.sendEmail((names, emails), self.title, text, ("Gratia Operation", self.config.get("email", "from")), self.config.get("email", "smtphost"))
 
     @staticmethod
