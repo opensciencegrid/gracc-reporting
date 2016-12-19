@@ -29,7 +29,7 @@ class Reporter(TimeUtils):
     __metaclass__ = abc.ABCMeta
 
     def __init__(self, report, config, start, end=None, verbose=False,
-                 raw=True, template=False, is_test=False, no_email=False,
+                 raw=True, template=None, is_test=False, no_email=False,
                  title=None, logfile=None):
         """Constructor for OSGReporter
         Args:
@@ -51,11 +51,12 @@ class Reporter(TimeUtils):
         self.template = template
         self.epochrange = None
         self.indexpattern = self.indexpattern_generate(raw)
+        self.report_type = report
         if logfile:
             self.logfile = logfile
         else:
             self.logfile = ('reports.log')
-        self.logger = self.setupgenLogger(reportname=report)
+        self.logger = self.setupgenLogger()
 
     @staticmethod
     def parse_opts():
@@ -103,7 +104,7 @@ class Reporter(TimeUtils):
         variables of start time and end time, and the flag raw."""
         return indexpattern_generate(self.start_time, self.end_time, raw)
 
-    def setupgenLogger(self, reportname):
+    def setupgenLogger(self):
         """Creates logger for Reporter class.
 
         For non-verbose use, use WARNING level (or above)
@@ -113,7 +114,7 @@ class Reporter(TimeUtils):
 
         Returns logging.getLogger object
         """
-        logger = logging.getLogger(reportname)
+        logger = logging.getLogger(self.report_type)
         logger.setLevel(logging.DEBUG)
 
         # Console handler - info
@@ -160,7 +161,7 @@ class Reporter(TimeUtils):
         """Method to define report's Elasticsearch query. Must be overridden"""
         pass
 
-    def generate_report_file(self, report):
+    def generate_report_file(self):
         """Method to generate the report file, if format_report below is not
         used."""
         pass
@@ -176,7 +177,7 @@ class Reporter(TimeUtils):
         CSV and HTML generation"""
         pass
 
-    def send_report(self, report_type=None, title=None):
+    def send_report(self, title=None):
         """Send reports as ascii, csv, html attachments."""
         text = {}
         content = self.format_report()
@@ -195,10 +196,10 @@ class Reporter(TimeUtils):
             emails = re.split('[; ,]', self.config.get("email", "test_to"))
             names = re.split('[; ,]', self.config.get("email", "test_realname"))
         else:
-            emails = re.split('[; ,]', self.config.get("email", "{0}_to".format(report_type))
+            emails = re.split('[; ,]', self.config.get("email", "{0}_to".format(self.report_type))
                               + ',' + self.config.get("email", "test_to"))
             names = re.split('[; ,]', self.config.get("email",
-                                    "{0}_realname".format(report_type)))
+                                    "{0}_realname".format(self.report_type)))
 
         if self.no_email:
             print "no_email flag was used.  Not sending email for this run."
@@ -210,7 +211,8 @@ class Reporter(TimeUtils):
         emailReport = TextUtils.TextUtils(self.header)
         text["text"] = emailReport.printAsTextTable("text", content)
         text["csv"] = emailReport.printAsTextTable("csv", content)
-        htmldata = emailReport.printAsTextTable("html", content)
+        htmldata = emailReport.printAsTextTable("html", content,
+                                                template=self.template)
 
         if self.template:
             with open(self.template, 'r') as t:

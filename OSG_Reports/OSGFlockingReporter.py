@@ -31,13 +31,11 @@ logfile = 'osgflockingreport.log'
 class FlockingReport(Reporter):
     """Class to generate the probe report"""
     def __init__(self, configuration, start, end, template=False,
-                     verbose=False, is_test=False, no_email=False):
-        report='FlockingReport'
-        # self.logfile = logfile
+                 verbose=False, is_test=False, no_email=False):
+        report='Flocking'
         Reporter.__init__(self, report, configuration, start, end=end,
                           template=template, verbose=verbose,
                           no_email=no_email, raw=False, logfile=logfile)
-        # self.logger = self.setupgenLogger("FlockingReport")
         self.verbose = verbose
         try:
             self.client = self.establish_client()
@@ -126,20 +124,6 @@ class FlockingReport(Reporter):
                         # print "WHOA!"
                         yield (sitekey, vokey, probekey, project.key, project.CoreHours_sum.value)
 
-    def generate_report_file(self, report=None):
-        """Takes data from query response and parses it to send to other functions for processing
-        Will handle HTML vs. csv file generation."""
-        pass
-
-
-    # def printlines(self):
-    #     """Coroutine to print each line to stdout"""
-    #     print "{0}\t{1}\t{2}\t{3}\t{4}".format("VOName", "SiteName", "ProbeName", "ProjectName", "Wall Hours")
-    #     for linetuple in self.generate():
-    #         site, vo, probe, project, wallhours = linetuple
-    #         print "{0}\t{1}\t{2}\t{3}\t{4}".format(vo, site, probe, project, wallhours)
-
-
     def format_report(self):
         """Takes the results from the elasticsearch query and returns a dict
         that can be used by the Reporter.send_report method to generate HTML,
@@ -159,12 +143,12 @@ class FlockingReport(Reporter):
             report["ProbeName"].append(probe)
             report["ProjectName"].append(project)
             report["Wall Hours"].append(wallhours)
-
         return report
 
     def run_report(self):
-        """Higher level method to handle the process flow of the report being run"""
-        self.send_report(report_type="Flocking", title=self.title)
+        """Higher level method to handle the process flow of the report
+        being run"""
+        self.send_report(title=self.title)
 
 
 

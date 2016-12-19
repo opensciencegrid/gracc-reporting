@@ -42,7 +42,7 @@ class TextUtils:
 
         return len(text[self.table_header[0]])
 
-    def printAsTextTable(self, format_type, text):
+    def printAsTextTable(self, format_type, text, template=False):
         """"Prepares input text to send as attachment
         Args:
             format_type(str) - text, csv, html
@@ -86,17 +86,18 @@ class TextUtils:
             ecol = "</td></tr>"
             space = "&nbsp;"
 
-        line = ""
-        for i in range(len(self.table_header)):
-            pad = col_paddings[i]
-            column = self.table_header[i].center(pad + 1)
-            if i == 0:
-                line = column
-                print i, line
-            else:
-                line = "%s%s%s" % (line, tcol, column)
-                print i, line
-        message = "%s%s%s%s\n" % (message, tbcol, line, tecol)
+        if not template and format_type != "html":
+            line = ""
+            for i in range(len(self.table_header)):
+                pad = col_paddings[i]
+                column = self.table_header[i].center(pad + 1)
+                if i == 0:
+                    line = column
+                    print i, line
+                else:
+                    line = "%s%s%s" % (line, tcol, column)
+                    print i, line
+            message = "%s%s%s%s\n" % (message, tbcol, line, tecol)
 
         for count in range(0, self.getLength(text)):
             index = 0
