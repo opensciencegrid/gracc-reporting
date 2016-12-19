@@ -85,14 +85,17 @@ class TextUtils:
             bcol = "<tr><td align=left>"
             ecol = "</td></tr>"
             space = "&nbsp;"
+
         line = ""
         for i in range(len(self.table_header)):
             pad = col_paddings[i]
             column = self.table_header[i].center(pad + 1)
             if i == 0:
                 line = column
+                print i, line
             else:
                 line = "%s%s%s" % (line, tcol, column)
+                print i, line
         message = "%s%s%s%s\n" % (message, tbcol, line, tecol)
 
         for count in range(0, self.getLength(text)):
