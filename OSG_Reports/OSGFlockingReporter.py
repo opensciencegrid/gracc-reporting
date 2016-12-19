@@ -1,8 +1,5 @@
 import os
 import inspect
-import smtplib
-import email.utils
-from email.mime.text import MIMEText
 import datetime
 import json
 import traceback
@@ -121,7 +118,6 @@ class FlockingReport(Reporter):
                     probekey = probe.key
                     projects = (project for project in probe.group_ProjectName.buckets)
                     for project in projects:
-                        # print "WHOA!"
                         yield (sitekey, vokey, probekey, project.key, project.CoreHours_sum.value)
 
     def format_report(self):
@@ -149,14 +145,6 @@ class FlockingReport(Reporter):
         """Higher level method to handle the process flow of the report
         being run"""
         self.send_report(title=self.title)
-
-
-
-
-
-
-
-
 
 
 def main():
