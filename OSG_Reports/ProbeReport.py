@@ -190,11 +190,11 @@ class OIMInfo(object):
 
 class ProbeReport(Reporter):
     """Class to generate the probe report"""
-    def __init__(self, configuration, start, end, template=False,
-                     verbose=False, is_test=False, no_email=False):
-        Reporter.__init__(self, configuration, start, end, verbose)
-        self.logfile = logfile
-        self.logger = self.setupgenLogger("ProbeReport")
+    def __init__(self, configuration, start, end, verbose=False, is_test=False,
+                 no_email=False):
+        report = "Probe"
+        Reporter.__init__(self, report, configuration, start, end=end,
+                          verbose=verbose, logfile=logfile, no_email=no_email)
         try:
             self.client = self.establish_client()
         except Exception as e:
@@ -203,8 +203,6 @@ class ProbeReport(Reporter):
         self.estimeformat = re.compile("(.+)T(.+)\.\d+Z")
         self.emailfile = 'filetoemail.txt'
         self.probe, self.resource = None, None
-        self.no_email = no_email
-        self.is_test = is_test
         self.historyfile = 'probereporthistory.log'
         self.newhistory = []
         self.reminder = False
@@ -325,7 +323,7 @@ class ProbeReport(Reporter):
 
                 yield curprobe, prev_reported_recent
 
-    def generate_report_file(self, oimdict, report=None):
+    def generate_report_file(self, oimdict):
         """Generator function that generates the report files to send in email.
         This is where we exclude sending emails for those probes we've reported
         on in the last week.
@@ -390,7 +388,7 @@ class ProbeReport(Reporter):
                'if your Gratia reporting is active.'.format(self.probe, self.resource, self.lastreport_date)
         return text
 
-    def send_report(self, report_type="ProbeReport"):
+    def send_report(self):
         """Send our emails"""
         if self.is_test:
             emails = re.split('[; ,]',self.config.get("email", "test_to"))
@@ -440,7 +438,7 @@ class ProbeReport(Reporter):
                 cleanup.write(line)
         return
 
-    def send_all_reports(self, oimdict):
+    def run_report(self, oimdict):
         """The higher level method that controls the generation and sending
         of the probe report using other methods in this class."""
         rep_files = self.generate_report_file(oimdict)
@@ -473,12 +471,11 @@ def main():
         preport = ProbeReport(config,
                               startdate,
                               startdate,
-                              template=args.template,
                               verbose=args.verbose,
                               is_test=args.is_test,
                               no_email=args.no_email)
 
-        preport.send_all_reports(oim_probe_fqdn_dict)
+        preport.run_report(oim_probe_fqdn_dict)
         print 'Probe Report Execution finished'
     except Exception as e:
         with open(logfile, 'a') as f:
