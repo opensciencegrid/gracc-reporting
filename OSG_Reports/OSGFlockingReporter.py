@@ -29,7 +29,7 @@ class FlockingReport(Reporter):
     """Class to generate the probe report"""
     def __init__(self, configuration, start, end, template=False,
                  verbose=False, is_test=False, no_email=False):
-        report='Flocking'
+        report = 'Flocking'
         Reporter.__init__(self, report, configuration, start, end=end,
                           template=template, verbose=verbose,
                           no_email=no_email, raw=False, logfile=logfile)
