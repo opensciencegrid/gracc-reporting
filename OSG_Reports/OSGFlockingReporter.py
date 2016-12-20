@@ -104,12 +104,12 @@ class FlockingReport(Reporter):
             raise
 
     def generate(self):
-        """Higher-level method that calls the lower-level functions to
-        generate the raw data for this report.
+        """Higher-level generator method that calls the lower-level functions
+        to generate the raw data for this report.
         """
-
         results = self.run_query()
 
+        # Iterate through the buckets to get our data, yield it
         for site in results.group_Site.buckets:
             sitekey = site.key
             for vo in site.group_VOName.buckets:
