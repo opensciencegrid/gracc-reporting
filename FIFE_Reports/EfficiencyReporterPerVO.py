@@ -187,10 +187,7 @@ class Efficiency(Reporter):
             emails = re.split('[; ,]', self.config.get(self.vo.lower(), "email") +
                               ',' + self.config.get("email", "test_to"))
 
-        if self.no_email:
-            self.logger.info("Not sending report")
-            self.logger.info("Would have sent emails to {0}.".format(
-                ', '.join(emails)))
+        if self.test_no_email(emails):
             return
 
         TextUtils.sendEmail(

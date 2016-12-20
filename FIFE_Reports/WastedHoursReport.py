@@ -298,10 +298,7 @@ class WastedHoursReport(Reporter):
             emails = self.config.get("email", "{0}_email".format(self.vo.lower())).split(",")\
                      + self.config.get("email", "test_to").split(",")
 
-        if self.no_email:
-            self.logger.info("Not sending report")
-            self.logger.info("Would have sent emails to {0}.".format(
-                ', '.join(emails)))
+        if self.test_no_email(emails):
             return
 
         TextUtils.sendEmail(([], emails),

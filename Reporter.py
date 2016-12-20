@@ -166,12 +166,6 @@ class Reporter(TimeUtils):
         used."""
         pass
 
-    @staticmethod
-    def sorted_buckets(agg, key=operator.attrgetter('key')):
-        """Sorts the Elasticsearch Aggregation buckets based on the key you
-        specify"""
-        return sorted(agg.buckets, key=key)
-
     def format_report(self):
         """Method to be overridden by reports that need simultaneous
         CSV and HTML generation"""
@@ -232,6 +226,23 @@ class Reporter(TimeUtils):
         """Method within report that actually runs the various other methods
         in the Reporter and report-specific class.  Must be overridden."""
         pass
+
+    @staticmethod
+    def sorted_buckets(agg, key=operator.attrgetter('key')):
+        """Sorts the Elasticsearch Aggregation buckets based on the key you
+        specify"""
+        return sorted(agg.buckets, key=key)
+
+
+    def test_no_email(self, emails):
+        if self.no_email:
+            self.logger.info("Not sending report")
+            self.logger.info("Would have sent emails to {0}.".format(
+                ', '.join(emails)))
+            return True
+        else:
+            return False
+
 
 
 def runerror(config, error, traceback):
