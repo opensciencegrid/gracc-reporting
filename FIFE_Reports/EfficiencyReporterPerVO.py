@@ -86,8 +86,7 @@ class Efficiency(Reporter):
             .bucket('group_CommonName', 'terms', field='CommonName')
 
         # Metric aggs
-        Bucket.metric('WallHours', 'sum',
-                      script="(doc['WallDuration'].value*doc['Processors'].value)/3600") \
+        Bucket.metric('WallHours', 'sum', field='CoreHours') \
             .metric('CPUDuration_sec', 'sum', field='CpuDuration')
 
         return s
@@ -115,7 +114,7 @@ class Efficiency(Reporter):
             return results
         except Exception as e:
             self.logger.exception("Error accessing Elasticsearch")
-            sys.exit(1)
+            raise
 
     def parse_lines(self):
         """For each set of dn, wall hours, cpu time, this gets username, calculates efficiency, and sends to
