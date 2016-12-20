@@ -50,13 +50,12 @@ class Job:
 
 
 class JobSuccessRateReporter(Reporter):
-    def __init__(self, configuration, start, end, vo, template, is_test, verbose, no_email):
-        Reporter.__init__(self, configuration, start, end, verbose)
+    def __init__(self, configuration, start, end, vo, template, is_test,
+                 verbose, no_email):
+        report = 'JobSuccessRate'
+        Reporter.__init__(self, report, configuration, start, end, verbose,
+                          is_test=is_test, no_email=no_email, logfile=logfile)
         self.vo = vo
-        self.logfile = logfile
-        self.logger = self.setupgenLogger("JobSuccessRate")
-        self.no_email = no_email
-        self.is_test = is_test
         self.template = template
         self.title = "Production Jobs Success Rate {0} - {1}".format(self.start_time, self.end_time)
         self.run = Jobs()
@@ -110,7 +109,8 @@ class JobSuccessRateReporter(Reporter):
             try:
                 # Parse userid
                 try:
-                    # Grabs the first parenthesized subgroup in the hit['CommonName'] string, where that subgroup comes
+                    # Grabs the first parenthesized subgroup in the
+                    # hit['CommonName'] string, where that subgroup comes
                     # after "CN=UID:"
                     userid = self.usermatch_CILogon.match(hit['CommonName']).\
                         group(1)
