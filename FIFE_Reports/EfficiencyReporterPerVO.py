@@ -30,16 +30,13 @@ logfile = 'efficiencyreport.log'
 class Efficiency(Reporter):
     def __init__(self, config, start, end, vo, verbose, hour_limit, eff_limit,
                  facility, is_test=False, no_email=False):
-        Reporter.__init__(self, config, start, end, verbose = False)
-        self.no_email = no_email
+        report = 'Efficiency'
+        Reporter.__init__(self, report, config, start, end, verbose=verbose,
+                          logfile=logfile, no_email=no_email, is_test=is_test)
         self.hour_limit = hour_limit
         self.vo = vo
-        self.verbose = verbose
-        self.logfile = logfile
-        self.logger = self.setupgenLogger('efficiencypervo')
         self.eff_limit = eff_limit
         self.facility = facility
-        self.is_test = is_test
         self.text = ''
         self.table = ''
         self.fn = "{0}-efficiency.{1}".format(self.vo.lower(),
