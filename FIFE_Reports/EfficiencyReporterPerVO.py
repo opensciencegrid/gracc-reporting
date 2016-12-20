@@ -31,37 +31,19 @@ logfile = 'efficiencyreport.log'
 class Efficiency(Reporter):
     def __init__(self, config, start, end, vo, verbose, hour_limit, eff_limit,
                  facility, is_test=False, no_email=False):
-        Reporter.__init__(self, config, start, end, verbose=False)
-        self.no_email = no_email
+        report = 'Efficiency'
+        Reporter.__init__(self, report, config, start, end, verbose=verbose,
+                          logfile=logfile, no_email=no_email, is_test=is_test)
         self.hour_limit = hour_limit
         self.vo = vo
-        self.verbose = verbose
-        self.logfile = logfile
-        self.logger = self.setupgenLogger('efficiencypervo')
         self.eff_limit = eff_limit
         self.facility = facility
-        self.is_test = is_test
         self.text = ''
         self.table = ''
         self.fn = "{0}-efficiency.{1}".format(self.vo.lower(),
                                          self.start_time.replace("/", "-"))
         self.cilogon_match = re.compile('.+CN=UID:(\w+)')
         self.non_cilogon_match = re.compile('/CN=([\w\s]+)/?.+?')
-
-    @staticmethod
-    def calc_eff(wallhours, cpusec):
-        """Calculate the efficiency given the wall hours and cputime in seconds.  Returns percentage"""
-        return (cpusec / 3600) / wallhours
-
-    def parseCN(self, cn):
-        """Parse the CN to grab the username"""
-        m = self.cilogon_match.match(cn)  # CILogon certs
-        if m:
-            pass
-        else:
-            m = self.non_cilogon_match.match(cn)
-        user = m.group(1)
-        return user
 
     def query(self):
         """Method to query Elasticsearch cluster for EfficiencyReport information"""
@@ -87,14 +69,14 @@ class Efficiency(Reporter):
             .bucket('group_CommonName', 'terms', field='CommonName')
 
         # Metric aggs
-        Bucket.metric('WallHours', 'sum',
-                      script="(doc['WallDuration'].value*doc['Processors'].value)/3600") \
+        Bucket.metric('WallHours', 'sum', field='CoreHours') \
             .metric('CPUDuration_sec', 'sum', field='CpuDuration')
 
         return s
 
-    def run_query(self):
-        """Execute the query and check the status code before returning the response"""
+    def generate(self):
+        """Main driver of activity in report.  Runs the ES query, checks for
+        success, and then returns the raw data for processing."""
         s = self.query()
         t = s.to_dict()
         if self.verbose:
@@ -116,7 +98,7 @@ class Efficiency(Reporter):
             return results
         except Exception as e:
             self.logger.exception("Error accessing Elasticsearch")
-            sys.exit(1)
+            raise
 
     def parse_lines(self):
         """For each set of dn, wall hours, cpu time, this gets username, calculates efficiency, and sends to
@@ -192,10 +174,7 @@ class Efficiency(Reporter):
             emails = re.split('[; ,]', self.config.get(self.vo.lower(), "email") +
                               ',' + self.config.get("email", "test_to"))
 
-        if self.no_email:
-            self.logger.info("Not sending report")
-            self.logger.info("Would have sent emails to {0}.".format(
-                ', '.join(emails)))
+        if self.test_no_email(emails):
             return
 
         TextUtils.sendEmail(
@@ -214,10 +193,26 @@ class Efficiency(Reporter):
 
         return
 
+    @staticmethod
+    def calc_eff(wallhours, cpusec):
+        """Calculate the efficiency given the wall hours and cputime in
+        seconds.  Returns percentage"""
+        return (cpusec / 3600) / wallhours
+
+    def parseCN(self, cn):
+        """Parse the CN to grab the username"""
+        m = self.cilogon_match.match(cn)  # CILogon certs
+        if m:
+            pass
+        else:
+            m = self.non_cilogon_match.match(cn)
+        user = m.group(1)
+        return user
+
     def run_report(self):
-        """Handles the data flow throughout the report generation.  Runs the query, generates the HTML report,
-        and sends the email"""
-        results = self.run_query()
+        """Handles the data flow throughout the report generation.  Runs the
+        query, generates the HTML report, and sends the email"""
+        results = self.generate()
         pline = self.parse_lines()
         pline.send(None)
 

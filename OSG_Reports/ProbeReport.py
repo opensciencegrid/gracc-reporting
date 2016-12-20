@@ -190,11 +190,11 @@ class OIMInfo(object):
 
 class ProbeReport(Reporter):
     """Class to generate the probe report"""
-    def __init__(self, configuration, start, end, template=False,
-                     verbose=False, is_test=False, no_email=False):
-        Reporter.__init__(self, configuration, start, end, verbose)
-        self.logfile = logfile
-        self.logger = self.setupgenLogger("ProbeReport")
+    def __init__(self, configuration, start, end, verbose=False, is_test=False,
+                 no_email=False):
+        report = "Probe"
+        Reporter.__init__(self, report, configuration, start, end=end,
+                          verbose=verbose, logfile=logfile, no_email=no_email)
         try:
             self.client = self.establish_client()
         except Exception as e:
@@ -203,8 +203,6 @@ class ProbeReport(Reporter):
         self.estimeformat = re.compile("(.+)T(.+)\.\d+Z")
         self.emailfile = 'filetoemail.txt'
         self.probe, self.resource = None, None
-        self.no_email = no_email
-        self.is_test = is_test
         self.historyfile = 'probereporthistory.log'
         self.newhistory = []
         self.reminder = False
@@ -219,7 +217,7 @@ class ProbeReport(Reporter):
 
         s = Search(using=self.client, index=self.indexpattern)\
             .filter(Q({"range": {"@received": {"gte": "{0}".format(startdateq)}}}))\
-            .filter(Q({"term": {"ResourceType": "Batch"}}))
+            .filter("term", ResourceType="Batch")
 
         s.aggs.bucket('group_probename', 'terms', field='ProbeName',
                                size=1000000000)
@@ -240,14 +238,10 @@ class ProbeReport(Reporter):
         Returns a string with either that time or a string indicating that
         it has been over a month.
         """
-        self.start_time = datetime.date.today().replace(day=1)-timedelta(days=1)
-        self.end_time = datetime.date.today()
-        self.indexpattern = self.indexpattern_generate()
-
         ls = Search(using=self.client, index=self.indexpattern)\
             .filter(Q({"range":{"@received":{"gte":"now-1M"}}}))\
-            .filter(Q({"term":{"ResourceType":"Batch"}}))\
-            .filter(Q({"term":{"ProbeName":"{0}".format(self.probe)}}))
+            .filter("term", ResourceType="Batch")\
+            .filter("wildcard", ProbeName="*:{0}".format(self.probe))
 
         ls.aggs.bucket('group_probename', 'terms', field='ProbeName',
                                size=1000000000)\
@@ -302,7 +296,6 @@ class ProbeReport(Reporter):
         probes = self.get_probenames()
         self.logger.info("Successfully analyzed ES data vs. OIM data")
         oimset = set((key for key in oimdict))
-
         return oimset.difference(probes)
 
     def getprev_reported_probes(self):
@@ -330,7 +323,7 @@ class ProbeReport(Reporter):
 
                 yield curprobe, prev_reported_recent
 
-    def generate_report_file(self, oimdict, report=None):
+    def generate_report_file(self, oimdict):
         """Generator function that generates the report files to send in email.
         This is where we exclude sending emails for those probes we've reported
         on in the last week.
@@ -387,38 +380,32 @@ class ProbeReport(Reporter):
 
     def emailtext(self):
         """Format the text for our emails"""
-        text= 'The probe {0} installed at {1} has not reported'\
-                    ' GRACC records to OSG for the last two days. The last ' \
-                    'date we received a record from {0} was {2}.  If this '\
-                    'is due to maintenance or a retirement of this '\
-                    'node, please let us know.  If not, please check to see '\
-                    'if your Gratia reporting is active.'.format(self.probe,
-                                                                 self.resource,
-                                                                 self.lastreport_date)
+        text = 'The probe installed on {0} at {1} has not reported'\
+               ' GRACC records to OSG for the last two days. The last ' \
+               'date we received a record from {0} was {2}.  If this '\
+               'is due to maintenance or a retirement of this '\
+               'node, please let us know.  If not, please check to see '\
+               'if your Gratia reporting is active.'.format(self.probe, self.resource, self.lastreport_date)
         return text
 
-    def send_report(self, report_type="ProbeReport"):
+    def send_report(self):
         """Send our emails"""
         if self.is_test:
             emails = re.split('[; ,]',self.config.get("email", "test_to"))
         else:
-            emails = re.split('[; ,]', self.config.get("email", "real_to") +
-                              ',' + self.config.get("email", "test_to"))
+            emails = re.split('[; ,]', self.config.get("email", "{0}_to".format(self.report_type))
+                              + ',' + self.config.get("email", "test_to"))
 
         emailfrom = self.config.get("email", "from")
 
-        if self.no_email:
-            self.logger.info("no_email flag was used.  Not sending email for "
-                             "this run.\t{0}\t{1}".format(self.resource,
-                                                         self.probe))
-            self.logger.info("Would have sent emails to {0}.".format(
-                ', '.join(emails)))
+        if self.test_no_email(emails):
+            self.logger.info("Resource name: {0}\tProbe Name: {1}"
+                             .format(self.resource, self.probe))
+
             if os.path.exists(self.emailfile):
                 os.unlink(self.emailfile)
 
             return
-
-
 
         with open(self.emailfile, 'rb') as fp:
             msg = MIMEText(fp.read())
@@ -449,7 +436,7 @@ class ProbeReport(Reporter):
                 cleanup.write(line)
         return
 
-    def send_all_reports(self, oimdict):
+    def run_report(self, oimdict):
         """The higher level method that controls the generation and sending
         of the probe report using other methods in this class."""
         rep_files = self.generate_report_file(oimdict)
@@ -460,7 +447,7 @@ class ProbeReport(Reporter):
         except Exception as e:
             self.logger.exception(e)
 
-        self.logger.info('All reports sent')
+        self.logger.info('All new reports sent')
         self.cleanup_history()
         return
 
@@ -482,12 +469,11 @@ def main():
         preport = ProbeReport(config,
                               startdate,
                               startdate,
-                              template=args.template,
                               verbose=args.verbose,
                               is_test=args.is_test,
                               no_email=args.no_email)
 
-        preport.send_all_reports(oim_probe_fqdn_dict)
+        preport.run_report(oim_probe_fqdn_dict)
         print 'Probe Report Execution finished'
     except Exception as e:
         with open(logfile, 'a') as f:
