@@ -94,13 +94,13 @@ class JobSuccessRateReporter(Reporter):
         # Elasticsearch query
         resultset = Search(using=self.establish_client(), index=self.indexpattern) \
             .filter("range", EndTime={"gte": starttimeq, "lt": endtimeq}) \
-            .filter(Q({"term": {"ResourceType": "Payload"}}))
+            .filter("term", ResourceType="Payload")
 
         if self.vo in re.split(',', self.config.get('noproduction', 'list')):
-            resultset = resultset.query("wildcard", VOName=voq)
+            resultset = resultset.filter("wildcard", VOName=voq)
         else:
-            resultset = resultset.query("wildcard", VOName=productioncheck)\
-                .filter(Q({"term": {"VOName": voq}}))
+            resultset = resultset.filter("wildcard", VOName=productioncheck)\
+                .filter("term", VOName=voq)
 
         if self.verbose:
             print resultset.to_dict()
