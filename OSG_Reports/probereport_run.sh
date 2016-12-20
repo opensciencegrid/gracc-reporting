@@ -16,5 +16,4 @@ else
     echo "Ran report script" >> probereport_run.log
 fi
 
-
 echo "END" `date` >> probereport_run.log
