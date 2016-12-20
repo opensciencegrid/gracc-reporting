@@ -121,91 +121,16 @@ class OSGPerSiteReporter(Reporter):
         report["Total"] = [sum((report[col][pos] for col in report
                                 if col not in ("Site", "Total")))
                            for pos in range(len(self.sitelist))]
-        # print report
-        # print len(self.vodict)
+
+        # Add total line at the bottom of report
+        for col, values in report.iteritems():
+            if col == "Site":
+                continue
+            values.append(sum(values))
+        report["Site"].append("Total")
+
         return report
-            # for site in sitelist:
-            #     if site in curvo.sites:
-            #         report[vo].append(curvo.getsitehours(site))
-            #     else:
-            #         report[vo].append(0)
 
-
-        #
-        # for result_tuple in self.generate():
-        #     vo, site, wallhrs = result_tuple
-        #
-        #     if vo not in self.header:
-        #         self.header.append(vo)
-        #         report[vo] = []
-        #
-        #     report["Site"].append(site)
-        #     report[vo]
-        #
-
-
-        #
-        #
-        #
-        #
-        # for result_tuple in self.generate():
-        #     vo, site, probe, project, wallhours = result_tuple
-        #     if self.verbose:
-        #         print "{0}\t{1}\t{2}\t{3}\t{4}".format(vo, site, probe,
-        #                                                project, wallhours)
-        #     report["VOName"].append(vo)
-        #     report["SiteName"].append(site)
-        #     report["ProbeName"].append(probe)
-        #     report["ProjectName"].append(project)
-        #     report["Wall Hours"].append(wallhours)
-        # return report
-        #
-        #
-        # for item in self.generate():
-        #     vo, site, wallhrs = item
-        #
-        #     if vo not in results_dict:
-        #         results_dict[item[0]] = {}
-        #     results_dict[item[0]][item[1].upper()] = \
-        #         int(round(item[2]/3600.,0))
-        #
-        # siteset = set([site for sites in results_dict.itervalues() for site in sites])
-        #
-        # for site in siteset:
-        #     for vo, sites in results_dict.iteritems():
-        #         if site not in sites:
-        #             results_dict[vo][site] = 0
-        #
-        # siteset = sorted(siteset)
-        #
-        # for vo, sites in results_dict.iteritems():
-        #     print "VO: {0}".format(vo)
-        #     for site in siteset:
-        #         print "\tSite: {0}, Wall Hours: {1}".format(site, sites[site])
-        #
-        # for vo, sites in results_dict.iteritems():
-        #     # print "Site: {0}".format(site)
-        #     listnew = []
-        #     results_dict[vo] = [sites[site] for site in siteset]
-        #     results_dict[vo].insert(0,sum(results_dict[vo]))
-        #     # Need to calculate total, put it in the beginning
-        #     # print siteset
-        #     # print results_dict[vo]
-        #     # for vo in voset:
-        #     #     print "\tVO: {0}, Wall Hours: {1}".format(vo, vos[vo])
-        #     #     listnew.append(vos[vo])
-        #     # results_dict[site] = listnew
-        #                 # for vo,walldur in vos.iteritems():
-        #         # print "\tVO: {0}, Wall Hours: {1}".format(vo, walldur)
-        #
-        # volist = sorted(list(results_dict.keys()))
-        #
-        # results_dict['Site'] = [site for site in siteset]
-        # results_dict['Total'] = [0 for _ in siteset]     # for now
-        #
-        # self.header = self.header + volist
-        # print results_dict
-        # return results_dict
 
     def run_report(self):
         self.generate()
@@ -228,8 +153,6 @@ def main():
                               no_email=args.no_email)
 
         osgreport.run_report()
-        # print osgreport.format_report()
-        # osgreport.send_report("siteusage")
         print 'OSG Per Site Report Execution finished'
     except Exception as e:
         with open(logfile, 'a') as f:
