@@ -393,17 +393,15 @@ class ProbeReport(Reporter):
         if self.is_test:
             emails = re.split('[; ,]',self.config.get("email", "test_to"))
         else:
-            emails = re.split('[; ,]', self.config.get("email", "real_to") +
-                              ',' + self.config.get("email", "test_to"))
+            emails = re.split('[; ,]', self.config.get("email", "{0}_to".format(self.report_type))
+                              + ',' + self.config.get("email", "test_to"))
 
         emailfrom = self.config.get("email", "from")
 
-        if self.no_email:
-            self.logger.info("no_email flag was used.  Not sending email for "
-                             "this run.\t{0}\t{1}".format(self.resource,
-                                                         self.probe))
-            self.logger.info("Would have sent emails to {0}.".format(
-                ', '.join(emails)))
+        if self.test_no_email(emails):
+            self.logger.info("Resource name: {0}\tProbe Name: {1}"
+                             .format(self.resource, self.probe))
+
             if os.path.exists(self.emailfile):
                 os.unlink(self.emailfile)
 
@@ -449,7 +447,7 @@ class ProbeReport(Reporter):
         except Exception as e:
             self.logger.exception(e)
 
-        self.logger.info('All reports sent')
+        self.logger.info('All new reports sent')
         self.cleanup_history()
         return
 
