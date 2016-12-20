@@ -45,11 +45,6 @@ class VO(object):
     def getsitehours(self, sitename):
         return self.sites[sitename]
 
-# class Site(object):
-#     def __init__(self, sitename):
-#         self.name = sitename
-
-
 
 class OSGPerSiteReporter(Reporter):
     def __init__(self, configuration, start, end, template=False,
@@ -80,8 +75,8 @@ class OSGPerSiteReporter(Reporter):
             .filter('term', ResourceType="Batch")
 
         s.aggs.bucket('vo_bucket', 'terms', field='VOName', size=1000000000)\
-              .bucket('site_bucket', 'terms', field='Site', size=1000000000)\
-              .metric('sum_core_hours', 'sum', field='CoreHours')
+            .bucket('site_bucket', 'terms', script={"inline": "doc['OIM_Site'].value ?: doc['SiteName'].value", "lang":"painless"}, size=1000000000)\
+            .metric('sum_core_hours', 'sum', field='CoreHours')
 
         return s
 
@@ -101,7 +96,6 @@ class OSGPerSiteReporter(Reporter):
 
     def create_vo_objects(self):
         while True:
-        # for result_tuple in self.generate():
             vo, site, wallhrs = yield
             if vo not in self.vodict:
                 V = VO(vo)
@@ -113,7 +107,6 @@ class OSGPerSiteReporter(Reporter):
 
 
     def format_report(self):
-        # results_dict = {}
         report = {}
         sitelist = sorted(self.sitelist)
         report["Site"] = [site for site in sitelist]
@@ -125,7 +118,6 @@ class OSGPerSiteReporter(Reporter):
             report[vo] = [curvo.getsitehours(site)
                           if site in curvo.sites else 0 for site in sitelist]
 
-        # for pos in range(len(self.vodict)):
         report["Total"] = [sum((report[col][pos] for col in report
                                 if col not in ("Site", "Total")))
                            for pos in range(len(self.sitelist))]
