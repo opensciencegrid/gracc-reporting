@@ -44,21 +44,6 @@ class Efficiency(Reporter):
         self.cilogon_match = re.compile('.+CN=UID:(\w+)')
         self.non_cilogon_match = re.compile('/CN=([\w\s]+)/?.+?')
 
-    @staticmethod
-    def calc_eff(wallhours, cpusec):
-        """Calculate the efficiency given the wall hours and cputime in seconds.  Returns percentage"""
-        return (cpusec / 3600) / wallhours
-
-    def parseCN(self, cn):
-        """Parse the CN to grab the username"""
-        m = self.cilogon_match.match(cn)  # CILogon certs
-        if m:
-            pass
-        else:
-            m = self.non_cilogon_match.match(cn)
-        user = m.group(1)
-        return user
-
     def query(self):
         """Method to query Elasticsearch cluster for EfficiencyReport information"""
         # Gather parameters, format them for the query
@@ -88,8 +73,9 @@ class Efficiency(Reporter):
 
         return s
 
-    def run_query(self):
-        """Execute the query and check the status code before returning the response"""
+    def generate(self):
+        """Main driver of activity in report.  Runs the ES query, checks for
+        success, and then returns the raw data for processing."""
         s = self.query()
         t = s.to_dict()
         if self.verbose:
@@ -206,10 +192,26 @@ class Efficiency(Reporter):
 
         return
 
+    @staticmethod
+    def calc_eff(wallhours, cpusec):
+        """Calculate the efficiency given the wall hours and cputime in
+        seconds.  Returns percentage"""
+        return (cpusec / 3600) / wallhours
+
+    def parseCN(self, cn):
+        """Parse the CN to grab the username"""
+        m = self.cilogon_match.match(cn)  # CILogon certs
+        if m:
+            pass
+        else:
+            m = self.non_cilogon_match.match(cn)
+        user = m.group(1)
+        return user
+
     def run_report(self):
-        """Handles the data flow throughout the report generation.  Runs the query, generates the HTML report,
-        and sends the email"""
-        results = self.run_query()
+        """Handles the data flow throughout the report generation.  Runs the
+        query, generates the HTML report, and sends the email"""
+        results = self.generate()
         pline = self.parse_lines()
         pline.send(None)
 
