@@ -40,7 +40,10 @@ class VO(object):
         self.sites = {}
 
     def add_site(self, sitename, corehours):
-        self.sites[sitename] = corehours
+        if sitename in self.sites:
+            self.sites[sitename] += corehours
+        else:
+            self.sites[sitename] = corehours
 
     def getsitehours(self, sitename):
         return self.sites[sitename]
@@ -70,13 +73,18 @@ class OSGPerSiteReporter(Reporter):
         if self.verbose:
             self.logger.info(self.indexpattern)
 
-        s = Search(using=self.client, index=self.indexpattern) \
+        s = Search(using=self.client, index='gracc.osg.summary') \
             .filter("range", EndTime={"gte": startdate, "lt": enddate})\
             .filter('term', ResourceType="Batch")
 
-        s.aggs.bucket('vo_bucket', 'terms', field='VOName', size=1000000000)\
-            .bucket('site_bucket', 'terms', script={"inline": "doc['OIM_Site'].value ?: doc['SiteName'].value", "lang":"painless"}, size=1000000000)\
+        s.aggs.bucket('vo_bucket', 'terms', field='VOName', size=2**31-1) \
+            .bucket('site_bucket', 'terms', script={"inline": "doc['OIM_Site'].value ?: doc['SiteName'].value", "lang": "painless"}, size=2**31-1) \
             .metric('sum_core_hours', 'sum', field='CoreHours')
+
+ # \
+        # .bucket('oimsite_bucket', 'terms', field="OIM_Site", missing='NOOIMSite', size=2**31-1)\
+        # .bucket('site_bucket', 'terms', field='SiteName', size=2**31-1)\
+
 
         return s
 
@@ -94,9 +102,22 @@ class OSGPerSiteReporter(Reporter):
                 wallhrs = site_bucket['sum_core_hours']['value']
                 consumer.send((vo, site, wallhrs))
 
+            # for oimsite_bucket in vo_bucket.oimsite_bucket.buckets:
+            #     oimsite = oimsite_bucket['key']
+            #     for site_bucket in oimsite_bucket.site_bucket.buckets:
+            #         if oimsite == 'NOOIMSite':
+            #             site = site_bucket['key']
+            #             print oimsite, site
+            #         else:
+            #             site = oimsite
+            #             print "OIMSite:", oimsite, site_bucket['key']
+            #         wallhrs = site_bucket['sum_core_hours']['value']
+            #         consumer.send((vo, site, wallhrs))
+
     def create_vo_objects(self):
         while True:
             vo, site, wallhrs = yield
+            # print vo, site, wallhrs
             if vo not in self.vodict:
                 V = VO(vo)
                 self.vodict[vo] = V
@@ -109,6 +130,7 @@ class OSGPerSiteReporter(Reporter):
     def format_report(self):
         report = {}
         sitelist = sorted(self.sitelist)
+        # print sitelist
         report["Site"] = [site for site in sitelist]
         # report["Total"] = []
 
