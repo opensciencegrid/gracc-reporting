@@ -1,17 +1,7 @@
-import xml.etree.ElementTree as ET
-from datetime import timedelta, date
-import urllib2
-import ast
+#!/usr/bin/python
+
 import os
 import inspect
-import math
-import re
-import smtplib
-import email.utils
-from email.mime.text import MIMEText
-import datetime
-import logging
-import json
 import traceback
 import sys
 
@@ -73,18 +63,13 @@ class OSGPerSiteReporter(Reporter):
         if self.verbose:
             self.logger.info(self.indexpattern)
 
-        s = Search(using=self.client, index='gracc.osg.summary') \
+        s = Search(using=self.client, index=self.indexpattern) \
             .filter("range", EndTime={"gte": startdate, "lt": enddate})\
             .filter('term', ResourceType="Batch")
 
         s.aggs.bucket('vo_bucket', 'terms', field='VOName', size=2**31-1) \
             .bucket('site_bucket', 'terms', script={"inline": "doc['OIM_Site'].value ?: doc['SiteName'].value", "lang": "painless"}, size=2**31-1) \
             .metric('sum_core_hours', 'sum', field='CoreHours')
-
- # \
-        # .bucket('oimsite_bucket', 'terms', field="OIM_Site", missing='NOOIMSite', size=2**31-1)\
-        # .bucket('site_bucket', 'terms', field='SiteName', size=2**31-1)\
-
 
         return s
 
@@ -102,18 +87,6 @@ class OSGPerSiteReporter(Reporter):
                 wallhrs = site_bucket['sum_core_hours']['value']
                 consumer.send((vo, site, wallhrs))
 
-            # for oimsite_bucket in vo_bucket.oimsite_bucket.buckets:
-            #     oimsite = oimsite_bucket['key']
-            #     for site_bucket in oimsite_bucket.site_bucket.buckets:
-            #         if oimsite == 'NOOIMSite':
-            #             site = site_bucket['key']
-            #             print oimsite, site
-            #         else:
-            #             site = oimsite
-            #             print "OIMSite:", oimsite, site_bucket['key']
-            #         wallhrs = site_bucket['sum_core_hours']['value']
-            #         consumer.send((vo, site, wallhrs))
-
     def create_vo_objects(self):
         while True:
             vo, site, wallhrs = yield
@@ -130,9 +103,7 @@ class OSGPerSiteReporter(Reporter):
     def format_report(self):
         report = {}
         sitelist = sorted(self.sitelist)
-        # print sitelist
         report["Site"] = [site for site in sitelist]
-        # report["Total"] = []
 
         for vo, vo_object in sorted(self.vodict.iteritems()):
             self.header.append(vo)
