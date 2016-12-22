@@ -87,7 +87,7 @@ class Efficiency(Reporter):
         try:
             response = s.execute()
             if not response.success():
-                raise
+                raise Exception("Error accessing Elasticsearch")
 
             if self.verbose:
                 print json.dumps(response.to_dict(), sort_keys=True, indent=4)
@@ -96,7 +96,7 @@ class Efficiency(Reporter):
             self.logger.info('Ran elasticsearch query successfully')
             return results
         except Exception as e:
-            self.logger.exception("Error accessing Elasticsearch")
+            self.logger.exception(e)
             raise
 
     def parse_lines(self):
