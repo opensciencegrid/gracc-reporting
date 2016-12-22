@@ -23,10 +23,17 @@ import Configuration
 from Reporter import Reporter, runerror
 
 logfile = 'osgpersitereport.log'
+opp_vos = ['glow', 'gluex', 'hcc', 'osg', 'sbgrid']
 
 class VO(object):
     def __init__(self, voname):
         self.name = voname
+
+        # if voname.lower() in opp_vos:
+        #     self.opportunistic = True
+        # else:
+        #     self.opportunistic = False
+
         self.sites = {}
 
     def add_site(self, sitename, corehours):
@@ -46,7 +53,8 @@ class OSGPerSiteReporter(Reporter):
         Reporter.__init__(self, report, configuration, start, end=end,
                           verbose=verbose, is_test=is_test, no_email=no_email,
                           logfile=logfile, raw=False)
-        self.header = ["Site", "Total"]
+        self.header = ["Site", "Total", "Opportunistic Total",
+                       "Percent Opportunistic"]
         try:
             self.client = self.establish_client()
         except Exception as e:
@@ -115,12 +123,24 @@ class OSGPerSiteReporter(Reporter):
                                 if col not in ("Site", "Total")))
                            for pos in range(len(self.sitelist))]
 
+        report["Opportunistic Total"] = [sum((report[col][pos]
+                                              for col in report
+                                              if col in opp_vos))
+                                         for pos in range(len(self.sitelist))]
+
+        report["Percent Opportunistic"] = [
+            report["Opportunistic Total"][pos] /
+                  report["Total"][pos] * 100
+            for pos in range(len(self.sitelist))]
+
         # Add total line at the bottom of report
         for col, values in report.iteritems():
-            if col == "Site":
+            if col in ('Site', 'Percent Opportunistic'):
                 continue
             values.append(sum(values))
         report["Site"].append("Total")
+        report['Percent Opportunistic'].append(
+            report['Opportunistic Total'][-1]/report['Total'][-1] * 100)
 
         return report
 
