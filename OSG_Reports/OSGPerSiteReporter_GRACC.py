@@ -1,9 +1,15 @@
 #!/usr/bin/python
 
+#Comments:
+# do VOs.tolower()
+
+
 import os
 import inspect
 import traceback
 import sys
+import datetime
+import json
 
 from elasticsearch_dsl import Search, Q
 
@@ -25,25 +31,68 @@ from Reporter import Reporter, runerror
 logfile = 'osgpersitereport.log'
 opp_vos = ['glow', 'gluex', 'hcc', 'osg', 'sbgrid']
 
+def prev_month_shift(datelist):
+    dt = datetime.datetime(*datelist)
+    newdate = dt.replace(day=1) - datetime.timedelta(days=1)
+    newmonth = newdate.month
+    newyear = newdate.year
+    try:
+        return dt.replace(year=newyear, month=newmonth)
+    except ValueError:
+        if newmonth == 2 and newdate.day == 29:
+            print "Leap year correction --> March 1"
+            return dt.replace(year=newyear, month=3, day=1)
+        else:
+            raise
+
+def perc_change(old, new):
+    try:
+        return ((new - old) / old) * 100
+    except ZeroDivisionError:
+        if new == 0:
+            return 0
+        else:
+            return 100
+
+
 class VO(object):
     def __init__(self, voname):
         self.name = voname
-
-        # if voname.lower() in opp_vos:
-        #     self.opportunistic = True
-        # else:
-        #     self.opportunistic = False
-
         self.sites = {}
+        self.current = True
+        self.pos = 0
+        self.total = [0,0]
+        self.totalcalc = self.running_totalhours()
+        self.totalcalc.send(None)
 
     def add_site(self, sitename, corehours):
-        if sitename in self.sites:
-            self.sites[sitename] += corehours
-        else:
-            self.sites[sitename] = corehours
+        if not self.current: self.pos = 1
 
-    def getsitehours(self, sitename):
-        return self.sites[sitename]
+        if sitename in self.sites:
+            self.sites[sitename][self.pos] += corehours
+        else:
+            self.sites[sitename] = [0, 0]
+            self.sites[sitename][self.pos] = corehours
+
+        self.totalcalc.send(corehours)
+        return
+
+    def running_totalhours(self):
+        while True:
+            newhrs = yield
+            self.total[self.pos] += newhrs
+
+    def get_cur_sitehours(self, sitename):
+        return self.sites[sitename][0]
+
+    def get_cur_totalhours(self):
+        return self.total[0]
+
+    def get_old_sitehours(self, sitename):
+        return self.sites[sitename][1]
+
+    def get_old_totalhours(self):
+        return self.total[1]
 
 
 class OSGPerSiteReporter(Reporter):
@@ -55,12 +104,15 @@ class OSGPerSiteReporter(Reporter):
                           logfile=logfile, raw=False)
         self.header = ["Site", "Total", "Opportunistic Total",
                        "Percent Opportunistic"]
+
         try:
             self.client = self.establish_client()
         except Exception as e:
             self.logger.exception(e)
+
         self.title = 'VOs Usage of OSG Sites: {0} - {1}'.format(
             self.start_time, self.end_time)
+        self.current = True
         self.vodict = {}
         self.sitelist = []
 
@@ -76,14 +128,25 @@ class OSGPerSiteReporter(Reporter):
             .filter('term', ResourceType="Batch")
 
         s.aggs.bucket('vo_bucket', 'terms', field='VOName', size=2**31-1) \
-            .bucket('site_bucket', 'terms', script={"inline": "doc['OIM_Site'].value ?: doc['SiteName'].value", "lang": "painless"}, size=2**31-1) \
+            .bucket('site_bucket', 'terms',
+                    script={"inline": "doc['OIM_Site'].value ?: doc['SiteName'].value", "lang": "painless"},
+                    size=2**31-1) \
             .metric('sum_core_hours', 'sum', field='CoreHours')
 
         return s
 
     def generate(self):
-        qresults = self.query().execute()
-        results = qresults.aggregations
+        qresults = self.query()
+
+        t = qresults.to_dict()
+        if self.verbose:
+            print json.dumps(t, sort_keys=True, indent=4)
+            self.logger.debug(json.dumps(t, sort_keys=True))
+        else:
+            self.logger.debug(json.dumps(t, sort_keys=True))
+
+        response = qresults.execute()
+        results = response.aggregations
 
         consumer = self.create_vo_objects()
         consumer.send(None)
@@ -95,52 +158,131 @@ class OSGPerSiteReporter(Reporter):
                 wallhrs = site_bucket['sum_core_hours']['value']
                 consumer.send((vo, site, wallhrs))
 
+        self.current = False
+        self.start_time = prev_month_shift(self.dateparse(self.start_time))
+        self.end_time = prev_month_shift(self.dateparse(self.end_time))
+
+        oldqresults = self.query()
+
+        t = oldqresults.to_dict()
+        if self.verbose:
+            print json.dumps(t, sort_keys=True, indent=4)
+            self.logger.debug(json.dumps(t, sort_keys=True))
+        else:
+            self.logger.debug(json.dumps(t, sort_keys=True))
+
+        response = oldqresults.execute()
+        oldresults = response.aggregations
+
+        for vo_bucket in oldresults.vo_bucket.buckets:
+            vo = vo_bucket['key']
+            for site_bucket in vo_bucket.site_bucket.buckets:
+                site = site_bucket['key']
+                wallhrs = site_bucket['sum_core_hours']['value']
+                consumer.send((vo, site, wallhrs))
+
+
     def create_vo_objects(self):
         while True:
             vo, site, wallhrs = yield
             # print vo, site, wallhrs
-            if vo not in self.vodict:
-                V = VO(vo)
-                self.vodict[vo] = V
-            V.add_site(site, wallhrs)
+            if self.current:
+                if vo not in self.vodict:
+                    V = VO(vo)
+                    self.vodict[vo] = V
+                V.add_site(site, wallhrs)
 
-            if site not in self.sitelist:
-                self.sitelist.append(site)
+                if site not in self.sitelist:
+                    self.sitelist.append(site)
+
+            else:
+                if vo not in self.vodict or site not in self.sitelist:
+                    continue
+                V = self.vodict[vo]
+                V.current = self.current
+                V.add_site(site, wallhrs)
 
 
     def format_report(self):
         report = {}
         sitelist = sorted(self.sitelist)
+
+
         report["Site"] = [site for site in sitelist]
-
+        inspos = 2
         for vo, vo_object in sorted(self.vodict.iteritems()):
-            self.header.append(vo)
-            curvo = self.vodict[vo]
-            report[vo] = [curvo.getsitehours(site)
-                          if site in curvo.sites else 0 for site in sitelist]
+            if vo not in self.header:
+                if vo in opp_vos:
+                    # Insert the vos into the header in order after the Site
+                    # and Total columns
+                    self.header.insert(inspos, vo)
+                    inspos += 1
+                else:
+                    self.header.append(vo)
 
+            curvo = self.vodict[vo]
+            report[vo] = [curvo.get_cur_sitehours(site)
+                          if site in curvo.sites else 0 for site in sitelist]
+            report[vo].append(vo_object.get_cur_totalhours())
+
+        report["Site"].append("Total")  # Add "Total" line at bottom of report
+
+        # This is the per-site total column, not the same "Total" as just above
         report["Total"] = [sum((report[col][pos] for col in report
                                 if col not in ("Site", "Total")))
-                           for pos in range(len(self.sitelist))]
+                           for pos in range(len(report["Site"]))]
 
         report["Opportunistic Total"] = [sum((report[col][pos]
                                               for col in report
                                               if col in opp_vos))
-                                         for pos in range(len(self.sitelist))]
+                                         for pos in range(len(report["Site"]))]
 
-        report["Percent Opportunistic"] = [
-            report["Opportunistic Total"][pos] /
-                  report["Total"][pos] * 100
-            for pos in range(len(self.sitelist))]
+        report["Percent Opportunistic"] = [report["Opportunistic Total"][pos] /
+                                           report["Total"][pos] * 100
+                                           for pos in
+                                           range(len(report["Site"]))]
 
-        # Add total line at the bottom of report
+        # In any modifications, the order of the next three sections must be
+        # preserved
+
+        # Month-over-month difference by VO
         for col, values in report.iteritems():
-            if col in ('Site', 'Percent Opportunistic'):
-                continue
-            values.append(sum(values))
-        report["Site"].append("Total")
-        report['Percent Opportunistic'].append(
-            report['Opportunistic Total'][-1]/report['Total'][-1] * 100)
+            # Insert a blank line
+            # values.insert(-2,'')
+            if col == "Site":
+                values.append("Prev. Month Total")
+                values.append("Percent Change over Prev. Month")
+            elif col in self.vodict:
+                values.append(self.vodict[col].get_old_totalhours())    # Total
+                values.append(perc_change(values[-2], values[-1]))    # Percent change
+
+        # Handle Opp. Total Prev. Month
+        stagecol = report['Opportunistic Total']
+        stagecol.append(sum((report[vo][-2] for vo in report if vo in opp_vos)))
+        stagecol.append(perc_change(stagecol[-1], stagecol[-3])) # (cur month total - prev month total) / prev month total
+
+        # Handle total column
+        stagecol = report['Total']
+        stagecol.append(sum((report[vo][-2] for vo in self.vodict)))
+        stagecol.append(perc_change(stagecol[-1], stagecol[-3])) # (cur month total - prev month total) / prev month total
+
+        # Handle percent opportunistic
+        report['Percent Opportunistic'].extend(((report["Opportunistic Total"][-1] /
+                                               report["Total"][-1] * 100), 'N/A'))
+
+        # # Handle percent change over previous month per vo
+        # for col, values in report.iteritems
+
+
+        # Insert a blank line
+        for _, values in report.iteritems():
+            values.insert(-3, '')
+
+
+        # for col, values in report.iteritems():
+        #     print col, len(values)
+
+
 
         return report
 
