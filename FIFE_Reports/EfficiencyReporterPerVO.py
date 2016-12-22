@@ -52,10 +52,13 @@ class Efficiency(Reporter):
         wildcardVOq = '*' + self.vo.lower() + '*'
         wildcardProbeNameq = 'condor:fifebatch?.fnal.gov'
 
+        if self.verbose:
+            self.logger.info(self.indexpattern)
+
         # Elasticsearch query and aggregations
         s = Search(using=self.establish_client(), index=self.indexpattern) \
-            .query("wildcard", VOName=wildcardVOq) \
-            .query("wildcard", ProbeName=wildcardProbeNameq) \
+            .filter("wildcard", VOName=wildcardVOq) \
+            .filter("wildcard", ProbeName=wildcardProbeNameq) \
             .filter("range", EndTime={"gte": starttimeq, "lt": endtimeq}) \
             .filter("range", WallDuration={"gt": 0}) \
             .filter("term", Host_description="GPGrid") \
