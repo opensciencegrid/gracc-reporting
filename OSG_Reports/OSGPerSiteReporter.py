@@ -26,6 +26,7 @@ logfile = 'osgpersitereport.log'
 opp_vos = ['glow', 'gluex', 'hcc', 'osg', 'sbgrid']
 
 
+# Helper Functions
 def monthrange(date):
     """ Pass in date list (as returned by TimeUtils.dateparse) or
     datetime.datetime object.
