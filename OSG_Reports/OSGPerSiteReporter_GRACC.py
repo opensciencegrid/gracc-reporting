@@ -1,9 +1,4 @@
 #!/usr/bin/python
-
-#Comments:
-# do VOs.tolower()
-
-
 import os
 import inspect
 import traceback
@@ -12,7 +7,6 @@ import datetime
 import json
 
 from elasticsearch_dsl import Search
-
 
 parentdir = os.path.dirname(
     os.path.dirname(
@@ -174,8 +168,8 @@ class OSGPerSiteReporter(Reporter):
 
         return s
 
-    def run_query(self, consumer):
-
+    def run_query(self):
+        """Code that runs the ES queries and returns the results"""
         qresults = self.query()
         t = qresults.to_dict()
 
@@ -185,71 +179,53 @@ class OSGPerSiteReporter(Reporter):
         else:
             self.logger.debug(json.dumps(t, sort_keys=True))
 
-        response = qresults.execute()
-        results = response.aggregations
+        try:
+            response = qresults.execute()
+            if not response.success():
+                raise Exception("Error accessing Elasticsearch")
 
+            if self.verbose:
+                print json.dumps(response.to_dict(), sort_keys=True, indent=4)
+
+            results = response.aggregations
+            self.logger.info('Ran elasticsearch query successfully')
+            return results
+        except Exception as e:
+            self.logger.exception(e)
+            raise
+
+    @staticmethod
+    def parse_results(results, consumer):
+        """Method that parses the result and passes the values to the
+        consumer coroutine"""
         for vo_bucket in results.vo_bucket.buckets:
             vo = vo_bucket['key'].lower()
             for site_bucket in vo_bucket.site_bucket.buckets:
                 site = site_bucket['key']
                 wallhrs = site_bucket['sum_core_hours']['value']
                 consumer.send((vo, site, wallhrs))
-
         return
 
-
     def generate(self):
-        # qresults = self.query()
-        #
-        # t = qresults.to_dict()
-        # if self.verbose:
-        #     print json.dumps(t, sort_keys=True, indent=4)
-        #     self.logger.debug(json.dumps(t, sort_keys=True))
-        # else:
-        #     self.logger.debug(json.dumps(t, sort_keys=True))
-        #
-        # response = qresults.execute()
-        # results = response.aggregations
-
+        """Higher-level method to run other methods to
+        generate the raw data for the report."""
         consumer = self.create_vo_objects()
         consumer.send(None)
 
-        self.run_query(consumer)
-        # for vo_bucket in results.vo_bucket.buckets:
-        #     vo = vo_bucket['key'].lower()
-        #     for site_bucket in vo_bucket.site_bucket.buckets:
-        #         site = site_bucket['key']
-        #         wallhrs = site_bucket['sum_core_hours']['value']
-        #         consumer.send((vo, site, wallhrs))
+        # Run our query twice - once for this month, once for last month
+        for self.start_time, self.end_time in (
+                monthrange(self.start_time), prev_month_shift(self.start_time)):
+            results = self.run_query()
+            self.parse_results(results, consumer)
+            self.current = False
 
-        self.current = False
-        self.start_time, self.end_time = prev_month_shift(self.start_time)
-
-        self.run_query(consumer)
-        #
-        # oldqresults = self.query()
-        #
-        # t = oldqresults.to_dict()
-        # if self.verbose:
-        #     print json.dumps(t, sort_keys=True, indent=4)
-        #     self.logger.debug(json.dumps(t, sort_keys=True))
-        # else:
-        #     self.logger.debug(json.dumps(t, sort_keys=True))
-        #
-        # response = oldqresults.execute()
-        # oldresults = response.aggregations
-        #
-        # for vo_bucket in oldresults.vo_bucket.buckets:
-        #     vo = vo_bucket['key'].lower()
-        #     for site_bucket in vo_bucket.site_bucket.buckets:
-        #         site = site_bucket['key']
-        #         wallhrs = site_bucket['sum_core_hours']['value']
-        #         consumer.send((vo, site, wallhrs))
+        return
 
     def create_vo_objects(self):
+        """Coroutine to create the VO objects and store the information
+        in them"""
         while True:
             vo, site, wallhrs = yield
-            # print vo, site, wallhrs
             if self.current:
                 if vo not in self.vodict:
                     V = VO(vo)
@@ -258,7 +234,6 @@ class OSGPerSiteReporter(Reporter):
 
                 if site not in self.sitelist:
                     self.sitelist.append(site)
-
             else:
                 if vo not in self.vodict or site not in self.sitelist:
                     continue
@@ -267,24 +242,32 @@ class OSGPerSiteReporter(Reporter):
                 V.add_site(site, wallhrs)
 
     def format_report(self):
+        """Report formatter.  Returns a dictionary called report containing the
+        columns of the report.
+
+        Note:  Each column here is a VO (or an aggregating column like Total)"""
         report = {}
         sitelist = sorted(self.sitelist)
 
+        # Populate Site column
         report["Site"] = [site for site in sitelist]
+
+        # Add VO Data to the report
         inspos = 2
         for vo, vo_object in sorted(self.vodict.iteritems()):
             if vo not in self.header:
                 if vo in opp_vos:
-                    # Insert the vos into the header in order after the Site
-                    # and Total columns
+                    # Insert the opportunistic VOs into the header
+                    # in order after the Site and Total columns
                     self.header.insert(inspos, vo)
                     inspos += 1
                 else:
+                    # Tack the other VO columns to the end
                     self.header.append(vo)
 
-            curvo = self.vodict[vo]
-            report[vo] = [curvo.get_cur_sitehours(site)
-                          if site in curvo.sites else 0 for site in sitelist]
+            report[vo] = [vo_object.get_cur_sitehours(site)
+                          if site in vo_object.sites else 0
+                          for site in sitelist]
             report[vo].append(vo_object.get_cur_totalhours())
 
         # Column for Previous Month Opportunistic Total
@@ -293,39 +276,41 @@ class OSGPerSiteReporter(Reporter):
                  for col in report if col in opp_vos))
             for site in self.sitelist]
         stagecol = report["Prev. Month Opp. Total"]
-        stagecol.append(sum(stagecol))
-
+        stagecol.append(sum(stagecol))  # Append the total for this column
 
         report["Site"].append("Total")  # Add "Total" line at bottom of report
 
         # This is the per-site total column, not the same "Total" as just above
+        # Add all of the data for every vo; do this for each site
         report["Total"] = [sum((report[col][pos] for col in report
-                                if col not in ("Site", "Total", "Percentage Change Month-Month")))
+                                if col not in
+                                ("Site", "Total", "Percentage Change Month-Month")))
                            for pos in range(len(report["Site"]))]
 
+        # Do the same as above, but for only the opp. VOs in the report
         report["Opportunistic Total"] = [sum((report[col][pos]
                                               for col in report
                                               if col in opp_vos))
                                          for pos in range(len(report["Site"]))]
 
+        # Calculate the percent opportunistic usage from the above two columns
         report["Percent Opportunistic"] = [report["Opportunistic Total"][pos] /
                                            report["Total"][pos] * 100
                                            for pos in
                                            range(len(report["Site"]))]
 
-        # Percent Change Month-Month
+        # Percent Change Month-Month for opportunistic VOs
         report["Percentage Change Month-Month"] = [
             perc_change(report["Prev. Month Opp. Total"][pos],
                         report["Opportunistic Total"][pos])
             for pos in range(len(report["Site"]))]
 
-        # In any modifications, the order of the next three sections must be
-        # preserved
+        # In any modifications, the order of the next four sections must be
+        # preserved.  They all have to do with handling the previous month's
+        # data
 
-        # Month-over-month difference by VO
+        # Previous month totals and percent change by VO
         for col, values in report.iteritems():
-            # Insert a blank line
-            # values.insert(-2,'')
             if col == "Site":
                 values.append("Prev. Month Total")
                 values.append("Percent Change over Prev. Month")
@@ -333,37 +318,37 @@ class OSGPerSiteReporter(Reporter):
                 values.append(self.vodict[col].get_old_totalhours())    # Total
                 values.append(perc_change(values[-1], values[-2]))    # Percent change
 
-        # Handle Opp. Total Prev. Month
+        # Handle opportunistic total column for the previous month
         stagecol = report['Opportunistic Total']
-        stagecol.append(sum((report[vo][-2] for vo in report if vo in opp_vos)))
+        stagecol.append(sum((report[vo][-2] for vo in report
+                             if vo in opp_vos)))
         stagecol.append(perc_change(stagecol[-1], stagecol[-2]))
 
-        # Handle total column
+        # Handle total column for the previous month
         stagecol = report['Total']
         stagecol.append(sum((report[vo][-2] for vo in self.vodict)))
         stagecol.append(perc_change(stagecol[-1], stagecol[-2]))
 
-        # Handle percent opportunistic
-        report['Percent Opportunistic'].extend(((report["Opportunistic Total"][-1] /
-                                               report["Total"][-1] * 100), 'N/A'))
+        # Handle percent opportunistic overall for previous month
+        report['Percent Opportunistic'].extend(
+            ((report["Opportunistic Total"][-1] /
+              report["Total"][-1] * 100), 'N/A'))
 
-        # Handle Prev Month Columns
-        # for column in ("Prev. Month Opp. Total"):
-        #     report[column].extend(('N/A', 'N/A'))
-
+        # Fill in the rest of the report
         report["Prev. Month Opp. Total"].extend(('N/A', 'N/A'))
         report["Percentage Change Month-Month"].extend(('N/A', 'N/A'))
 
         # Insert a blank line
-        for _, values in report.iteritems():
+        for values in report.itervalues():
             values.insert(-3, '')
 
         return report
 
-
     def run_report(self):
+        """Method to run the OSG per site report"""
         self.generate()
         self.send_report(title=self.title)
+        return
 
 
 def main():
@@ -374,12 +359,12 @@ def main():
 
     try:
         osgreport = OSGPerSiteReporter(config,
-                              args.start,
-                              args.end,
-                              template=args.template,
-                              verbose=args.verbose,
-                              is_test=args.is_test,
-                              no_email=args.no_email)
+                                       args.start,
+                                       args.end,
+                                       template=args.template,
+                                       verbose=args.verbose,
+                                       is_test=args.is_test,
+                                       no_email=args.no_email)
 
         osgreport.run_report()
         print 'OSG Per Site Report Execution finished'
