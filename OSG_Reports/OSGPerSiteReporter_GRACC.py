@@ -2,7 +2,6 @@
 
 #Comments:
 # do VOs.tolower()
-# Check the zero division stuff and percentage change (some suspicious numbers)
 
 
 import os
@@ -165,7 +164,7 @@ class OSGPerSiteReporter(Reporter):
         consumer.send(None)
 
         for vo_bucket in results.vo_bucket.buckets:
-            vo = vo_bucket['key']
+            vo = vo_bucket['key'].lower()
             for site_bucket in vo_bucket.site_bucket.buckets:
                 site = site_bucket['key']
                 wallhrs = site_bucket['sum_core_hours']['value']
@@ -187,7 +186,7 @@ class OSGPerSiteReporter(Reporter):
         oldresults = response.aggregations
 
         for vo_bucket in oldresults.vo_bucket.buckets:
-            vo = vo_bucket['key']
+            vo = vo_bucket['key'].lower()
             for site_bucket in vo_bucket.site_bucket.buckets:
                 site = site_bucket['key']
                 wallhrs = site_bucket['sum_core_hours']['value']
