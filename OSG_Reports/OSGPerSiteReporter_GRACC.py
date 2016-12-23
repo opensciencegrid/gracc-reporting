@@ -32,23 +32,28 @@ from Reporter import Reporter, runerror
 logfile = 'osgpersitereport.log'
 opp_vos = ['glow', 'gluex', 'hcc', 'osg', 'sbgrid']
 
-def prev_month_shift(datelist):
-    dt = datetime.datetime(*datelist)
-    newdate = dt.replace(day=1) - datetime.timedelta(days=1)
-    newmonth = newdate.month
-    newyear = newdate.year
-    try:
-        return dt.replace(year=newyear, month=newmonth)
-    except ValueError:
-        if newmonth == 2 and newdate.day == 29:
-            print "Leap year correction --> March 1"
-            return dt.replace(year=newyear, month=3, day=1)
-        else:
-            raise
+
+def monthrange(startlist):
+    # Pass in date list (as returned by TimeUtils.dateparse
+    # Return tuple of datetime.datetime objects
+    if isinstance(startlist, list):
+        startlist = datetime.datetime(*startlist)
+    start = startlist.replace(day=1)
+    nextmonth_first = (startlist.replace(day=28) +
+                       datetime.timedelta(days=4)).replace(day=1)
+    end = nextmonth_first - datetime.timedelta(days=1)
+    return start, end
+
+
+def prev_month_shift(startdate):
+    # Assumes you're passing in datetime.datetime object
+    sd = startdate.replace(day=1)-datetime.timedelta(days=1)
+    return monthrange(sd)
+
 
 def perc_change(old, new):
     try:
-        return ((new - old) / old) * 100
+        return (float((new - old) / old)) * 100.
     except ZeroDivisionError:
         if new == 0:
             return 0
@@ -90,7 +95,10 @@ class VO(object):
         return self.total[0]
 
     def get_old_sitehours(self, sitename):
-        return self.sites[sitename][1]
+        if sitename in self.sites:
+            return self.sites[sitename][1]
+        else:
+            return 0
 
     def get_old_totalhours(self):
         return self.total[1]
@@ -104,7 +112,11 @@ class OSGPerSiteReporter(Reporter):
                           verbose=verbose, is_test=is_test, no_email=no_email,
                           logfile=logfile, raw=False)
         self.header = ["Site", "Total", "Opportunistic Total",
-                       "Percent Opportunistic"]
+                       "Percent Opportunistic", "Prev. Month Opp. Total",
+                       "Percentage Change Month-Month"]
+
+        self.start_time, self.end_time = \
+            monthrange(self.dateparse(self.start_time))
 
         try:
             self.client = self.establish_client()
@@ -160,8 +172,7 @@ class OSGPerSiteReporter(Reporter):
                 consumer.send((vo, site, wallhrs))
 
         self.current = False
-        self.start_time = prev_month_shift(self.dateparse(self.start_time))
-        self.end_time = prev_month_shift(self.dateparse(self.end_time))
+        self.start_time, self.end_time = prev_month_shift(self.start_time)
 
         oldqresults = self.query()
 
@@ -181,7 +192,6 @@ class OSGPerSiteReporter(Reporter):
                 site = site_bucket['key']
                 wallhrs = site_bucket['sum_core_hours']['value']
                 consumer.send((vo, site, wallhrs))
-
 
     def create_vo_objects(self):
         while True:
@@ -203,11 +213,9 @@ class OSGPerSiteReporter(Reporter):
                 V.current = self.current
                 V.add_site(site, wallhrs)
 
-
     def format_report(self):
         report = {}
         sitelist = sorted(self.sitelist)
-
 
         report["Site"] = [site for site in sitelist]
         inspos = 2
@@ -226,11 +234,20 @@ class OSGPerSiteReporter(Reporter):
                           if site in curvo.sites else 0 for site in sitelist]
             report[vo].append(vo_object.get_cur_totalhours())
 
+        # Column for Previous Month Opportunistic Total
+        report["Prev. Month Opp. Total"] = [
+            sum((self.vodict[col].get_old_sitehours(site)
+                 for col in report if col in opp_vos))
+            for site in self.sitelist]
+        stagecol = report["Prev. Month Opp. Total"]
+        stagecol.append(sum(stagecol))
+
+
         report["Site"].append("Total")  # Add "Total" line at bottom of report
 
         # This is the per-site total column, not the same "Total" as just above
         report["Total"] = [sum((report[col][pos] for col in report
-                                if col not in ("Site", "Total")))
+                                if col not in ("Site", "Total", "Percentage Change Month-Month")))
                            for pos in range(len(report["Site"]))]
 
         report["Opportunistic Total"] = [sum((report[col][pos]
@@ -242,6 +259,12 @@ class OSGPerSiteReporter(Reporter):
                                            report["Total"][pos] * 100
                                            for pos in
                                            range(len(report["Site"]))]
+
+        # Percent Change Month-Month
+        report["Percentage Change Month-Month"] = [
+            perc_change(report["Prev. Month Opp. Total"][pos],
+                        report["Opportunistic Total"][pos])
+            for pos in range(len(report["Site"]))]
 
         # In any modifications, the order of the next three sections must be
         # preserved
@@ -260,30 +283,27 @@ class OSGPerSiteReporter(Reporter):
         # Handle Opp. Total Prev. Month
         stagecol = report['Opportunistic Total']
         stagecol.append(sum((report[vo][-2] for vo in report if vo in opp_vos)))
-        stagecol.append(perc_change(stagecol[-1], stagecol[-2])) # (cur month total - prev month total) / prev month total
+        stagecol.append(perc_change(stagecol[-1], stagecol[-2]))
 
         # Handle total column
         stagecol = report['Total']
         stagecol.append(sum((report[vo][-2] for vo in self.vodict)))
-        stagecol.append(perc_change(stagecol[-1], stagecol[-2])) # (cur month total - prev month total) / prev month total
+        stagecol.append(perc_change(stagecol[-1], stagecol[-2]))
 
         # Handle percent opportunistic
         report['Percent Opportunistic'].extend(((report["Opportunistic Total"][-1] /
                                                report["Total"][-1] * 100), 'N/A'))
 
-        # # Handle percent change over previous month per vo
-        # for col, values in report.iteritems
+        # Handle Prev Month Columns
+        # for column in ("Prev. Month Opp. Total"):
+        #     report[column].extend(('N/A', 'N/A'))
 
+        report["Prev. Month Opp. Total"].extend(('N/A', 'N/A'))
+        report["Percentage Change Month-Month"].extend(('N/A', 'N/A'))
 
         # Insert a blank line
         for _, values in report.iteritems():
             values.insert(-3, '')
-
-
-        # for col, values in report.iteritems():
-        #     print col, len(values)
-
-
 
         return report
 
