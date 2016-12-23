@@ -69,21 +69,24 @@ def perc_change(old, new):
 
 
 class VO(object):
+    """Class to hold VO information"""
     def __init__(self, voname):
         self.name = voname
         self.sites = {}
         self.current = True
         self.pos = 0
-        self.total = [0,0]
+        self.total = [0,0]  # Position 0 = Current, Position 1 = Past
         self.totalcalc = self.running_totalhours()
         self.totalcalc.send(None)
 
     def add_site(self, sitename, corehours):
+        """Add a new site data to the VO.  Also updates the core hours of
+         sitename and the total for the VO"""
         if not self.current: self.pos = 1
 
         if sitename in self.sites:
             self.sites[sitename][self.pos] += corehours
-        else:
+        else:   # Initialize the site
             self.sites[sitename] = [0, 0]
             self.sites[sitename][self.pos] = corehours
 
@@ -91,23 +94,30 @@ class VO(object):
         return
 
     def running_totalhours(self):
+        """Keeps running total of core hours for the VO"""
         while True:
             newhrs = yield
             self.total[self.pos] += newhrs
 
     def get_cur_sitehours(self, sitename):
+        """Get the current value of core hours for a particular sitename for
+        the VO"""
         return self.sites[sitename][0]
 
     def get_cur_totalhours(self):
+        """Get the current value of total core hours for the VO"""
         return self.total[0]
 
     def get_old_sitehours(self, sitename):
+        """Get the previous month's value of core hours for a particular
+        sitename for the VO"""
         if sitename in self.sites:
             return self.sites[sitename][1]
         else:
             return 0
 
     def get_old_totalhours(self):
+        """Get the previous month's value of total core hours for the VO"""
         return self.total[1]
 
 
