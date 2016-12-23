@@ -40,9 +40,16 @@ def monthrange(date):
     (2016-12-05 --> 2016-12-01, 2016-12-31)
     """
     if isinstance(date, list):
-        startlist = datetime.datetime(*date)
-    start = startlist.replace(day=1)
-    nextmonth_first = (startlist.replace(day=28) +
+        startdate = datetime.datetime(*date)
+    elif isinstance(date, datetime.datetime) or \
+            isinstance(date, datetime.date):
+        startdate = date
+    else:
+        print "monthrange will only work with a datelist or a " \
+              "datetime.datetime object"
+        sys.exit(1)
+    start = startdate.replace(day=1)
+    nextmonth_first = (startdate.replace(day=28) +
                        datetime.timedelta(days=4)).replace(day=1)
     end = nextmonth_first - datetime.timedelta(days=1)
     return start, end
@@ -122,6 +129,8 @@ class VO(object):
 
 
 class OSGPerSiteReporter(Reporter):
+    """Class to store information and perform actions for the OSG Per Site
+    Report"""
     def __init__(self, configuration, start, end, template=False,
                      verbose=False, is_test=False, no_email=False):
         report = 'siteusage'
@@ -131,7 +140,6 @@ class OSGPerSiteReporter(Reporter):
         self.header = ["Site", "Total", "Opportunistic Total",
                        "Percent Opportunistic", "Prev. Month Opp. Total",
                        "Percentage Change Month-Month"]
-
         self.start_time, self.end_time = \
             monthrange(self.dateparse(self.start_time))
 
@@ -147,6 +155,7 @@ class OSGPerSiteReporter(Reporter):
         self.sitelist = []
 
     def query(self):
+        """Method to define the elasticsearch query for this report"""
         startdate = self.dateparse_to_iso(self.start_time)
         enddate = self.dateparse_to_iso(self.end_time)
 
@@ -165,10 +174,11 @@ class OSGPerSiteReporter(Reporter):
 
         return s
 
-    def generate(self):
-        qresults = self.query()
+    def run_query(self, consumer):
 
+        qresults = self.query()
         t = qresults.to_dict()
+
         if self.verbose:
             print json.dumps(t, sort_keys=True, indent=4)
             self.logger.debug(json.dumps(t, sort_keys=True))
@@ -178,9 +188,6 @@ class OSGPerSiteReporter(Reporter):
         response = qresults.execute()
         results = response.aggregations
 
-        consumer = self.create_vo_objects()
-        consumer.send(None)
-
         for vo_bucket in results.vo_bucket.buckets:
             vo = vo_bucket['key'].lower()
             for site_bucket in vo_bucket.site_bucket.buckets:
@@ -188,27 +195,56 @@ class OSGPerSiteReporter(Reporter):
                 wallhrs = site_bucket['sum_core_hours']['value']
                 consumer.send((vo, site, wallhrs))
 
+        return
+
+
+    def generate(self):
+        # qresults = self.query()
+        #
+        # t = qresults.to_dict()
+        # if self.verbose:
+        #     print json.dumps(t, sort_keys=True, indent=4)
+        #     self.logger.debug(json.dumps(t, sort_keys=True))
+        # else:
+        #     self.logger.debug(json.dumps(t, sort_keys=True))
+        #
+        # response = qresults.execute()
+        # results = response.aggregations
+
+        consumer = self.create_vo_objects()
+        consumer.send(None)
+
+        self.run_query(consumer)
+        # for vo_bucket in results.vo_bucket.buckets:
+        #     vo = vo_bucket['key'].lower()
+        #     for site_bucket in vo_bucket.site_bucket.buckets:
+        #         site = site_bucket['key']
+        #         wallhrs = site_bucket['sum_core_hours']['value']
+        #         consumer.send((vo, site, wallhrs))
+
         self.current = False
         self.start_time, self.end_time = prev_month_shift(self.start_time)
 
-        oldqresults = self.query()
-
-        t = oldqresults.to_dict()
-        if self.verbose:
-            print json.dumps(t, sort_keys=True, indent=4)
-            self.logger.debug(json.dumps(t, sort_keys=True))
-        else:
-            self.logger.debug(json.dumps(t, sort_keys=True))
-
-        response = oldqresults.execute()
-        oldresults = response.aggregations
-
-        for vo_bucket in oldresults.vo_bucket.buckets:
-            vo = vo_bucket['key'].lower()
-            for site_bucket in vo_bucket.site_bucket.buckets:
-                site = site_bucket['key']
-                wallhrs = site_bucket['sum_core_hours']['value']
-                consumer.send((vo, site, wallhrs))
+        self.run_query(consumer)
+        #
+        # oldqresults = self.query()
+        #
+        # t = oldqresults.to_dict()
+        # if self.verbose:
+        #     print json.dumps(t, sort_keys=True, indent=4)
+        #     self.logger.debug(json.dumps(t, sort_keys=True))
+        # else:
+        #     self.logger.debug(json.dumps(t, sort_keys=True))
+        #
+        # response = oldqresults.execute()
+        # oldresults = response.aggregations
+        #
+        # for vo_bucket in oldresults.vo_bucket.buckets:
+        #     vo = vo_bucket['key'].lower()
+        #     for site_bucket in vo_bucket.site_bucket.buckets:
+        #         site = site_bucket['key']
+        #         wallhrs = site_bucket['sum_core_hours']['value']
+        #         consumer.send((vo, site, wallhrs))
 
     def create_vo_objects(self):
         while True:
