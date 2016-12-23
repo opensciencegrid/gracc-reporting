@@ -11,7 +11,7 @@ import sys
 import datetime
 import json
 
-from elasticsearch_dsl import Search, Q
+from elasticsearch_dsl import Search
 
 
 parentdir = os.path.dirname(
@@ -32,11 +32,15 @@ logfile = 'osgpersitereport.log'
 opp_vos = ['glow', 'gluex', 'hcc', 'osg', 'sbgrid']
 
 
-def monthrange(startlist):
-    # Pass in date list (as returned by TimeUtils.dateparse
-    # Return tuple of datetime.datetime objects
-    if isinstance(startlist, list):
-        startlist = datetime.datetime(*startlist)
+def monthrange(date):
+    """ Pass in date list (as returned by TimeUtils.dateparse) or
+    datetime.datetime object.
+
+    Returns tuple of datetime.datetime objects that span the month
+    (2016-12-05 --> 2016-12-01, 2016-12-31)
+    """
+    if isinstance(date, list):
+        startlist = datetime.datetime(*date)
     start = startlist.replace(day=1)
     nextmonth_first = (startlist.replace(day=28) +
                        datetime.timedelta(days=4)).replace(day=1)
@@ -44,20 +48,24 @@ def monthrange(startlist):
     return start, end
 
 
-def prev_month_shift(startdate):
-    # Assumes you're passing in datetime.datetime object
-    sd = startdate.replace(day=1)-datetime.timedelta(days=1)
+def prev_month_shift(date):
+    """Takes a datetime.datetime object and return two datetime.datetime
+    objects that span the range of the _previous_ month
+    (2016-12-05 --> 2016-11-01, 2016-11-30)
+    """
+    sd = date.replace(day=1)-datetime.timedelta(days=1)
     return monthrange(sd)
 
 
 def perc_change(old, new):
+    """Calculates the percentage change between two numbers"""
     try:
         return (float((new - old) / old)) * 100.
     except ZeroDivisionError:
         if new == 0:
-            return 0
+            return 0.
         else:
-            return 100
+            return 100.
 
 
 class VO(object):
