@@ -2,6 +2,7 @@
 
 #Comments:
 # do VOs.tolower()
+# Check the zero division stuff and percentage change (some suspicious numbers)
 
 
 import os
@@ -254,17 +255,17 @@ class OSGPerSiteReporter(Reporter):
                 values.append("Percent Change over Prev. Month")
             elif col in self.vodict:
                 values.append(self.vodict[col].get_old_totalhours())    # Total
-                values.append(perc_change(values[-2], values[-1]))    # Percent change
+                values.append(perc_change(values[-1], values[-2]))    # Percent change
 
         # Handle Opp. Total Prev. Month
         stagecol = report['Opportunistic Total']
         stagecol.append(sum((report[vo][-2] for vo in report if vo in opp_vos)))
-        stagecol.append(perc_change(stagecol[-1], stagecol[-3])) # (cur month total - prev month total) / prev month total
+        stagecol.append(perc_change(stagecol[-1], stagecol[-2])) # (cur month total - prev month total) / prev month total
 
         # Handle total column
         stagecol = report['Total']
         stagecol.append(sum((report[vo][-2] for vo in self.vodict)))
-        stagecol.append(perc_change(stagecol[-1], stagecol[-3])) # (cur month total - prev month total) / prev month total
+        stagecol.append(perc_change(stagecol[-1], stagecol[-2])) # (cur month total - prev month total) / prev month total
 
         # Handle percent opportunistic
         report['Percent Opportunistic'].extend(((report["Opportunistic Total"][-1] /
