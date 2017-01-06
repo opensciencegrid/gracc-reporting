@@ -289,9 +289,16 @@ class ProbeReport(Reporter):
         else:
             self.logger.debug(json.dumps(t, sort_keys=True))
 
-        response = resultset.execute()
-        self.results = response.aggregations
-        self.logger.info("Successfully queried Elasticsearch")
+        try:
+            response = resultset.execute()
+            if not response.success():
+                raise Exception("Error accessing Elasticsearch")
+
+            self.results = response.aggregations
+            self.logger.info("Successfully queried Elasticsearch")
+        except Exception as e:
+            self.logger.exception(e)
+            raise
 
         probes = self.get_probenames()
         self.logger.info("Successfully analyzed ES data vs. OIM data")
