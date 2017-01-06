@@ -199,6 +199,7 @@ class ProbeReport(Reporter):
             self.client = self.establish_client()
         except Exception as e:
             self.logger.exception(e)
+        self.configuration = configuration
         self.probematch = re.compile("(.+):(.+)")
         self.estimeformat = re.compile("(.+)T(.+)\.\d+Z")
         self.emailfile = 'filetoemail.txt'
@@ -251,7 +252,8 @@ class ProbeReport(Reporter):
             aggs = ls.execute().aggregations
         except Exception as e:
             self.logger.exception(e)
-            raise
+            runerror(self.configuration, e, traceback.format_exc())
+            sys.exit(1)
 
         buckets = aggs.group_probename.buckets
         if buckets:
@@ -303,7 +305,8 @@ class ProbeReport(Reporter):
             self.logger.info("Successfully queried Elasticsearch")
         except Exception as e:
             self.logger.exception(e)
-            raise
+            runerror(self.configuration, e, traceback.format_exc())
+            sys.exit(1)
 
         probes = self.get_probenames()
         self.logger.info("Successfully analyzed ES data vs. OIM data")
