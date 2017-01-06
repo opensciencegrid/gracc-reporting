@@ -247,7 +247,12 @@ class ProbeReport(Reporter):
                                size=1000000000)\
             .metric('datemax', 'max', field='@received')
 
-        aggs = ls.execute().aggregations
+        try:
+            aggs = ls.execute().aggregations
+        except Exception as e:
+            self.logger.exception(e)
+            raise
+
         buckets = aggs.group_probename.buckets
         if buckets:
             try:
