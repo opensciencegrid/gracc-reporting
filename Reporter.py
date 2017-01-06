@@ -206,12 +206,30 @@ class Reporter(TimeUtils):
         text["text"] = emailReport.printAsTextTable("text", content)
         text["csv"] = emailReport.printAsTextTable("csv", content)
         htmldata = emailReport.printAsTextTable("html", content,
-                                                template=self.template)
+                                                template=self.template,
+                                                header=self.header)
+
+        # if self.config.get("project_name", "csv"): #In future, make this header color
+        #     pass
+        # else:
+        #     headercolor = "#ee8130"
+
+        headercolor = "#ee8130"
+
+        if self.header:
+            htmlheader = "".join(['<th align="center" style="font-weight:bold; letter-spacing:1px; font-size:11px; color:{0}">{1}</th>'.format(headercolor, headerelt) for headerelt in self.header])
+            htmlheader = '<tr>{0}</tr>'.format(htmlheader)
 
         if self.template:
             with open(self.template, 'r') as t:
                 htmltext= "".join(t.readlines())
             htmltext = htmltext.replace('$TITLE', use_title)
+            # print use_title
+            # if "$HEADER" in htmltext:
+            #     print "WOO!"
+            # print htmlheader
+            if "$HEADER" in htmltext and htmlheader:
+                htmltext = htmltext.replace("$HEADER", htmlheader)
             text["html"] = htmltext.replace('$TABLE', htmldata)
         else:
             text["html"] = "<html><body><h2>{0}</h2><table border=1>{1}</table></body></html>".format(use_title, htmldata)

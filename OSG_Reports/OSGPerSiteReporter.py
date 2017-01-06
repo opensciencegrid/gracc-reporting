@@ -129,9 +129,10 @@ class OSGPerSiteReporter(Reporter):
     def __init__(self, configuration, start, end, template=False,
                      verbose=False, is_test=False, no_email=False):
         report = 'siteusage'
+        # self.template = template
         Reporter.__init__(self, report, configuration, start, end=end,
                           verbose=verbose, is_test=is_test, no_email=no_email,
-                          logfile=logfile, raw=False)
+                          logfile=logfile, raw=False, template=template)
         self.header = ["Site", "Total", "Opportunistic Total",
                        "Percent Opportunistic", "Prev. Month Opp. Total",
                        "Percentage Change Month-Month"]
