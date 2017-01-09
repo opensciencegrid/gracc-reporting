@@ -206,37 +206,29 @@ class Reporter(TimeUtils):
         text["text"] = emailReport.printAsTextTable("text", content)
         text["csv"] = emailReport.printAsTextTable("csv", content)
         htmldata = emailReport.printAsTextTable("html", content,
-                                                template=self.template,
-                                                header=self.header)
-
-        # if self.config.get("project_name", "csv"): #In future, make this header color
-        #     pass
-        # else:
-        #     headercolor = "#ee8130"
-
-        headercolor = "#ee8130"
+                                                template=self.template)
 
         if self.header:
-            htmlheader = "".join(['<th align="center" style="font-weight:bold; letter-spacing:1px; font-size:11px; color:{0}">{1}</th>'.format(headercolor, headerelt) for headerelt in self.header])
-            htmlheader = '<tr>{0}</tr>'.format(htmlheader)
+            htmlheader = "\n".join(['<th>{0}</th>'.format(headerelt)
+                                    for headerelt in self.header])
 
         if self.template:
             with open(self.template, 'r') as t:
                 htmltext= "".join(t.readlines())
+
+            # Build the HTML file from the template
             htmltext = htmltext.replace('$TITLE', use_title)
-            # print use_title
-            # if "$HEADER" in htmltext:
-            #     print "WOO!"
-            # print htmlheader
             if "$HEADER" in htmltext and htmlheader:
-                htmltext = htmltext.replace("$HEADER", htmlheader)
+                htmltext = htmltext.replace('$HEADER', htmlheader)
             text["html"] = htmltext.replace('$TABLE', htmldata)
+
         else:
             text["html"] = "<html><body><h2>{0}</h2><table border=1>{1}</table></body></html>".format(use_title, htmldata)
 
         TextUtils.sendEmail((names, emails), use_title, text,
                             ("GRACC Operations", emailfrom),
-                            self.config.get("email", "smtphost"))
+                            self.config.get("email", "smtphost"),
+                            html_template=self.template)
         return
 
     @abc.abstractmethod
