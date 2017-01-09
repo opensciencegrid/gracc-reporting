@@ -42,7 +42,7 @@ class TextUtils:
 
         return len(text[self.table_header[0]])
 
-    def printAsTextTable(self, format_type, text, template=False, header=False):
+    def printAsTextTable(self, format_type, text, template=False):
         """"Prepares input text to send as attachment
         Args:
             format_type(str) - text, csv, html
