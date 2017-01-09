@@ -95,7 +95,10 @@ class OIMInfo(object):
                   '&end_date={3}%2F{4}%2F{5}&all_resources=on' \
                   '&facility_sel%5B%5D=10009&gridtype=on&gridtype_1=on' \
                   '&service=on&service_sel%5B%5D=1&active=on&active_value=1' \
-                  '&disable_value=1&has_wlcg=on'.format(*dateslist)
+                  '&disable=on&disable_value=0&has_wlcg=on'.format(*dateslist)
+
+        if self.verbose:
+            self.logger.info(oim_url)
 
         try:
             oim_xml = urllib2.urlopen(oim_url)
@@ -115,10 +118,19 @@ class OIMInfo(object):
         for resourcename_elt in self.root.findall('./ResourceGroup/Resources/Resource'
                                              '/Name'):
             resourcename = resourcename_elt.text
+
+            # Check that resource is active
             activepath = './ResourceGroup/Resources/Resource/' \
-                                     '[Name="{0}"]/Active'.format(resourcename)
+                         '[Name="{0}"]/Active'.format(resourcename)
             if not ast.literal_eval(self.root.find(activepath).text):
                 continue
+
+            # Skip if resource is disabled
+            disablepath = './ResourceGroup/Resources/Resource/' \
+                         '[Name="{0}"]/Disable'.format(resourcename)
+            if ast.literal_eval(self.root.find(disablepath).text):
+                continue
+
             if resourcename not in self.resourcedict:
                 resource_grouppath = './ResourceGroup/Resources/Resource/' \
                                      '[Name="{0}"]/../..'.format(resourcename)
@@ -194,7 +206,8 @@ class ProbeReport(Reporter):
                  no_email=False):
         report = "Probe"
         Reporter.__init__(self, report, configuration, start, end=end,
-                          verbose=verbose, logfile=logfile, no_email=no_email)
+                          verbose=verbose, logfile=logfile, is_test=is_test,
+                          no_email=no_email)
         try:
             self.client = self.establish_client()
         except Exception as e:
