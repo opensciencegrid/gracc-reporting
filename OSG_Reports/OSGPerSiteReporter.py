@@ -129,7 +129,6 @@ class OSGPerSiteReporter(Reporter):
     def __init__(self, configuration, start, end, template=False,
                      verbose=False, is_test=False, no_email=False):
         report = 'siteusage'
-        # self.template = template
         Reporter.__init__(self, report, configuration, start, end=end,
                           verbose=verbose, is_test=is_test, no_email=no_email,
                           logfile=logfile, raw=False, template=template)
@@ -162,6 +161,8 @@ class OSGPerSiteReporter(Reporter):
             .filter("range", EndTime={"gte": startdate, "lt": enddate})\
             .filter('term', ResourceType="Batch")
 
+        # Note:  Using ?: operator in painless language to coalesce the
+        # 'OIM_Site' and 'SiteName' fields.
         s.aggs.bucket('vo_bucket', 'terms', field='VOName', size=2**31-1) \
             .bucket('site_bucket', 'terms',
                     script={"inline": "doc['OIM_Site'].value ?: doc['SiteName'].value", "lang": "painless"},
