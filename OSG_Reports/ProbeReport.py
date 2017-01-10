@@ -104,16 +104,22 @@ class OIMInfo(object):
             oim_xml = urllib2.urlopen(oim_url)
             self.logger.info("Got OIM file successfully")
         except (urllib2.HTTPError, urllib2.URLError) as e:
+            self.logger.error("Couldn't get OIM Resource Group file")
             self.logger.exception(e)
-            return None
+            sys.exit(1)
 
         return oim_xml
 
     def parse(self):
         """Parse XML file"""
-        self.e = ET.parse(self.xml_file)
-        self.root = self.e.getroot()
-        self.logger.info("Parsing OIM File")
+        try:
+            self.e = ET.parse(self.xml_file)
+            self.logger.info("Parsing OIM File")
+            self.root = self.e.getroot()
+        except Exception as e:
+            self.logger.error("Couldn't parse OIM Resource Group File")
+            self.logger.exception(e)
+            sys.exit(1)
 
         for resourcename_elt in self.root.findall('./ResourceGroup/Resources/Resource'
                                              '/Name'):
