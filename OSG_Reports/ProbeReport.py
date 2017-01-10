@@ -41,14 +41,13 @@ class OIMInfo(object):
         self.verbose = verbose
         self.logfile = logfile
         self.logger = self.setupgenLogger("ProbeReport-OIM")
-        self.e = None
         self.root = None
         self.resourcedict = {}
 
         self.dateslist = self.dateslist_init()
         self.xml_file = self.get_file_from_OIM()
         if self.xml_file:
-            self.rgparse()
+            self.rgparse_xml()
             self.logger.info('Successfully parsed OIM file')
         else:
             raise
@@ -133,17 +132,32 @@ class OIMInfo(object):
 
         return oim_xml
 
-    def rgparse(self):
+    def parse(self, other_xml_file=False):
         """Parse XML file"""
+        if other_xml_file:
+            xml_file = other_xml_file
+            exit_on_fail = False
+            label = "Downtimes"
+        else:
+            xml_file = self.xml_file
+            exit_on_fail = True
+            label = "Resource Group"
         try:
-            self.e = ET.parse(self.xml_file)
-            self.logger.info("Parsing OIM File")
-            self.root = self.e.getroot()
+            tree = ET.parse(xml_file)
+            self.logger.info("Parsing OIM {0} File".format(label))
+            root = tree.getroot()
         except Exception as e:
-            self.logger.error("Couldn't parse OIM Resource Group File")
+            self.logger.error("Couldn't parse OIM {0} File".format(label))
             self.logger.exception(e)
-            sys.exit(1)
+            if exit_on_fail:
+                sys.exit(1)
+            else:
+                return None
 
+        return root
+
+    def rgparse_xml(self):
+        self.root = self.parse()
         for resourcename_elt in self.root.findall('./ResourceGroup/Resources/Resource'
                                              '/Name'):
             resourcename = resourcename_elt.text
@@ -224,12 +238,8 @@ class OIMInfo(object):
         if not xml_file:
             return nolist
 
-        try:
-            tree = ET.parse(xml_file)
-            root = tree.getroot()
-        except ET.ParseError as e:
-            self.logger.error("Could not parse downtimes XML file")
-            self.logger.exception(e)
+        root = self.parse(xml_file)
+        if not root:
             return nolist
 
         down_fqdns = []
@@ -295,7 +305,7 @@ class ProbeReport(Reporter):
             .filter("term", ResourceType="Batch")
 
         s.aggs.bucket('group_probename', 'terms', field='ProbeName',
-                               size=1000000000)
+                               size=2**31-1)
 
         return s
 
@@ -319,7 +329,7 @@ class ProbeReport(Reporter):
             .filter("wildcard", ProbeName="*:{0}".format(self.probe))
 
         ls.aggs.bucket('group_probename', 'terms', field='ProbeName',
-                               size=1000000000)\
+                               size=2**31-1)\
             .metric('datemax', 'max', field='@received')
 
         try:
