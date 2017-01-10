@@ -328,7 +328,7 @@ class ProbeReport(Reporter):
 
     def getprev_reported_probes(self):
         """Generator function that yields the probes from the previously
-        reported file, as well as whether the previous reporte date was recent
+        reported file, as well as whether the previous report date was recent
         or not.  'Recent' is defined in the ::cutoff:: variable.
         """
         # Cutoff is a week ago, probrepdate is last report date for
@@ -359,16 +359,13 @@ class ProbeReport(Reporter):
         Yields if there are emails to send, returns otherwise"""
         missingprobes = self.generate(oimdict)
 
+        prev_reported = set()
+        prev_reported_recent = set()
         if os.path.exists(self.historyfile):
-            prev_reported = set()
-            prev_reported_recent = set()
             for curprobe, is_recent_probe in self.getprev_reported_probes():
                 prev_reported.add(curprobe)
                 if is_recent_probe:
                     prev_reported_recent.add(curprobe)
-        else:
-            prev_reported = set()
-            prev_reported_recent = set()
 
         assert prev_reported.issuperset(prev_reported_recent)
         prev_reported_old = prev_reported.difference(prev_reported_recent)
