@@ -10,4 +10,4 @@ Flocking report:
 python OSGFlockingReporter.py -s 2016-11-09 -e 2016-11-16 -c osg.config -T template_flocking.html -d -v -n
 
 Probe Report:
-python ProbeReport.py -c osg.config -d
+python ProbeReport.py -c osg.config -d -n -v
