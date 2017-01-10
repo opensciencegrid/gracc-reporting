@@ -201,6 +201,7 @@ class OIMInfo(object):
     def get_downtimes(self):
         """Get downtimes from OIM, return list of probes on resources that are
         in downtime currently"""
+        nolist = []
         dt_oim_url = 'http://myosg.grid.iu.edu/rgdowntime/xml?' \
                      'summary_attrs_showservice=on&' \
                      'summary_attrs_showrsvstatus=on&summary_attrs_showfqdn=on&' \
@@ -218,7 +219,7 @@ class OIMInfo(object):
         except (urllib2.HTTPError, urllib2.URLError) as e:
             self.logger.error("Could not get downtimes from OIM")
             self.logger.exception(e)
-            return None
+            return nolist
 
         try:
             tree = ET.parse(oim_xml)
@@ -226,7 +227,7 @@ class OIMInfo(object):
         except ET.ParseError as e:
             self.logger.error("Could not parse downtimes XML file")
             self.logger.exception(e)
-            return None
+            return nolist
 
         down_fqdns = []
 
@@ -237,7 +238,7 @@ class OIMInfo(object):
             detime = datetime.datetime.strptime(dtelt.find('./EndTime').text,
                                                 "%b %d, %Y %H:%M %p UTC")
             if dstime < now < detime:
-                print "{0} in downtime".format(fqdn)
+                self.logger.info("{0} in downtime".format(fqdn))
                 down_fqdns.append(fqdn)
 
         return down_fqdns
