@@ -46,7 +46,7 @@ class OIMInfo(object):
         self.resourcedict = {}
 
         self.dateslist = self.dateslist_init()
-        self.xml_file = self.get_rgfile_from_OIM()
+        self.xml_file = self.get_file_from_OIM()
         if self.xml_file:
             self.rgparse()
             self.logger.info('Successfully parsed OIM file')
@@ -78,17 +78,18 @@ class OIMInfo(object):
         return logger
 
     def dateslist_init(self):
+        """Creates dates lists to get passed into OIM urls"""
         startdate = today - datetime.timedelta(days=7)
         rawdateslist = [startdate.month, startdate.day, startdate.year,
                         today.month, today.day, today.year]
         return ['0' + str(elt) if len(str(elt)) == 1 else str(elt)
                      for elt in rawdateslist]
 
-
-    def get_rgfile_from_OIM(self):
+    def get_file_from_OIM(self, rg=True):
         """Get RG file from OIM for parsing, return the XML file"""
 
-        oim_url = 'http://myosg.grid.iu.edu/rgsummary/xml?' \
+        if rg:
+            oim_url = 'http://myosg.grid.iu.edu/rgsummary/xml?' \
                   'summary_attrs_showhierarchy=on&summary_attrs_showwlcg=on' \
                   '&summary_attrs_showservice=on&summary_attrs_showfqdn=on' \
                   '&gip_status_attrs_showtestresults=on' \
@@ -101,17 +102,34 @@ class OIMInfo(object):
                   '&facility_sel%5B%5D=10009&gridtype=on&gridtype_1=on' \
                   '&service=on&service_sel%5B%5D=1&active=on&active_value=1' \
                   '&disable=on&disable_value=0&has_wlcg=on'.format(*self.dateslist)
+            label = "Resource Group"
+        else:
+            oim_url = 'http://myosg.grid.iu.edu/rgdowntime/xml?' \
+                     'summary_attrs_showservice=on&' \
+                     'summary_attrs_showrsvstatus=on&summary_attrs_showfqdn=on&' \
+                     'gip_status_attrs_showtestresults=on&downtime_attrs_showpast=&' \
+                     'account_type=cumulative_hours&ce_account_type=gip_vo&' \
+                     'se_account_type=vo_transfer_volume&bdiitree_type=total_jobs&' \
+                     'bdii_object=service&bdii_server=is-osg&start_type=7daysago&' \
+                     'start_date={0}%2F{1}%2F{2}&end_type=now&end_date={3}%2F{4}%2F{5}&' \
+                     'all_resources=on&facility_sel%5B%5D=10009&gridtype=on&' \
+                     'gridtype_1=on&service=on&service_sel%5B%5D=1&active=on&' \
+                     'active_value=1&disable=on&disable_value=0&has_wlcg=on'.format(*self.dateslist)
+            label = "Downtimes"
 
         if self.verbose:
             self.logger.info(oim_url)
 
         try:
             oim_xml = urllib2.urlopen(oim_url)
-            self.logger.info("Got OIM file successfully")
+            self.logger.info("Got OIM {0} file successfully".format(label))
         except (urllib2.HTTPError, urllib2.URLError) as e:
-            self.logger.error("Couldn't get OIM Resource Group file")
+            self.logger.error("Couldn't get OIM {0} file".format(label))
             self.logger.exception(e)
-            sys.exit(1)
+            if rg:
+                sys.exit(1)
+            else:
+                return None
 
         return oim_xml
 
@@ -202,27 +220,12 @@ class OIMInfo(object):
         """Get downtimes from OIM, return list of probes on resources that are
         in downtime currently"""
         nolist = []
-        dt_oim_url = 'http://myosg.grid.iu.edu/rgdowntime/xml?' \
-                     'summary_attrs_showservice=on&' \
-                     'summary_attrs_showrsvstatus=on&summary_attrs_showfqdn=on&' \
-                     'gip_status_attrs_showtestresults=on&downtime_attrs_showpast=&' \
-                     'account_type=cumulative_hours&ce_account_type=gip_vo&' \
-                     'se_account_type=vo_transfer_volume&bdiitree_type=total_jobs&' \
-                     'bdii_object=service&bdii_server=is-osg&start_type=7daysago&' \
-                     'start_date={0}%2F{1}%2F{2}&end_type=now&end_date={3}%2F{4}%2F{5}&' \
-                     'all_resources=on&facility_sel%5B%5D=10009&gridtype=on&' \
-                     'gridtype_1=on&service=on&service_sel%5B%5D=1&active=on&' \
-                     'active_value=1&disable=on&disable_value=0&has_wlcg=on'.format(*self.dateslist)
-
-        try:
-            oim_xml = urllib2.urlopen(dt_oim_url)
-        except (urllib2.HTTPError, urllib2.URLError) as e:
-            self.logger.error("Could not get downtimes from OIM")
-            self.logger.exception(e)
+        xml_file = self.get_file_from_OIM(rg=False)
+        if not xml_file:
             return nolist
 
         try:
-            tree = ET.parse(oim_xml)
+            tree = ET.parse(xml_file)
             root = tree.getroot()
         except ET.ParseError as e:
             self.logger.error("Could not parse downtimes XML file")
