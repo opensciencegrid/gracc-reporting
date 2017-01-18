@@ -215,6 +215,7 @@ class JobSuccessRateReporter(Reporter):
         """This is the function that creates the report HTML file"""
         total_failed = 0
         if len(self.run.jobs) == 0:
+            self.logger.info("no_email flag triggered - no jobs to report on")
             self.no_email = True
             return
         table_summary = ""
