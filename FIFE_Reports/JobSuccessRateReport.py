@@ -123,11 +123,12 @@ class JobSuccessRateReporter(Reporter):
                     userid = self.usermatch_CILogon.match(hit['CommonName']).\
                         group(1)
                 except AttributeError:
-                    try:
-                        userid = self.usermatch_FNAL.match(hit['CommonName']).\
-                            group(1)  # If this doesn't match CILogon standard,
-                                      #  just grab the *.fnal.gov string at the end
-                    except AttributeError:
+                    # If this doesn't match CILogon standard, see if it
+                    # matches *.fnal.gov string at the end.  If so,
+                    # it's a managed proxy most likely, so give the localuserid
+                    if self.usermatch_FNAL.match(hit['CommonName']) and 'LocalUserId' in hit:
+                            userid = hit['LocalUserId']
+                    else:
                         userid = hit['CommonName']  # Just print the CN string, move on
                 # Parse jobid
                 try:
