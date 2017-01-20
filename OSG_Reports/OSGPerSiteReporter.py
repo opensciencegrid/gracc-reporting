@@ -240,6 +240,7 @@ class OSGPerSiteReporter(Reporter):
             else:
                 if vo not in self.vodict or site not in self.sitelist:
                     continue
+
                 V = self.vodict[vo]
                 V.current = self.current
                 V.add_site(site, wallhrs)
@@ -277,7 +278,7 @@ class OSGPerSiteReporter(Reporter):
         report["Prev. Month Opp. Total"] = [
             sum((self.vodict[col].get_old_sitehours(site)
                  for col in report if col in opp_vos))
-            for site in self.sitelist]
+            for site in sitelist]
         stagecol = report["Prev. Month Opp. Total"]
         stagecol.append(sum(stagecol))  # Append the total for this column
 
