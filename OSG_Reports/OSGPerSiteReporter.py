@@ -336,8 +336,8 @@ class OSGPerSiteReporter(Reporter):
 
         # Handle percent opportunistic overall for previous month
         report['Percent Opportunistic'].extend(
-            ((report["Opportunistic Total"][-1] /
-              report["Total"][-1] * 100), 'N/A'))
+            ((report["Opportunistic Total"][-2] /
+              report["Total"][-2] * 100), 'N/A'))
 
         # Fill in the rest of the report
         report["Prev. Month Opp. Total"].extend(('N/A', 'N/A'))
