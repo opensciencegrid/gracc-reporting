@@ -287,7 +287,8 @@ class OSGPerSiteReporter(Reporter):
         # Add all of the data for every vo; do this for each site
         report["Total"] = [sum((report[col][pos] for col in report
                                 if col not in
-                                ("Site", "Total", "Percentage Change Month-Month")))
+                                ("Site", "Total", "Percentage Change Month-Month",
+                                 "Prev. Month Opp. Total")))
                            for pos in range(len(report["Site"]))]
 
         # Do the same as above, but for only the opp. VOs in the report
@@ -344,6 +345,7 @@ class OSGPerSiteReporter(Reporter):
         # Insert a blank line
         for values in report.itervalues():
             values.insert(-3, '')
+
 
         return report
 
