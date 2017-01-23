@@ -92,7 +92,7 @@ class JobSuccessRateReporter(Reporter):
             sleep(3)
 
         # Elasticsearch query
-        resultset = Search(using=self.establish_client(), index=self.indexpattern) \
+        resultset = Search(using=self.client, index=self.indexpattern) \
             .filter("range", EndTime={"gte": starttimeq, "lt": endtimeq}) \
             .filter("term", ResourceType="Payload")
 
