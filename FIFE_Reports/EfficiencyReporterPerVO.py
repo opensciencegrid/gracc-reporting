@@ -56,7 +56,7 @@ class Efficiency(Reporter):
             self.logger.info(self.indexpattern)
 
         # Elasticsearch query and aggregations
-        s = Search(using=self.establish_client(), index=self.indexpattern) \
+        s = Search(using=self.client, index=self.indexpattern) \
             .filter("wildcard", VOName=wildcardVOq) \
             .filter("wildcard", ProbeName=wildcardProbeNameq) \
             .filter("range", EndTime={"gte": starttimeq, "lt": endtimeq}) \
