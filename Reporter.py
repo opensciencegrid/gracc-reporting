@@ -56,7 +56,8 @@ class Reporter(TimeUtils):
             self.logfile = logfile
         else:
             self.logfile = ('reports.log')
-        self.logger = self.setupgenLogger()
+        self.logger = self.__setupgenLogger()
+        self.client = self.__establish_client()
 
     @staticmethod
     def parse_opts():
@@ -104,7 +105,7 @@ class Reporter(TimeUtils):
         variables of start time and end time, and the flag raw."""
         return indexpattern_generate(self.start_time, self.end_time, raw)
 
-    def setupgenLogger(self):
+    def __setupgenLogger(self):
         """Creates logger for Reporter class.
 
         For non-verbose use, use WARNING level (or above)
@@ -144,17 +145,22 @@ class Reporter(TimeUtils):
 
         return logger
 
-    @staticmethod
-    def establish_client():
+    def __establish_client(self):
         """Initialize and return the elasticsearch client"""
-        client = Elasticsearch(['https://gracc.opensciencegrid.org/q'],
-                               use_ssl=True,
-                               verify_certs=False,
-                               # ca_certs = 'gracc_cert/lets-encrypt-x3-cross-signed.pem',
-                               # client_cert = 'gracc_cert/gracc-reports-dev.crt',
-                               # client_key = 'gracc_cert/gracc-reports-dev.key',
-                               timeout=60)
-        return client
+        try:
+            client = Elasticsearch(['https://gracc.opensciencegrid.org/q'],
+                                    use_ssl=True,
+                                    verify_certs=False,
+                                   # ca_certs = 'gracc_cert/lets-encrypt-x3-cross-signed.pem',
+                                   # client_cert = 'gracc_cert/gracc-reports-dev.crt',
+                                   # client_key = 'gracc_cert/gracc-reports-dev.key',
+                                   timeout=60)
+        except Exception as e:
+            self.logger.exception("Couldn't initialize Elasticsearch instance."
+                                  " Error/traceback: {0}".format(e))
+            sys.exit(1)
+        else:
+            return client
 
     @abc.abstractmethod
     def query(self):
