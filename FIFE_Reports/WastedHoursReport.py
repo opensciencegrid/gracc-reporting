@@ -22,7 +22,6 @@ import NiceNum
 import Configuration
 from Reporter import Reporter, runerror
 import TextUtils
-import time
 
 logfile = 'wastedhours.log'
 
@@ -284,7 +283,6 @@ class WastedHoursReport(Reporter):
         f = open(self.fn, "w")
         f.write(self.text)
         f.close()
-        time.sleep(5)
         if self.verbose:
             print total_jobs, total_hrs
         return
@@ -328,7 +326,14 @@ if __name__ == "__main__":
 
     try:
         report = WastedHoursReport(config, args.start, args.end, args.is_test, args.verbose, args.no_email)
-        report.run_report()
+        try:
+            report.run_report()
+        except (Exception, KeyboardInterrupt) as e:
+            # Make sure to clean up files if there's an error or
+            # keyboard interrupt
+            if os.path.exists(report.fn):
+                os.unlink(report.fn)
+            raise
     except Exception as e:
         print >> sys.stderr, traceback.format_exc()
         runerror(config, e, traceback.format_exc())
