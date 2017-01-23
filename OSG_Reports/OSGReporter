@@ -38,6 +38,7 @@ class OSGReporter(Reporter):
                  verbose=False, no_email=False, is_test=False):
         Reporter.__init__(self, config, start, end, verbose, raw=False,
                           no_email=no_email, is_test=is_test)
+        self.report_type = self.validate_report_type(report_type)
         self.header = ["Project Name", "PI", "Institution", "Field of Science",
                      "Wall Hours"]
         self.logfile = logfile
@@ -52,15 +53,18 @@ class OSGReporter(Reporter):
         self.limit = limit
         self.isSum = isSum
 
-        if self.report_type == "OSG":
-            self.title = "{0}-Direct Projects {1} - {2}".format(
-                self.report_type, self.start_time, self.end_time)
-        elif self.report_type == "XD":
-            self.title = "OSG-{0} Projects {1} - {2}".format(
-                self.report_type, self.start_time, self.end_time)
-        else:
+
+    def validate_report_type(self, report_type):
+        validtypes = {"OSG": "OSG-Direct", "XD": "OSG-XD",
+                      "OSG-Connect": "OSG-Connect"}
+        if report_type in validtypes:
             self.title = "{0} Projects {1} - {2}".format(
-                self.report_type, self.start_time, self.end_time)
+                validtypes[report_type], self.start_time, self.end_time)
+            return report_type
+        else:
+            raise Exception("Must use report type {0}".format(
+                ', '.join((name for name in validtypes)))
+            )
 
     def query(self):
         """Method to query Elasticsearch cluster for OSGReporter information"""
@@ -74,6 +78,9 @@ class OSGReporter(Reporter):
         if self.verbose:
             print probes
 
+        print self.indexpattern
+        self.indexpattern = 'gracc.osg.summary'
+
         # Elasticsearch query and aggregations
         s = Search(using=self.client, index=self.indexpattern) \
                 .filter("range", EndTime={"gte": starttimeq, "lt": endtimeq}) \
@@ -83,12 +90,12 @@ class OSGReporter(Reporter):
         # Size 0 to return only aggregations
         # Bucket, metric aggs
         Bucket = s.aggs.bucket("group_ProjectName", "terms", field="ProjectName",
-                               size=1000000000, order={"_term":"asc"})\
-                    .bucket("group_PIName", "terms", field="PIName")\
-                    .bucket("group_Organization", "terms", field="Organization")\
-                    .bucket("group_FOS", "terms", field="FieldOfScience")
+                               size=2**31-1, order={"_term":"asc"},
+                               missing="UNKNOWN")\
+                    .bucket("group_PIName", "terms", field="OIM_PIName", missing="UNKNOWN")\
+                    .bucket("group_Organization", "terms", field="OIM_Organization", missing="UNKNOWN")\
+                    .bucket("group_FOS", "terms", field="OIM_FieldOfScience", missing="UNKNOWN")
         Bucket.metric("CoreHours_sum", "sum", field="CoreHours")
-
 
         return s
 
@@ -113,6 +120,23 @@ class OSGReporter(Reporter):
             print e, "Error accessing Elasticsearch"
             sys.exit(1)
 
+    @staticmethod
+    def is_missing(string):
+        """Check to see a field is missing info"""
+        if string == "N/A" or string == "UNKNOWN":
+            return True
+        return False
+
+    def get_project_info(self):
+        """Method to handle logic of what to do with projects with missing OIM info"""
+        if self.report_type == "XD":
+            pass
+        elif self.report_type == "OSG":
+            pass
+        elif self.report_type == "OSG-Connect":
+            pass
+        return
+
     def run_report(self):
         """Takes data from query response and parses it to send to other
         functions for processing"""
@@ -121,8 +145,12 @@ class OSGReporter(Reporter):
         for pname_bucket in self.sorted_buckets(results.group_ProjectName,
                                                 key=key_to_lower):
             pname = pname_bucket.key
+            if self.is_missing(pname):
+                pass    # If no ProjectName, then email osg-support
             for pi_bucket in pname_bucket.group_PIName.buckets:
                 pi = pi_bucket.key
+                if self.is_missing(pi):
+                    self.get_project_info()
                 for org_bucket in pi_bucket.group_Organization.buckets:
                     org = org_bucket.key
                     for fos_bucket in org_bucket.group_FOS.buckets:
@@ -177,7 +205,7 @@ if __name__=="__main__":
                         verbose=args.verbose,
                         is_test=args.is_test,
                         no_email=args.no_email)
-        print args.no_email
+        # print args.no_email
         r.run_report()
         r.send_report("Project")
         r.logger.info("OSG Project Report executed successfully")
