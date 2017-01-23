@@ -22,6 +22,7 @@ import NiceNum
 import Configuration
 from Reporter import Reporter, runerror
 import TextUtils
+import time
 
 logfile = 'wastedhours.log'
 
@@ -156,14 +157,14 @@ class WastedHoursReport(Reporter):
         self.fn = "user_wasted_hours_report.{0}".format(
             self.end_time.split(" ")[0].replace("/", "-"))
 
-    def query(self, client):
+    def query(self):
         """Query method to grab wasted hours info, return query object"""
         wildcardProbeNameq = 'condor:fifebatch?.fnal.gov'
 
         starttimeq = self.dateparse_to_iso(self.start_time)
         endtimeq = self.dateparse_to_iso(self.end_time)
 
-        s = Search(using=client, index=self.indexpattern) \
+        s = Search(using=self.client, index=self.indexpattern) \
             .filter("wildcard", ProbeName=wildcardProbeNameq) \
             .filter("range", EndTime={"gt": starttimeq, "lt": endtimeq})
 
@@ -194,8 +195,7 @@ class WastedHoursReport(Reporter):
         Generates the raw data for the report
         :return:
         """
-        client = self.establish_client()
-        resultquery = self.query(client)
+        resultquery = self.query()
 
         response = resultquery.execute()
         return_code_success = response.success()
@@ -284,6 +284,7 @@ class WastedHoursReport(Reporter):
         f = open(self.fn, "w")
         f.write(self.text)
         f.close()
+        time.sleep(5)
         if self.verbose:
             print total_jobs, total_hrs
         return
@@ -332,4 +333,5 @@ if __name__ == "__main__":
         print >> sys.stderr, traceback.format_exc()
         runerror(config, e, traceback.format_exc())
         sys.exit(1)
+
     sys.exit(0)
