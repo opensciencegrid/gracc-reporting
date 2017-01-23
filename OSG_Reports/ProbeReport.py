@@ -279,10 +279,6 @@ class ProbeReport(Reporter):
         Reporter.__init__(self, report, configuration, start, end=start,
                           verbose=verbose, logfile=logfile, is_test=is_test,
                           no_email=no_email)
-        try:
-            self.client = self.establish_client()
-        except Exception as e:
-            self.logger.exception(e)
         self.configuration = configuration
         self.probematch = re.compile("(.+):(.+)")
         self.estimeformat = re.compile("(.+)T(.+)\.\d+Z")
