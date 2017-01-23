@@ -165,23 +165,20 @@ class WastedHoursReport(Reporter):
 
         s = Search(using=self.client, index=self.indexpattern) \
             .filter("wildcard", ProbeName=wildcardProbeNameq) \
-            .filter("range", EndTime={"gt": starttimeq, "lt": endtimeq})
+            .filter("range", EndTime={"gte": starttimeq, "lt": endtimeq})
 
         # Aggregations
-        a1 = A('filters', filters={
+
+        Buckets = s.aggs.bucket('group_status', 'filters', filters={
             'Success': {'bool': {'must': {'term': {'Resource_ExitCode': 0}}}},
             'Failure': {
-                'bool': {'must_not': {'term': {'Resource_ExitCode': 0}}}}})
-        a2 = A('terms', field='VOName', size=1000000000) # large size to
-                                                        # bring in all records
-        a3 = A('terms', field='CommonName', size=1000000000)
-
-        Buckets = s.aggs.bucket('group_status', a1)\
-            .bucket('group_VO', a2) \
-            .bucket('group_CommonName', a3)
+                'bool': {'must_not': {'term': {'Resource_ExitCode': 0}}}}})\
+            .bucket('group_VO', 'terms', field='VOName', size=2**31-1) \
+            .bucket('group_CommonName','terms', field='CommonName',
+                    size=2**31-1)
 
         # Metrics
-        Metric = Buckets.metric('numJobs', 'sum', field='Count')\
+        Buckets.metric('numJobs', 'sum', field='Count')\
             .metric('WallHours', 'sum', field='CoreHours')
 
         if self.verbose:
