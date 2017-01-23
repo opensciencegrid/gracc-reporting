@@ -55,7 +55,7 @@ class Reporter(TimeUtils):
         if logfile:
             self.logfile = logfile
         else:
-            self.logfile = ('reports.log')
+            self.logfile = 'reports.log'
         self.logger = self.__setupgenLogger()
         self.client = self.__establish_client()
 
