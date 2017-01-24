@@ -448,7 +448,7 @@ class JobSuccessRateReporter(Reporter):
         if self.is_test:
             emails = re.split('[; ,]', self.config.get("email", "test_to"))
         else:
-            emails = re.split('[; ,]', self.config.get("email", "{0}_email".format(self.vo.lower()))
+            emails = re.split('[; ,]', self.config.get(self.vo.lower(), "email")
                               + ',' + self.config.get("email", "test_to"))
 
         if self.test_no_email(emails):
