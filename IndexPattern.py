@@ -9,7 +9,7 @@ def indexpattern_generate(start, end, raw=True):
     This function assumes that the date being passed in has been split into a list with [yyyy,mm,dd] format.  This gets tested and cleaned up in the called dateparse function.
     """
     if not raw:
-        return 'gracc.osg.summary*'
+        return 'gracc.osg.summary'
 
     t = TimeUtils()
     startdate = t.dateparse(start)

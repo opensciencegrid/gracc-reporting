@@ -54,12 +54,10 @@ class Job:
 class JobSuccessRateReporter(Reporter):
     def __init__(self, configuration, start, end, vo, template, is_test,
                  verbose, no_email):
-        Reporter.__init__(self, configuration, start, end, verbose)
+        report = 'JobSuccessRate'
+        Reporter.__init__(self, report, configuration, start, end, verbose,
+                          is_test=is_test, no_email=no_email, logfile=logfile)
         self.vo = vo
-        self.logfile = logfile
-        self.logger = self.setupgenLogger("JobSuccessRate")
-        self.no_email = no_email
-        self.is_test = is_test
         self.template = template
         self.title = "Production Jobs Success Rate {0} - {1}".format(
             self.start_time, self.end_time)
@@ -94,15 +92,15 @@ class JobSuccessRateReporter(Reporter):
             sleep(3)
 
         # Elasticsearch query
-        resultset = Search(using=self.establish_client(), index=self.indexpattern) \
+        resultset = Search(using=self.client, index=self.indexpattern) \
             .filter("range", EndTime={"gte": starttimeq, "lt": endtimeq}) \
-            .filter(Q({"term": {"ResourceType": "Payload"}}))
+            .filter("term", ResourceType="Payload")
 
         if self.vo in re.split(',', self.config.get('noproduction', 'list')):
-            resultset = resultset.query("wildcard", VOName=voq)
+            resultset = resultset.filter("wildcard", VOName=voq)
         else:
-            resultset = resultset.query("wildcard", VOName=productioncheck)\
-                .filter(Q({"term": {"VOName": voq}}))
+            resultset = resultset.filter("wildcard", VOName=productioncheck)\
+                .filter("term", VOName=voq)
 
         if self.verbose:
             print resultset.to_dict()
@@ -125,11 +123,12 @@ class JobSuccessRateReporter(Reporter):
                     userid = self.usermatch_CILogon.match(hit['CommonName']).\
                         group(1)
                 except AttributeError:
-                    try:
-                        userid = self.usermatch_FNAL.match(hit['CommonName']).\
-                            group(1)  # If this doesn't match CILogon standard,
-                                      #  just grab the *.fnal.gov string at the end
-                    except AttributeError:
+                    # If this doesn't match CILogon standard, see if it
+                    # matches *.fnal.gov string at the end.  If so,
+                    # it's a managed proxy most likely, so give the localuserid
+                    if self.usermatch_FNAL.match(hit['CommonName']) and 'LocalUserId' in hit:
+                            userid = hit['LocalUserId']
+                    else:
                         userid = hit['CommonName']  # Just print the CN string, move on
                 # Parse jobid
                 try:
@@ -216,6 +215,7 @@ class JobSuccessRateReporter(Reporter):
         """This is the function that creates the report HTML file"""
         total_failed = 0
         if len(self.run.jobs) == 0:
+            self.logger.info("no_email flag triggered - no jobs to report on")
             self.no_email = True
             return
         table_summary = ""
@@ -448,17 +448,13 @@ class JobSuccessRateReporter(Reporter):
         if self.is_test:
             emails = re.split('[; ,]', self.config.get("email", "test_to"))
         else:
-            emails = re.split('[; ,]', self.config.get("email", "{0}_email".format(self.vo.lower()))
+            emails = re.split('[; ,]', self.config.get(self.vo.lower(), "email")
                               + ',' + self.config.get("email", "test_to"))
 
-        if self.no_email:
-            self.logger.info("Not sending email")
-            self.logger.info("Would have sent emails to {0}.".format(
-                ', '.join(emails)))
+        if self.test_no_email(emails):
             if os.path.exists(self.fn):
                 os.unlink(self.fn)  # Delete HTML file
             return
-
 
         TextUtils.sendEmail(([], emails),
                             "{0} Production Jobs Success Rate on the OSG Sites ({1} - {2})".format(

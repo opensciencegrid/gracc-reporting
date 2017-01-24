@@ -1,5 +1,4 @@
 import xml.etree.ElementTree as ET
-from datetime import timedelta, date
 import urllib2
 import ast
 import os
@@ -32,6 +31,9 @@ import Configuration
 from Reporter import Reporter, runerror
 
 logfile = 'probereport.log'
+now = datetime.datetime.now()
+today = now.date()
+
 
 class OIMInfo(object):
     """Class to hold and operate on OIM information"""
@@ -39,13 +41,13 @@ class OIMInfo(object):
         self.verbose = verbose
         self.logfile = logfile
         self.logger = self.setupgenLogger("ProbeReport-OIM")
-        self.e = None
         self.root = None
         self.resourcedict = {}
 
+        self.dateslist = self.dateslist_init()
         self.xml_file = self.get_file_from_OIM()
         if self.xml_file:
-            self.parse()
+            self.rgparse_xml()
             self.logger.info('Successfully parsed OIM file')
         else:
             raise
@@ -74,16 +76,19 @@ class OIMInfo(object):
 
         return logger
 
-    def get_file_from_OIM(self):
-        """Get RG file from OIM for parsing, return the XML file"""
-        today = date.today()
-        startdate = today - timedelta(days=7)
+    def dateslist_init(self):
+        """Creates dates lists to get passed into OIM urls"""
+        startdate = today - datetime.timedelta(days=7)
         rawdateslist = [startdate.month, startdate.day, startdate.year,
                         today.month, today.day, today.year]
-        dateslist = ['0' + str(elt) if len(str(elt)) == 1 else str(elt)
+        return ['0' + str(elt) if len(str(elt)) == 1 else str(elt)
                      for elt in rawdateslist]
 
-        oim_url = 'http://myosg.grid.iu.edu/rgsummary/xml?' \
+    def get_file_from_OIM(self, rg=True):
+        """Get RG file from OIM for parsing, return the XML file"""
+
+        if rg:
+            oim_url = 'http://myosg.grid.iu.edu/rgsummary/xml?' \
                   'summary_attrs_showhierarchy=on&summary_attrs_showwlcg=on' \
                   '&summary_attrs_showservice=on&summary_attrs_showfqdn=on' \
                   '&gip_status_attrs_showtestresults=on' \
@@ -95,30 +100,80 @@ class OIMInfo(object):
                   '&end_date={3}%2F{4}%2F{5}&all_resources=on' \
                   '&facility_sel%5B%5D=10009&gridtype=on&gridtype_1=on' \
                   '&service=on&service_sel%5B%5D=1&active=on&active_value=1' \
-                  '&disable_value=1&has_wlcg=on'.format(*dateslist)
+                  '&disable=on&disable_value=0&has_wlcg=on'.format(*self.dateslist)
+            label = "Resource Group"
+        else:
+            oim_url = 'http://myosg.grid.iu.edu/rgdowntime/xml?' \
+                     'summary_attrs_showservice=on&' \
+                     'summary_attrs_showrsvstatus=on&summary_attrs_showfqdn=on&' \
+                     'gip_status_attrs_showtestresults=on&downtime_attrs_showpast=&' \
+                     'account_type=cumulative_hours&ce_account_type=gip_vo&' \
+                     'se_account_type=vo_transfer_volume&bdiitree_type=total_jobs&' \
+                     'bdii_object=service&bdii_server=is-osg&start_type=7daysago&' \
+                     'start_date={0}%2F{1}%2F{2}&end_type=now&end_date={3}%2F{4}%2F{5}&' \
+                     'all_resources=on&facility_sel%5B%5D=10009&gridtype=on&' \
+                     'gridtype_1=on&service=on&service_sel%5B%5D=1&active=on&' \
+                     'active_value=1&disable=on&disable_value=0&has_wlcg=on'.format(*self.dateslist)
+            label = "Downtimes"
+
+        if self.verbose:
+            self.logger.info(oim_url)
 
         try:
             oim_xml = urllib2.urlopen(oim_url)
-            self.logger.info("Got OIM file successfully")
+            self.logger.info("Got OIM {0} file successfully".format(label))
         except (urllib2.HTTPError, urllib2.URLError) as e:
+            self.logger.error("Couldn't get OIM {0} file".format(label))
             self.logger.exception(e)
-            return None
+            if rg:
+                sys.exit(1)
+            else:
+                return None
 
         return oim_xml
 
-    def parse(self):
+    def parse(self, other_xml_file=False):
         """Parse XML file"""
-        self.e = ET.parse(self.xml_file)
-        self.root = self.e.getroot()
-        self.logger.info("Parsing OIM File")
+        if other_xml_file:
+            xml_file = other_xml_file
+            exit_on_fail = False
+            label = "Downtimes"
+        else:
+            xml_file = self.xml_file
+            exit_on_fail = True
+            label = "Resource Group"
+        try:
+            tree = ET.parse(xml_file)
+            self.logger.info("Parsing OIM {0} File".format(label))
+            root = tree.getroot()
+        except Exception as e:
+            self.logger.error("Couldn't parse OIM {0} File".format(label))
+            self.logger.exception(e)
+            if exit_on_fail:
+                sys.exit(1)
+            else:
+                return None
 
+        return root
+
+    def rgparse_xml(self):
+        self.root = self.parse()
         for resourcename_elt in self.root.findall('./ResourceGroup/Resources/Resource'
                                              '/Name'):
             resourcename = resourcename_elt.text
+
+            # Check that resource is active
             activepath = './ResourceGroup/Resources/Resource/' \
-                                     '[Name="{0}"]/Active'.format(resourcename)
+                         '[Name="{0}"]/Active'.format(resourcename)
             if not ast.literal_eval(self.root.find(activepath).text):
                 continue
+
+            # Skip if resource is disabled
+            disablepath = './ResourceGroup/Resources/Resource/' \
+                         '[Name="{0}"]/Disable'.format(resourcename)
+            if ast.literal_eval(self.root.find(disablepath).text):
+                continue
+
             if resourcename not in self.resourcedict:
                 resource_grouppath = './ResourceGroup/Resources/Resource/' \
                                      '[Name="{0}"]/../..'.format(resourcename)
@@ -175,36 +230,60 @@ class OIMInfo(object):
 
         return returndict
 
+    def get_downtimes(self):
+        """Get downtimes from OIM, return list of probes on resources that are
+        in downtime currently"""
+        nolist = []
+        xml_file = self.get_file_from_OIM(rg=False)
+        if not xml_file:
+            return nolist
+
+        root = self.parse(xml_file)
+        if not root:
+            return nolist
+
+        down_fqdns = []
+
+        for dtelt in root.findall('./CurrentDowntimes/Downtime'):
+            fqdn = dtelt.find('./ResourceFQDN').text
+            dstime = datetime.datetime.strptime(dtelt.find('./StartTime').text,
+                                                "%b %d, %Y %H:%M %p UTC")
+            detime = datetime.datetime.strptime(dtelt.find('./EndTime').text,
+                                                "%b %d, %Y %H:%M %p UTC")
+            if dstime < now < detime:
+                self.logger.info("{0} in downtime".format(fqdn))
+                down_fqdns.append(fqdn)
+
+        return down_fqdns
+
     def get_fqdns_for_probes(self):
         """Parses resource dictionary and grabs the FQDNs and Resource Names
         if the resource is flagged as WLCG Interop Accting = True
 
         Returns a dictionary with those two pieces of information
         """
+        downtimes = self.get_downtimes()
         oim_probe_dict = {}
         for resourcename, info in self.resourcedict.iteritems():
-            if ast.literal_eval(info['WLCGInteropAcct']):
+            if ast.literal_eval(info['WLCGInteropAcct']) and \
+                            info['FQDN'] not in downtimes:
                 oim_probe_dict[info['FQDN']] = info['Resource']
         return oim_probe_dict
 
 
 class ProbeReport(Reporter):
     """Class to generate the probe report"""
-    def __init__(self, configuration, start, end, template=False,
-                     verbose=False, is_test=False, no_email=False):
-        Reporter.__init__(self, configuration, start, end, verbose)
-        self.logfile = logfile
-        self.logger = self.setupgenLogger("ProbeReport")
-        try:
-            self.client = self.establish_client()
-        except Exception as e:
-            self.logger.exception(e)
+    def __init__(self, configuration, start, verbose=False, is_test=False,
+                 no_email=False):
+        report = "Probe"
+        Reporter.__init__(self, report, configuration, start, end=start,
+                          verbose=verbose, logfile=logfile, is_test=is_test,
+                          no_email=no_email)
+        self.configuration = configuration
         self.probematch = re.compile("(.+):(.+)")
         self.estimeformat = re.compile("(.+)T(.+)\.\d+Z")
         self.emailfile = 'filetoemail.txt'
         self.probe, self.resource = None, None
-        self.no_email = no_email
-        self.is_test = is_test
         self.historyfile = 'probereporthistory.log'
         self.newhistory = []
         self.reminder = False
@@ -222,16 +301,16 @@ class ProbeReport(Reporter):
             .filter("term", ResourceType="Batch")
 
         s.aggs.bucket('group_probename', 'terms', field='ProbeName',
-                               size=1000000000)
+                               size=2**31-1)
 
         return s
 
     def lastreportinit(self):
         """Reset the start/end times for the ES query and generate a new
         index pattern based on those"""
-        self.start_time = datetime.date.today().replace(
-            day=1) - timedelta(days=1)
-        self.end_time = datetime.date.today()
+        self.start_time = today.replace(
+            day=1) - datetime.timedelta(days=1)
+        self.end_time = today
         self.indexpattern = self.indexpattern_generate()
         return
 
@@ -246,10 +325,16 @@ class ProbeReport(Reporter):
             .filter("wildcard", ProbeName="*:{0}".format(self.probe))
 
         ls.aggs.bucket('group_probename', 'terms', field='ProbeName',
-                               size=1000000000)\
+                               size=2**31-1)\
             .metric('datemax', 'max', field='@received')
 
-        aggs = ls.execute().aggregations
+        try:
+            aggs = ls.execute().aggregations
+        except Exception as e:
+            self.logger.exception(e)
+            runerror(self.configuration, e, traceback.format_exc())
+            sys.exit(1)
+
         buckets = aggs.group_probename.buckets
         if buckets:
             try:
@@ -291,9 +376,17 @@ class ProbeReport(Reporter):
         else:
             self.logger.debug(json.dumps(t, sort_keys=True))
 
-        response = resultset.execute()
-        self.results = response.aggregations
-        self.logger.info("Successfully queried Elasticsearch")
+        try:
+            response = resultset.execute()
+            if not response.success():
+                raise Exception("Error accessing Elasticsearch")
+
+            self.results = response.aggregations
+            self.logger.info("Successfully queried Elasticsearch")
+        except Exception as e:
+            self.logger.exception(e)
+            runerror(self.configuration, e, traceback.format_exc())
+            sys.exit(1)
 
         probes = self.get_probenames()
         self.logger.info("Successfully analyzed ES data vs. OIM data")
@@ -302,12 +395,12 @@ class ProbeReport(Reporter):
 
     def getprev_reported_probes(self):
         """Generator function that yields the probes from the previously
-        reported file, as well as whether the previous reporte date was recent
+        reported file, as well as whether the previous report date was recent
         or not.  'Recent' is defined in the ::cutoff:: variable.
         """
         # Cutoff is a week ago, probrepdate is last report date for
         # a probe
-        cutoff = datetime.date.today() - datetime.timedelta(days=7)
+        cutoff = today - datetime.timedelta(days=7)
         with open(self.historyfile, 'r') as h:
             for line in h:
                 proberepdate = datetime.date(
@@ -325,7 +418,7 @@ class ProbeReport(Reporter):
 
                 yield curprobe, prev_reported_recent
 
-    def generate_report_file(self, oimdict, report=None):
+    def generate_report_file(self, oimdict):
         """Generator function that generates the report files to send in email.
         This is where we exclude sending emails for those probes we've reported
         on in the last week.
@@ -333,16 +426,13 @@ class ProbeReport(Reporter):
         Yields if there are emails to send, returns otherwise"""
         missingprobes = self.generate(oimdict)
 
+        prev_reported = set()
+        prev_reported_recent = set()
         if os.path.exists(self.historyfile):
-            prev_reported = set()
-            prev_reported_recent = set()
             for curprobe, is_recent_probe in self.getprev_reported_probes():
                 prev_reported.add(curprobe)
                 if is_recent_probe:
                     prev_reported_recent.add(curprobe)
-        else:
-            prev_reported = set()
-            prev_reported_recent = set()
 
         assert prev_reported.issuperset(prev_reported_recent)
         prev_reported_old = prev_reported.difference(prev_reported_recent)
@@ -366,7 +456,7 @@ class ProbeReport(Reporter):
 
             # Append line to new history
             self.newhistory.append('{0}\t{1}\n'.format(
-                elt, datetime.date.today()))
+                elt, today))
             yield
 
         return
@@ -378,34 +468,32 @@ class ProbeReport(Reporter):
         else:
             remindertext = ''
         return "{0}{1} Reporting Account Failure dated {2}"\
-            .format(remindertext, self.resource, datetime.date.today())
+            .format(remindertext, self.resource, today)
 
     def emailtext(self):
         """Format the text for our emails"""
         text = 'The probe installed on {0} at {1} has not reported'\
                ' GRACC records to OSG for the last two days. The last ' \
-               'date we received a record from {0} was {2}.  If this '\
+               'date we received a record from {0} was {2} UTC.  If this '\
                'is due to maintenance or a retirement of this '\
                'node, please let us know.  If not, please check to see '\
                'if your Gratia reporting is active.'.format(self.probe, self.resource, self.lastreport_date)
         return text
 
-    def send_report(self, report_type="ProbeReport"):
+    def send_report(self):
         """Send our emails"""
         if self.is_test:
             emails = re.split('[; ,]',self.config.get("email", "test_to"))
         else:
-            emails = re.split('[; ,]', self.config.get("email", "real_to") +
-                              ',' + self.config.get("email", "test_to"))
+            emails = re.split('[; ,]', self.config.get("email", "{0}_to".format(self.report_type))
+                              + ',' + self.config.get("email", "test_to"))
 
         emailfrom = self.config.get("email", "from")
 
-        if self.no_email:
-            self.logger.info("no_email flag was used.  Not sending email for "
-                             "this run.\t{0}\t{1}".format(self.resource,
-                                                         self.probe))
-            self.logger.info("Would have sent emails to {0}.".format(
-                ', '.join(emails)))
+        if self.test_no_email(emails):
+            self.logger.info("Resource name: {0}\tProbe Name: {1}"
+                             .format(self.resource, self.probe))
+
             if os.path.exists(self.emailfile):
                 os.unlink(self.emailfile)
 
@@ -440,7 +528,7 @@ class ProbeReport(Reporter):
                 cleanup.write(line)
         return
 
-    def send_all_reports(self, oimdict):
+    def run_report(self, oimdict):
         """The higher level method that controls the generation and sending
         of the probe report using other methods in this class."""
         rep_files = self.generate_report_file(oimdict)
@@ -451,7 +539,7 @@ class ProbeReport(Reporter):
         except Exception as e:
             self.logger.exception(e)
 
-        self.logger.info('All reports sent')
+        self.logger.info('All new reports sent')
         self.cleanup_history()
         return
 
@@ -467,18 +555,16 @@ def main():
         oiminfo = OIMInfo(args.verbose)
         oim_probe_fqdn_dict = oiminfo.get_fqdns_for_probes()
 
-        startdate = datetime.date.today() - timedelta(days=2)
+        startdate = today - datetime.timedelta(days=2)
 
         # Set up and send probe report
         preport = ProbeReport(config,
                               startdate,
-                              startdate,
-                              template=args.template,
                               verbose=args.verbose,
                               is_test=args.is_test,
                               no_email=args.no_email)
 
-        preport.send_all_reports(oim_probe_fqdn_dict)
+        preport.run_report(oim_probe_fqdn_dict)
         print 'Probe Report Execution finished'
     except Exception as e:
         with open(logfile, 'a') as f:
