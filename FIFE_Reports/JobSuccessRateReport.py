@@ -462,8 +462,9 @@ class JobSuccessRateReporter(Reporter):
                                 self.start_time,
                                 self.end_time),
                             {"html": self.text},
-                            ("GRACC Operations", "sbhat@fnal.gov"),
-                            "smtp.fnal.gov")
+                            (self.config.get("email", "realname"),
+                             self.config.get("email", "from")),
+                            self.config.get("email", "smtphost"))
         if os.path.exists(self.fn):
             os.unlink(self.fn)  # Delete HTML file
 
