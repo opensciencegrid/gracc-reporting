@@ -247,6 +247,7 @@ class JobSuccessRateReporter(Reporter):
 
         num_hosts_per_site = 20
         errors_per_host = 20
+        num_failed_sites = 10
 
         # Look in clusters, figure out whether job failed or succeeded,
         # categorize appropriately, and generate HTML line for total jobs
@@ -396,16 +397,27 @@ class JobSuccessRateReporter(Reporter):
         faildict = {site: item['FailedJobs'] for site, item in site_failed_dict.iteritems()}
 
         if self.limit_sites:
+            # If a VO wants to limit the number of sites
+            # Make the value here (10) configurable
             try:
                 # Take top ten failed sites in descending order
-                failkeys = (site[0] for site in sorted(faildict.iteritems())[:-11:-1])
+                failkeys = (site[0] for site in sorted(faildict.iteritems(),
+                                                       key=lambda x: x[1],
+                                                       reverse=True)[0:10])
             except IndexError:
                 # Take all sites in descending order
-                failkeys = (site[0] for site in sorted(faildict.iteritems())[::-1])
+                failkeys = (site[0] for site in sorted(faildict.iteritems(),
+                                                       key=lambda x: x[1],
+                                                       reverse=True))
         else:
-            failkeys = (site[0] for site in sorted(faildict.iteritems())[::-1])
+            failkeys = (site[0] for site in
+                        sorted(faildict.iteritems(), key=lambda x: x[1],
+                               reverse=True))
 
         table = ''.join(str(site_failed_dict[site]['HTMLLines']) for site in failkeys)
+
+        # table = ''.join(str(site_failed_dict[site]['HTMLLines']) for site in faildict)
+
 
         table += '\n<tr><td align = "left">Total</td>' \
                  '<td align = "right">{0}</td>' \
