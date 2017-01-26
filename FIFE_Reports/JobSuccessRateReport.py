@@ -230,11 +230,14 @@ class JobSuccessRateReporter(Reporter):
         except NoOptionError:
             num_clusters = 100
 
+
         try:
             jobs_per_cluster = int(
                 self.config.get(self.vo.lower(), 'jobs_per_cluster'))
         except NoOptionError:
             jobs_per_cluster = 1e6
+
+        num_hosts_per_site = 20
 
         # Look in clusters, figure out whether job failed or succeeded,
         # categorize appropriately, and generate HTML line for total jobs
@@ -315,7 +318,7 @@ class JobSuccessRateReporter(Reporter):
 
         site_failed_dict = {}
         # Compile count of failed jobs, calculate job success rate
-        for key, jobs in self.run.jobs.items():
+        for site, jobs in self.run.jobs.iteritems():
             failed = 0
             total = len(jobs)
             failures = {}
@@ -333,42 +336,45 @@ class JobSuccessRateReporter(Reporter):
                              '<td align = "right">{1}</td>' \
                              '<td align = "right">{2}</td>'\
                              '<td align = "right">{3}</td></tr>'.format(
-                                                                    key,
+                                                                    site,
                                                                     total,
                                                                     failed,
                                                                     round((total - failed) * 100. / total, 1))
-            site_failed_dict[key] = {}
-            site_failed_dict[key]['FailedJobs'] = failed
-            if 'HTMLLines' not in site_failed_dict[key]:
-                site_failed_dict[key]['HTMLLines'] = \
+            site_failed_dict[site] = {}
+            site_failed_dict[site]['FailedJobs'] = failed
+            if 'HTMLLines' not in site_failed_dict[site]:
+                site_failed_dict[site]['HTMLLines'] = \
                     '\n<tr><td align = "left">{0}</td>' \
                     '<td align = "right">{1}</td>' \
                     '<td align = "right">{2}</td>'\
                     '<td align = "right">{3}</td>' \
                     '<td></td><td></td><td></td></tr>'.format(
-                        key,
+                        site,
                         total,
                         failed,
                         round((total - failed) * 100. / total, 1))
 
-            for host, errors in failures.items():
-                for code, count in errors.items():
-                    site_failed_dict[key]['HTMLLines'] += \
-                        '\n<tr><td></td><td></td><td></td><td></td>' \
-                        '<td align = "left">{0}</td>'\
-                        '<td align = "right">{1}</td>' \
-                        '<td align = "right">{2}</td></tr>'.format(
-                            host,
-                            code,
-                            count)
+            hostcount = 0
+            while hostcount < num_hosts_per_site:
+                for host, errors in failures.iteritems():
+                    for code, count in errors.iteritems():
+                        site_failed_dict[site]['HTMLLines'] += \
+                            '\n<tr><td></td><td></td><td></td><td></td>' \
+                            '<td align = "left">{0}</td>'\
+                            '<td align = "right">{1}</td>' \
+                            '<td align = "right">{2}</td></tr>'.format(
+                                host,
+                                code,
+                                count)
+                        hostcount += 1
 
         # If gratia-main-osg ever upgrades python to 2.7+, replace the next
         # three uncommented lines with the following line:
         # faildict = {key: item['FailedJobs'] for key, item in site_failed_dict.iteritems()}
 
         faildict = {}
-        for key, item in site_failed_dict.iteritems():
-            faildict[key] = item['FailedJobs']
+        for site, item in site_failed_dict.iteritems():
+            faildict[site] = item['FailedJobs']
 
         if self.limit_sites:
             try:
