@@ -393,13 +393,7 @@ class JobSuccessRateReporter(Reporter):
                 else:
                     break
 
-        # If gratia-main-osg ever upgrades python to 2.7+, replace the next
-        # three uncommented lines with the following line:
-        # faildict = {site: item['FailedJobs'] for site, item in site_failed_dict.iteritems()}
-
-        faildict = {}
-        for site, item in site_failed_dict.iteritems():
-            faildict[site] = item['FailedJobs']
+        faildict = {site: item['FailedJobs'] for site, item in site_failed_dict.iteritems()}
 
         if self.limit_sites:
             try:
