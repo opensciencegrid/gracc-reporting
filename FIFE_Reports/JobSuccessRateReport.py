@@ -30,6 +30,14 @@ from Reporter import Reporter, runerror
 logfile = 'jobsuccessratereport.log'
 
 
+def sum_errors(dic):
+    """Helper function to sum up number of failed jobs per host.
+    Assumes that dic is in the form
+    {"error_code1":count1, "error_code2":count2, etc.}
+    """
+    return sum(value for key, value in dic.iteritems())
+
+
 class Jobs:
     def __init__(self):
         self.jobs = {}
@@ -238,6 +246,7 @@ class JobSuccessRateReporter(Reporter):
             jobs_per_cluster = 1e6
 
         num_hosts_per_site = 20
+        errors_per_host = 20
 
         # Look in clusters, figure out whether job failed or succeeded,
         # categorize appropriately, and generate HTML line for total jobs
@@ -322,6 +331,9 @@ class JobSuccessRateReporter(Reporter):
             failed = 0
             total = len(jobs)
             failures = {}
+            # failures structure:
+            # {host: {exit_code1:count, exit_code2:count},
+            # host2: {exit_code1:count, exit_code2: count}, etc.}
             for job in jobs:
                 if job.exit_code != 0:
                     failed += 1
@@ -355,22 +367,35 @@ class JobSuccessRateReporter(Reporter):
                         round((total - failed) * 100. / total, 1))
 
             hostcount = 0
-            while hostcount < num_hosts_per_site:
-                for host, errors in failures.iteritems():
-                    for code, count in errors.iteritems():
-                        site_failed_dict[site]['HTMLLines'] += \
-                            '\n<tr><td></td><td></td><td></td><td></td>' \
-                            '<td align = "left">{0}</td>'\
-                            '<td align = "right">{1}</td>' \
-                            '<td align = "right">{2}</td></tr>'.format(
-                                host,
-                                code,
-                                count)
-                        hostcount += 1
+
+            for host, errors in sorted(failures.iteritems(),
+                                       key=lambda x: sum_errors(x[1]),
+                                       reverse=True):
+                # Sort hosts by total error count in reverse order
+                if hostcount < num_hosts_per_site:
+                    errcount = 0
+                    for code, count in sorted(errors.iteritems(), key=lambda x: x[1], reverse=True):
+                        # Sort error codes for each host by count in
+                        # reverse order
+                        if errcount < errors_per_host:
+                            site_failed_dict[site]['HTMLLines'] += \
+                                '\n<tr><td></td><td></td><td></td><td></td>' \
+                                '<td align = "left">{0}</td>'\
+                                '<td align = "right">{1}</td>' \
+                                '<td align = "right">{2}</td></tr>'.format(
+                                    host,
+                                    code,
+                                    count)
+                            errcount += 1
+                        else:
+                            break
+                    hostcount += 1
+                else:
+                    break
 
         # If gratia-main-osg ever upgrades python to 2.7+, replace the next
         # three uncommented lines with the following line:
-        # faildict = {key: item['FailedJobs'] for key, item in site_failed_dict.iteritems()}
+        # faildict = {site: item['FailedJobs'] for site, item in site_failed_dict.iteritems()}
 
         faildict = {}
         for site, item in site_failed_dict.iteritems():
