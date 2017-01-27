@@ -27,10 +27,24 @@ import TextUtils
 import Configuration
 from Reporter import Reporter, runerror
 
+# Various config values and their default values
+config_vals = {'num_clusters': 100, 'jobs_per_cluster': 1e6,
+               'num_hosts_per_site': 1000, 'errors_per_host': 1000,
+               'num_failed_sites': 1000}
 logfile = 'jobsuccessratereport.log'
 
 
+
+def sum_errors(dic):
+    """Helper function to sum up number of failed jobs per host.
+    Assumes that dic is in the form
+    {"error_code1":count1, "error_code2":count2, etc.}
+    """
+    return sum(value for key, value in dic.iteritems())
+
+
 class Jobs:
+    """Class to assign jobs to sites"""
     def __init__(self):
         self.jobs = {}
 
@@ -42,6 +56,7 @@ class Jobs:
 
 
 class Job:
+    """Class that holds job information"""
     def __init__(self, end_time, start_time, jobid, site, host, exit__code):
         self.end_time = end_time
         self.start_time = start_time
@@ -52,6 +67,7 @@ class Job:
 
 
 class JobSuccessRateReporter(Reporter):
+    """Reporting class for JSR"""
     def __init__(self, configuration, start, end, vo, template, is_test,
                  verbose, no_email):
         report = 'JobSuccessRate'
@@ -72,11 +88,12 @@ class JobSuccessRateReporter(Reporter):
         self.text = ''
         self.fn = "{0}-jobrate.{1}".format(self.vo.lower(),
                                            self.start_time.replace("/", "-"))
-        try:
-            self.limit_sites = ast.literal_eval(
-                self.config.get(self.vo.lower(), 'limit_sites'))
-        except NoOptionError:
-            self.limit_sites = False
+        self.limit_sites = self.limit_site_check()
+
+    def limit_site_check(self):
+        """Check to see if the num_failed_sites option is set in the config
+        file for the VO"""
+        return self.config.has_option(self.vo.lower(), 'num_failed_sites')
 
     def query(self):
         """Method that actually queries elasticsearch"""
@@ -161,7 +178,7 @@ class JobSuccessRateReporter(Reporter):
                 pass
 
     def add_to_clusters(self):
-        """Generator function/coroutine.  For each line fed in, will
+        """Coroutine: For each line fed in, will
         instantiate Job class for each one, add to Jobs class dictionary,
         and add to clusters.  Then waits for next line"""
         while True:
@@ -218,28 +235,21 @@ class JobSuccessRateReporter(Reporter):
             self.logger.info("no_email flag triggered - no jobs to report on")
             self.no_email = True
             return
+
+        # Grab config values.  If they don't exist, keep defaults
+        for key in config_vals:
+            try:
+                config_vals[key] = int(self.config.get(self.vo.lower(), key))
+            except NoOptionError:
+                pass
+
         table_summary = ""
         job_table = ""
-
-
         job_table_cl_count = 0
-
-        # Grab config values
-        try:
-            num_clusters = int(self.config.get(self.vo.lower(), 'num_clusters'))
-        except NoOptionError:
-            num_clusters = 100
-
-        try:
-            jobs_per_cluster = int(
-                self.config.get(self.vo.lower(), 'jobs_per_cluster'))
-        except NoOptionError:
-            jobs_per_cluster = 1e6
 
         # Look in clusters, figure out whether job failed or succeeded,
         # categorize appropriately, and generate HTML line for total jobs
         # failed by cluster
-
         for cid, cdict in self.clusters.iteritems():
             total_jobs = len(cdict['jobs'])
             failures = []
@@ -251,7 +261,7 @@ class JobSuccessRateReporter(Reporter):
                 failures.append(job)
             if total_jobs_failed == 0:
                 continue
-            if job_table_cl_count < num_clusters:  # Limit number of clusters
+            if job_table_cl_count < config_vals['num_clusters']:  # Limit number of clusters
                                                    # shown in report based on config file
                 job_table += '\n<tr><td align = "left">{0}</td>' \
                              '<td align = "right">{1}</td>' \
@@ -267,7 +277,7 @@ class JobSuccessRateReporter(Reporter):
                 jcount = 0
 
                 for job in failures:
-                    if jcount < jobs_per_cluster:
+                    if jcount < config_vals['jobs_per_cluster']:
                         # Generate link for each job for certain number of jobs
                         try:
                             job_link_parts = \
@@ -315,10 +325,13 @@ class JobSuccessRateReporter(Reporter):
 
         site_failed_dict = {}
         # Compile count of failed jobs, calculate job success rate
-        for key, jobs in self.run.jobs.items():
+        for site, jobs in self.run.jobs.iteritems():
             failed = 0
             total = len(jobs)
             failures = {}
+            # failures structure:
+            # {host: {exit_code1:count, exit_code2:count},
+            # host2: {exit_code1:count, exit_code2: count}, etc.}
             for job in jobs:
                 if job.exit_code != 0:
                     failed += 1
@@ -333,52 +346,80 @@ class JobSuccessRateReporter(Reporter):
                              '<td align = "right">{1}</td>' \
                              '<td align = "right">{2}</td>'\
                              '<td align = "right">{3}</td></tr>'.format(
-                                                                    key,
+                                                                    site,
                                                                     total,
                                                                     failed,
                                                                     round((total - failed) * 100. / total, 1))
-            site_failed_dict[key] = {}
-            site_failed_dict[key]['FailedJobs'] = failed
-            if 'HTMLLines' not in site_failed_dict[key]:
-                site_failed_dict[key]['HTMLLines'] = \
+            site_failed_dict[site] = {}
+            site_failed_dict[site]['FailedJobs'] = failed
+            if 'HTMLLines' not in site_failed_dict[site]:
+                site_failed_dict[site]['HTMLLines'] = \
                     '\n<tr><td align = "left">{0}</td>' \
                     '<td align = "right">{1}</td>' \
                     '<td align = "right">{2}</td>'\
                     '<td align = "right">{3}</td>' \
                     '<td></td><td></td><td></td></tr>'.format(
-                        key,
+                        site,
                         total,
                         failed,
                         round((total - failed) * 100. / total, 1))
 
-            for host, errors in failures.items():
-                for code, count in errors.items():
-                    site_failed_dict[key]['HTMLLines'] += \
-                        '\n<tr><td></td><td></td><td></td><td></td>' \
-                        '<td align = "left">{0}</td>'\
-                        '<td align = "right">{1}</td>' \
-                        '<td align = "right">{2}</td></tr>'.format(
-                            host,
-                            code,
-                            count)
+            hostcount = 0
 
-        # If gratia-main-osg ever upgrades python to 2.7+, replace the next
-        # three uncommented lines with the following line:
-        # faildict = {key: item['FailedJobs'] for key, item in site_failed_dict.iteritems()}
+            for host, errors in sorted(failures.iteritems(),
+                                       key=lambda x: sum_errors(x[1]),
+                                       reverse=True):
+                # Sort hosts by total error count in reverse order
+                if hostcount < config_vals['num_hosts_per_site']:
+                    errcount = 0
+                    for code, count in sorted(errors.iteritems(),
+                                              key=lambda x: x[1],
+                                              reverse=True):
+                        # Sort error codes for each host by count in
+                        # reverse order
+                        if errcount < config_vals['errors_per_host']:
+                            site_failed_dict[site]['HTMLLines'] += \
+                                '\n<tr><td></td><td></td><td></td><td></td>' \
+                                '<td align = "left">{0}</td>'\
+                                '<td align = "right">{1}</td>' \
+                                '<td align = "right">{2}</td></tr>'.format(
+                                    host,
+                                    code,
+                                    count)
+                            errcount += 1
+                        else:
+                            break
+                    hostcount += 1
+                else:
+                    break
 
-        faildict = {}
-        for key, item in site_failed_dict.iteritems():
-            faildict[key] = item['FailedJobs']
+        faildict = {site: item['FailedJobs']
+                    for site, item in site_failed_dict.iteritems()}
 
         if self.limit_sites:
+            # If a VO wants to limit the number of sites
+            # Make the value here (10) configurable
             try:
                 # Take top ten failed sites in descending order
-                failkeys = (site[0] for site in sorted(faildict.iteritems())[:-11:-1])
+                failkeys = (site[0] for site in sorted(faildict.iteritems(),
+                                                       key=lambda x: x[1],
+                                                       reverse=True)[0:config_vals['num_failed_sites']])
             except IndexError:
                 # Take all sites in descending order
-                failkeys = (site[0] for site in sorted(faildict.iteritems())[::-1])
+                failkeys = (site[0] for site in sorted(faildict.iteritems(),
+                                                       key=lambda x: x[1],
+                                                       reverse=True))
+            finally:
+                siteheader_add = " (Top {0} sites shown here, " \
+                                 "top {1} hosts per site)".format(config_vals['num_failed_sites'],
+                                                                  config_vals['num_hosts_per_site'])
         else:
-            failkeys = (site[0] for site in sorted(faildict.iteritems())[::-1])
+            failkeys = (site[0] for site in
+                        sorted(faildict.iteritems(), key=lambda x: x[1],
+                               reverse=True))
+            siteheader_add = ""
+
+        siteheader = "Site Details{0}".format(siteheader_add)
 
         table = ''.join(str(site_failed_dict[site]['HTMLLines']) for site in failkeys)
 
@@ -415,12 +456,16 @@ class JobSuccessRateReporter(Reporter):
             divopen = ''
             divclose = ''
 
-        if jobs_per_cluster < 1000:
-            numclusterheader = 'Failed Job Details ({0} clusters shown here,' \
-                         ' {1} per cluster)'.format(num_clusters,
-                                                    jobs_per_cluster)
+        # Cosmetic reformatting of site failed jobs section
+        if config_vals['jobs_per_cluster'] > 1000:
+            string_per_cluster = ''
         else:
-            numclusterheader = 'Failed Job Details (100 clusters shown here)'
+            string_per_cluster = ', {0} per cluster'.format(
+                int(config_vals['jobs_per_cluster']))
+
+        numclusterheader = 'Failed Job Details ' \
+                           '({0} clusters shown here{1})'.format(int(config_vals['num_clusters']),
+                                                                 string_per_cluster)
 
         # Grab HTML template, replace variables shown
         self.text = "".join(open(self.template).readlines())
@@ -429,6 +474,7 @@ class JobSuccessRateReporter(Reporter):
         self.text = self.text.replace("$TABLE_SUMMARY", table_summary)
         self.text = self.text.replace("$DIVOPEN", divopen)
         self.text = self.text.replace("$NUMCLUSTERHEADER", numclusterheader)
+        self.text = self.text.replace("$SITEHEADER", siteheader)
         self.text = self.text.replace("$TABLE_JOBS", job_table)
         self.text = self.text.replace("$DIVCLOSE", divclose)
         self.text = self.text.replace("$TABLE", table)
@@ -462,8 +508,9 @@ class JobSuccessRateReporter(Reporter):
                                 self.start_time,
                                 self.end_time),
                             {"html": self.text},
-                            ("GRACC Operations", "sbhat@fnal.gov"),
-                            "smtp.fnal.gov")
+                            (self.config.get("email", "realname"),
+                             self.config.get("email", "from")),
+                            self.config.get("email", "smtphost"))
         if os.path.exists(self.fn):
             os.unlink(self.fn)  # Delete HTML file
 

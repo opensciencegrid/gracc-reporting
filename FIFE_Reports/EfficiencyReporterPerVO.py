@@ -188,8 +188,9 @@ class Efficiency(Reporter):
                                 self.start_time,
                                 self.end_time),
                             {"html": self.text},
-                            ("GRACC Operations", "sbhat@fnal.gov"),
-                            "smtp.fnal.gov")
+                            (self.config.get("email", "realname"),
+                             self.config.get("email", "from")),
+                            self.config.get("email", "smtphost"))
 
         self.logger.info("Report sent for {0}".format(self.vo))
 
