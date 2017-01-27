@@ -44,6 +44,7 @@ def sum_errors(dic):
 
 
 class Jobs:
+    """Class to assign jobs to sites"""
     def __init__(self):
         self.jobs = {}
 
@@ -55,6 +56,7 @@ class Jobs:
 
 
 class Job:
+    """Class that holds job information"""
     def __init__(self, end_time, start_time, jobid, site, host, exit__code):
         self.end_time = end_time
         self.start_time = start_time
@@ -65,6 +67,7 @@ class Job:
 
 
 class JobSuccessRateReporter(Reporter):
+    """Reporting class for JSR"""
     def __init__(self, configuration, start, end, vo, template, is_test,
                  verbose, no_email):
         report = 'JobSuccessRate'
@@ -175,7 +178,7 @@ class JobSuccessRateReporter(Reporter):
                 pass
 
     def add_to_clusters(self):
-        """Generator function/coroutine.  For each line fed in, will
+        """Coroutine: For each line fed in, will
         instantiate Job class for each one, add to Jobs class dictionary,
         and add to clusters.  Then waits for next line"""
         while True:
