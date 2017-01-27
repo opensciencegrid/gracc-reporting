@@ -233,21 +233,34 @@ class JobSuccessRateReporter(Reporter):
         job_table_cl_count = 0
 
         # Grab config values
-        try:
-            num_clusters = int(self.config.get(self.vo.lower(), 'num_clusters'))
-        except NoOptionError:
-            num_clusters = 100
+        # Various config values and their default values
+        config_vals = {'num_clusters': 100, 'jobs_per_cluster': 1e6,
+                       'num_hosts_per_site': 1000, 'errors_per_host': 1000,
+                       'num_failed_sites': 1000}
+
+        for key in config_vals:
+            try:
+                config_vals[key] = int(self.config.get(self.vo.lower(), key))
+            except NoOptionError:
+                pass
 
 
-        try:
-            jobs_per_cluster = int(
-                self.config.get(self.vo.lower(), 'jobs_per_cluster'))
-        except NoOptionError:
-            jobs_per_cluster = 1e6
 
-        num_hosts_per_site = 20
-        errors_per_host = 20
-        num_failed_sites = 10
+        #
+        # try:
+        #     num_clusters = int(self.config.get(self.vo.lower(), 'num_clusters'))
+        # except NoOptionError:
+        #     num_clusters = 100
+        #
+        # try:
+        #     jobs_per_cluster = int(
+        #         self.config.get(self.vo.lower(), 'jobs_per_cluster'))
+        # except NoOptionError:
+        #     jobs_per_cluster = 1e6
+        #
+        # num_hosts_per_site = 20
+        # errors_per_host = 20
+        # num_failed_sites = 10
 
         # Look in clusters, figure out whether job failed or succeeded,
         # categorize appropriately, and generate HTML line for total jobs
@@ -264,7 +277,7 @@ class JobSuccessRateReporter(Reporter):
                 failures.append(job)
             if total_jobs_failed == 0:
                 continue
-            if job_table_cl_count < num_clusters:  # Limit number of clusters
+            if job_table_cl_count < config_vals['num_clusters']:  # Limit number of clusters
                                                    # shown in report based on config file
                 job_table += '\n<tr><td align = "left">{0}</td>' \
                              '<td align = "right">{1}</td>' \
@@ -280,7 +293,7 @@ class JobSuccessRateReporter(Reporter):
                 jcount = 0
 
                 for job in failures:
-                    if jcount < jobs_per_cluster:
+                    if jcount < config_vals['jobs_per_cluster']:
                         # Generate link for each job for certain number of jobs
                         try:
                             job_link_parts = \
@@ -373,12 +386,14 @@ class JobSuccessRateReporter(Reporter):
                                        key=lambda x: sum_errors(x[1]),
                                        reverse=True):
                 # Sort hosts by total error count in reverse order
-                if hostcount < num_hosts_per_site:
+                if hostcount < config_vals['num_hosts_per_site']:
                     errcount = 0
-                    for code, count in sorted(errors.iteritems(), key=lambda x: x[1], reverse=True):
+                    for code, count in sorted(errors.iteritems(),
+                                              key=lambda x: x[1],
+                                              reverse=True):
                         # Sort error codes for each host by count in
                         # reverse order
-                        if errcount < errors_per_host:
+                        if errcount < config_vals['errors_per_host']:
                             site_failed_dict[site]['HTMLLines'] += \
                                 '\n<tr><td></td><td></td><td></td><td></td>' \
                                 '<td align = "left">{0}</td>'\
@@ -394,7 +409,8 @@ class JobSuccessRateReporter(Reporter):
                 else:
                     break
 
-        faildict = {site: item['FailedJobs'] for site, item in site_failed_dict.iteritems()}
+        faildict = {site: item['FailedJobs']
+                    for site, item in site_failed_dict.iteritems()}
 
         if self.limit_sites:
             # If a VO wants to limit the number of sites
@@ -403,7 +419,7 @@ class JobSuccessRateReporter(Reporter):
                 # Take top ten failed sites in descending order
                 failkeys = (site[0] for site in sorted(faildict.iteritems(),
                                                        key=lambda x: x[1],
-                                                       reverse=True)[0:10])
+                                                       reverse=True)[0:config_vals['num_failed_sites']])
             except IndexError:
                 # Take all sites in descending order
                 failkeys = (site[0] for site in sorted(faildict.iteritems(),
@@ -415,9 +431,6 @@ class JobSuccessRateReporter(Reporter):
                                reverse=True))
 
         table = ''.join(str(site_failed_dict[site]['HTMLLines']) for site in failkeys)
-
-        # table = ''.join(str(site_failed_dict[site]['HTMLLines']) for site in faildict)
-
 
         table += '\n<tr><td align = "left">Total</td>' \
                  '<td align = "right">{0}</td>' \
@@ -452,12 +465,16 @@ class JobSuccessRateReporter(Reporter):
             divopen = ''
             divclose = ''
 
-        if jobs_per_cluster < 1000:
-            numclusterheader = 'Failed Job Details ({0} clusters shown here,' \
-                         ' {1} per cluster)'.format(num_clusters,
-                                                    jobs_per_cluster)
+        # Cosmetic reformatting of site failed jobs section
+        if config_vals['jobs_per_cluster'] > 1000:
+            string_per_cluster = ''
         else:
-            numclusterheader = 'Failed Job Details (100 clusters shown here)'
+            string_per_cluster = ', {0} per cluster'.format(
+                int(config_vals['jobs_per_cluster']))
+
+        numclusterheader = 'Failed Job Details ' \
+                           '({0} clusters shown here{1})'.format(int(config_vals['num_clusters']),
+                                                                 string_per_cluster)
 
         # Grab HTML template, replace variables shown
         self.text = "".join(open(self.template).readlines())
