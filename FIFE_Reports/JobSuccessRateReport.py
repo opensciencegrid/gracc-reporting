@@ -85,11 +85,12 @@ class JobSuccessRateReporter(Reporter):
         self.text = ''
         self.fn = "{0}-jobrate.{1}".format(self.vo.lower(),
                                            self.start_time.replace("/", "-"))
-        try:
-            self.limit_sites = ast.literal_eval(
-                self.config.get(self.vo.lower(), 'limit_sites'))
-        except NoOptionError:
-            self.limit_sites = False
+        self.limit_sites = self.limit_site_check()
+
+    def limit_site_check(self):
+        """Check to see if the num_failed_sites option is set in the config
+        file for the VO"""
+        return self.config.has_option(self.vo.lower(), 'num_failed_sites')
 
     def query(self):
         """Method that actually queries elasticsearch"""
