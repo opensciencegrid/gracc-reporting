@@ -27,7 +27,12 @@ import TextUtils
 import Configuration
 from Reporter import Reporter, runerror
 
+# Various config values and their default values
+config_vals = {'num_clusters': 100, 'jobs_per_cluster': 1e6,
+               'num_hosts_per_site': 1000, 'errors_per_host': 1000,
+               'num_failed_sites': 1000}
 logfile = 'jobsuccessratereport.log'
+
 
 
 def sum_errors(dic):
@@ -226,46 +231,21 @@ class JobSuccessRateReporter(Reporter):
             self.logger.info("no_email flag triggered - no jobs to report on")
             self.no_email = True
             return
-        table_summary = ""
-        job_table = ""
 
-
-        job_table_cl_count = 0
-
-        # Grab config values
-        # Various config values and their default values
-        config_vals = {'num_clusters': 100, 'jobs_per_cluster': 1e6,
-                       'num_hosts_per_site': 1000, 'errors_per_host': 1000,
-                       'num_failed_sites': 1000}
-
+        # Grab config values.  If they don't exist, keep defaults
         for key in config_vals:
             try:
                 config_vals[key] = int(self.config.get(self.vo.lower(), key))
             except NoOptionError:
                 pass
 
-
-
-        #
-        # try:
-        #     num_clusters = int(self.config.get(self.vo.lower(), 'num_clusters'))
-        # except NoOptionError:
-        #     num_clusters = 100
-        #
-        # try:
-        #     jobs_per_cluster = int(
-        #         self.config.get(self.vo.lower(), 'jobs_per_cluster'))
-        # except NoOptionError:
-        #     jobs_per_cluster = 1e6
-        #
-        # num_hosts_per_site = 20
-        # errors_per_host = 20
-        # num_failed_sites = 10
+        table_summary = ""
+        job_table = ""
+        job_table_cl_count = 0
 
         # Look in clusters, figure out whether job failed or succeeded,
         # categorize appropriately, and generate HTML line for total jobs
         # failed by cluster
-
         for cid, cdict in self.clusters.iteritems():
             total_jobs = len(cdict['jobs'])
             failures = []
@@ -425,10 +405,17 @@ class JobSuccessRateReporter(Reporter):
                 failkeys = (site[0] for site in sorted(faildict.iteritems(),
                                                        key=lambda x: x[1],
                                                        reverse=True))
+            finally:
+                siteheader_add = " (Top {0} sites shown here, " \
+                                 "top {1} hosts per site)".format(config_vals['num_failed_sites'],
+                                                                  config_vals['num_hosts_per_site'])
         else:
             failkeys = (site[0] for site in
                         sorted(faildict.iteritems(), key=lambda x: x[1],
                                reverse=True))
+            siteheader_add = ""
+
+        siteheader = "Site Details{0}".format(siteheader_add)
 
         table = ''.join(str(site_failed_dict[site]['HTMLLines']) for site in failkeys)
 
@@ -483,6 +470,7 @@ class JobSuccessRateReporter(Reporter):
         self.text = self.text.replace("$TABLE_SUMMARY", table_summary)
         self.text = self.text.replace("$DIVOPEN", divopen)
         self.text = self.text.replace("$NUMCLUSTERHEADER", numclusterheader)
+        self.text = self.text.replace("$SITEHEADER", siteheader)
         self.text = self.text.replace("$TABLE_JOBS", job_table)
         self.text = self.text.replace("$DIVCLOSE", divclose)
         self.text = self.text.replace("$TABLE", table)
