@@ -1,80 +1,81 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <html>
-       <head>
-               <title>Opportunistic Resources provided by the OSG Site for the OSG Open Facility (2014-09-01 - 2014-09-30)</title>
-               <style>
-                 body {
-                   font-family: Helvetica, Arial, sans-serif;
-                   font-size: 12px;
-                   line-height: 17px;
-                   margin:50px 0;
-                 }
-                 td {
-                   border-top: 2px solid #ccc;
-                 }
+    <head>
+        <title>Opportunistic Resources provided by the OSG Site for the OSG Open Facility (2014-09-01 - 2014-09-30)</title>
+        <style>
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 12px;
+            line-height: 17px;
+            margin:50px 0;
+        }
+
+        td {
+            border-top: 2px solid #ccc;
+        }
 
         /*  Define the background color for all the EVEN background rows  */
         tr:nth-child(even){
-                background: #30cfbc;
+            background: #30cfbc;
         }
+        </style>
+    </head>
 
-
-
-               </style>
-       </head>
-       <body>
-<div class="container-narrow" style="width:770px; margin:0 auto; text-align:center">
-<div class="masthead">
-       <h3 class="muted"><img src="http://fife.fnal.gov/wp-content/uploads/2016/07/fife_logo_lowres.png" width="150"></h3>
-</div>
-</div>
-       <div style="width:770px; margin:0 auto; font-family: Helvetica, Arial, sans-serif; font-size: 12px; line-height: 17px;">
-<div style="background:#00B8F4; width:100%; padding:15px; margin:10px 0; font-size:20px; line-height:25px; color:#000000">$VO Production Jobs Success Rate on the OSG Resources ($START - $END).</div>
-<h3>Summary</h3>
-	<table cellpadding="7" cellspacing="0" border="0" width="100%" style="clear:both;">
-       <tr>
-        <th style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Site</td>
-        <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Total Jobs</th>
-        <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Failed Jobs</th>
-        <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Success Rate</th>
-        </tr>
-$TABLE_SUMMARY
-</table>
-For more details, see $FIFEMON_LINK
-$DIVOPEN
-<h3>$NUMCLUSTERHEADER</h3>
-           Click on each job for more details.
+    <body>
+    <div class="container-narrow" style="width:770px; margin:0 auto; text-align:center">
+        <div class="masthead">
+            <h3 class="muted"><img src="http://fife.fnal.gov/wp-content/uploads/2016/07/fife_logo_lowres.png" width="150"></h3>
+        </div>
+    </div>
+    <div style="width:770px; margin:0 auto; font-family: Helvetica, Arial, sans-serif; font-size: 12px; line-height: 17px;">
+        <div style="background:#00B8F4; width:100%; padding:15px; margin:10px 0; font-size:20px; line-height:25px; color:#000000">$VO Production Jobs Success Rate on the OSG Resources ($START - $END).</div>
+        <h3>Summary</h3>
         <table cellpadding="7" cellspacing="0" border="0" width="100%" style="clear:both;">
-        <tr>
-        <th style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Cluster</td>
-        <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">UserId</th>
-        <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Total Jobs</th>
-        <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Failed Jobs</th>
-        <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">JobId</th>
-        <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Start Time</th>
-        <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">End Time</th>
-        <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Site</th>
-        <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Host</th>
-        <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">ExitCode</th>
-        </tr>
-$TABLE_JOBS
-	</table>
-$DIVCLOSE
+            <tr>
+                <th style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Site</td>
+                <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Total Jobs</th>
+                <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Failed Jobs</th>
+                <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Success Rate</th>
+            </tr>
+            $TABLE_SUMMARY
+        </table>
+        For more details, see $FIFEMON_LINK
 
-<h3>$SITEHEADER</h3>
-       <table cellpadding="7" cellspacing="0" border="0" width="100%" style="clear:both;">
-       <tr>
-        <th style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Site</td>
-        <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Total Jobs</th>
-        <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Failed Jobs</th>
-        <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Success Rate</th>
-        <th style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Bad Host</th>
-        <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Exit Code</th>
-        <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Failed Jobs on Host</th>
-        </tr>
-$TABLE
-</table>
-       </div>
-       </body>
+        $DIVOPEN
+        <h3>$NUMCLUSTERHEADER</h3>
+        Click on each job for more details.
 
+        <table cellpadding="7" cellspacing="0" border="0" width="100%" style="clear:both;">
+            <tr>
+                <th style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Cluster</td>
+                <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">UserId</th>
+                <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Total Jobs</th>
+                <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Failed Jobs</th>
+                <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">JobId</th>
+                <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Start Time</th>
+                <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">End Time</th>
+                <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Site</th>
+                <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Host</th>
+                <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">ExitCode</th>
+            </tr>
+            $TABLE_JOBS
+        </table>
+        $DIVCLOSE
+
+        <h3>$SITEHEADER</h3>
+        <table cellpadding="7" cellspacing="0" border="0" width="100%" style="clear:both;">
+            <tr>
+                <th style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Site</td>
+                <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Total Jobs</th>
+                <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Failed Jobs</th>
+                <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Success Rate</th>
+                <th style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Bad Host</th>
+                <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Exit Code</th>
+                <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Failed Jobs on Host</th>
+            </tr>
+        $TABLE
+        </table>
+
+    </div>
+    </body>
 </html>
