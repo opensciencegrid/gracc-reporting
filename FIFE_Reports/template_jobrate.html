@@ -1,7 +1,7 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <html>
     <head>
-        <title>Opportunistic Resources provided by the OSG Site for the OSG Open Facility (2014-09-01 - 2014-09-30)</title>
+        <title>$VO Production Jobs Success Rate Report</title>
         <style>
         body {
             font-family: Helvetica, Arial, sans-serif;
@@ -12,6 +12,15 @@
 
         td {
             border-top: 2px solid #ccc;
+        }
+
+        th {
+            text-align: right;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing:1px;
+            font-size:11px;
+            color:#00B8F4
         }
 
         /*  Define the background color for all the EVEN background rows  */
@@ -28,14 +37,14 @@
         </div>
     </div>
     <div style="width:770px; margin:0 auto; font-family: Helvetica, Arial, sans-serif; font-size: 12px; line-height: 17px;">
-        <div style="background:#00B8F4; width:100%; padding:15px; margin:10px 0; font-size:20px; line-height:25px; color:#000000">$VO Production Jobs Success Rate on the OSG Resources ($START - $END).</div>
+        <div style="background:#00B8F4; width:100%; padding:15px; margin:10px 0; font-size:20px; line-height:25px; color:#000000">$VO Production Jobs Success Rate on the OSG Resources ($START - $END)</div>
         <h3>Summary</h3>
         <table cellpadding="7" cellspacing="0" border="0" width="100%" style="clear:both;">
             <tr>
-                <th style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Site</td>
-                <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Total Jobs</th>
-                <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Failed Jobs</th>
-                <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Success Rate</th>
+                <th style="text-align:center">Site</th>
+                <th>Total Jobs</th>
+                <th>Failed Jobs</th>
+                <th>Success Rate</th>
             </tr>
             $TABLE_SUMMARY
         </table>
@@ -47,16 +56,16 @@
 
         <table cellpadding="7" cellspacing="0" border="0" width="100%" style="clear:both;">
             <tr>
-                <th style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Cluster</td>
-                <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">UserId</th>
-                <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Total Jobs</th>
-                <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Failed Jobs</th>
-                <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">JobId</th>
-                <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Start Time</th>
-                <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">End Time</th>
-                <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Site</th>
-                <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Host</th>
-                <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">ExitCode</th>
+                <th style="text-align:center">Cluster</td>
+                <th>UserId</th>
+                <th>Total Jobs</th>
+                <th>Failed Jobs</th>
+                <th>JobId</th>
+                <th>Start Time</th>
+                <th>End Time</th>
+                <th>Site</th>
+                <th>Host</th>
+                <th>ExitCode</th>
             </tr>
             $TABLE_JOBS
         </table>
@@ -65,13 +74,13 @@
         <h3>$SITEHEADER</h3>
         <table cellpadding="7" cellspacing="0" border="0" width="100%" style="clear:both;">
             <tr>
-                <th style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Site</td>
-                <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Total Jobs</th>
-                <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Failed Jobs</th>
-                <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Success Rate</th>
-                <th style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Bad Host</th>
-                <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Exit Code</th>
-                <th align="right" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Failed Jobs on Host</th>
+                <th style="text-align:center">Site</td>
+                <th>Total Jobs</th>
+                <th>Failed Jobs</th>
+                <th>Success Rate</th>
+                <th style="text-align:center">Bad Host</th>
+                <th>Exit Code</th>
+                <th>Failed Jobs on Host</th>
             </tr>
         $TABLE
         </table>
