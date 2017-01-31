@@ -7,7 +7,7 @@ cd /cloud/login/sbhat/EmailReports/OSG_Reports
 
 #echo "START" `date` >> probereport_run.log
 
-python ProbeReport.py -c osg.config -d
+python ProbeReport.py -c osg.config
 
 if [ $? -ne 0 ]
 then
