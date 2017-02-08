@@ -343,7 +343,7 @@ class ProbeReport(Reporter):
         if buckets:
             try:
                 rawdate = buckets[0]['datemax'].value_as_string
-                return "{0} at {1}".format(*self.estimeformat.match(rawdate)
+                return "{0} at {1} UTC".format(*self.estimeformat.match(rawdate)
                                                  .groups())
             except Exception as e:
                 self.logger.exception(e)
@@ -482,7 +482,7 @@ class ProbeReport(Reporter):
         """Format the text for our emails"""
         text = 'The probe installed on {0} at {1} has not reported'\
                ' GRACC records to OSG for the last two days. The last ' \
-               'date we received a record from {0} was {2} UTC.  If this '\
+               'date we received a record from {0} was {2}.  If this '\
                'is due to maintenance or a retirement of this '\
                'node, please let us know.  If not, please check to see '\
                'if your Gratia reporting is active.'.format(self.probe, self.resource, self.lastreport_date)
