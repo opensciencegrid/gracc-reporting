@@ -2,7 +2,7 @@
 
 from TimeUtils import TimeUtils
 
-def indexpattern_generate(start, end, raw=True):
+def indexpattern_generate(start, end, raw=True, allraw=False):
     """Function to return the proper index pattern for queries to elasticsearch on gracc.opensciencegrid.org.  This improves performance by not just using a general index pattern unless absolutely necessary.
     This will especially help with reports, for example.
 
@@ -10,6 +10,9 @@ def indexpattern_generate(start, end, raw=True):
     """
     if not raw:
         return 'gracc.osg.summary'
+
+    if allraw:
+        return 'gracc.osg.raw-*'
 
     t = TimeUtils()
     startdate = t.dateparse(start)
@@ -71,7 +74,7 @@ if __name__ == "__main__":
     print "Passed date string tests (/ and -)"
 
     t2 = TimeUtils()
-    dateparse_fulldate = t2.dateparse(fulldate,time=True)
+    dateparse_fulldate = t2.dateparse(fulldate)
     assert indexpattern_generate(dateparse_fulldate, date_dateend) == 'gracc.osg.raw-2016.06', "Assertion Error, {0}-{1} test failed".format(datestringslash, date_dateend)
     print "Passed full date time test"
 
@@ -81,3 +84,12 @@ if __name__ == "__main__":
     except TypeError as e:
         print "A TypeError was raised.  The error was the following:"
         print e
+
+    print "Testing allraw and summary indices"
+    assert indexpattern_generate(dateparse_fulldate, date_dateend, raw=False) == 'gracc.osg.summary'
+    assert indexpattern_generate(dateparse_fulldate, date_dateend, allraw=True) == 'gracc.osg.raw-*'
+    assert indexpattern_generate(dateparse_fulldate, date_dateend, raw=False, allraw=True) == 'gracc.osg.summary'
+    print "Passed allraw and summary tests"
+
+
+

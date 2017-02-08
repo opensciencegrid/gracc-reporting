@@ -278,7 +278,7 @@ class ProbeReport(Reporter):
         report = "Probe"
         Reporter.__init__(self, report, configuration, start, end=start,
                           verbose=verbose, logfile=logfile, is_test=is_test,
-                          no_email=no_email)
+                          no_email=no_email, allraw=True)
         self.configuration = configuration
         self.probematch = re.compile("(.+):(.+)")
         self.estimeformat = re.compile("(.+)T(.+)\.\d+Z")
@@ -312,6 +312,10 @@ class ProbeReport(Reporter):
             day=1) - datetime.timedelta(days=1)
         self.end_time = today
         self.indexpattern = self.indexpattern_generate()
+
+        if self.verbose:
+            print "New index pattern is {0}".format(self.indexpattern)
+
         return
 
     def lastreportquery(self):
@@ -389,6 +393,7 @@ class ProbeReport(Reporter):
             sys.exit(1)
 
         probes = self.get_probenames()
+        print probes
         self.logger.info("Successfully analyzed ES data vs. OIM data")
         oimset = set((key for key in oimdict))
         return oimset.difference(probes)

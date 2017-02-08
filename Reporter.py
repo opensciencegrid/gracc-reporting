@@ -29,7 +29,7 @@ class Reporter(TimeUtils):
     __metaclass__ = abc.ABCMeta
 
     def __init__(self, report, config, start, end=None, verbose=False,
-                 raw=True, template=None, is_test=False, no_email=False,
+                 raw=True, allraw=False, template=None, is_test=False, no_email=False,
                  title=None, logfile=None):
         """Constructor for OSGReporter
         Args:
@@ -50,7 +50,7 @@ class Reporter(TimeUtils):
         self.is_test = is_test
         self.template = template
         self.epochrange = None
-        self.indexpattern = self.indexpattern_generate(raw)
+        self.indexpattern = self.indexpattern_generate(raw, allraw)
         self.report_type = report
         if logfile:
             self.logfile = logfile
@@ -100,10 +100,11 @@ class Reporter(TimeUtils):
         arguments = parser.parse_args()
         return arguments
 
-    def indexpattern_generate(self, raw=True):
+    def indexpattern_generate(self, raw=True, allraw=False):
         """Returns the Elasticsearch index pattern based on the class
-        variables of start time and end time, and the flag raw."""
-        return indexpattern_generate(self.start_time, self.end_time, raw)
+        variables of start time and end time, and the flags raw and allraw."""
+        return indexpattern_generate(self.start_time, self.end_time, raw,
+                                     allraw)
 
     def __setupgenLogger(self):
         """Creates logger for Reporter class.
