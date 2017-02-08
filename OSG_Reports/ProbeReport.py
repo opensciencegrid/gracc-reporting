@@ -485,7 +485,9 @@ class ProbeReport(Reporter):
                'date we received a record from {0} was {2}.  If this '\
                'is due to maintenance or a retirement of this '\
                'node, please let us know.  If not, please check to see '\
-               'if your Gratia reporting is active.'.format(self.probe, self.resource, self.lastreport_date)
+               'if your Gratia reporting is active.  The GRACC page at '\
+               'https://gracc.opensciencegrid.org/dashboard/db/probe-status'\
+               ' shows the latest date a probe has reported records to OSG.'.format(self.probe, self.resource, self.lastreport_date)
         return text
 
     def send_report(self):
