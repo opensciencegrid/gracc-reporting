@@ -393,7 +393,10 @@ class ProbeReport(Reporter):
             sys.exit(1)
 
         probes = self.get_probenames()
-        print probes
+
+        if self.verbose:
+            self.logger.info("Probes in last two days of records: {0}".format(probes))
+
         self.logger.info("Successfully analyzed ES data vs. OIM data")
         oimset = set((key for key in oimdict))
         return oimset.difference(probes)
