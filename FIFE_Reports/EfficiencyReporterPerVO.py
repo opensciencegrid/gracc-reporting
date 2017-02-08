@@ -188,7 +188,7 @@ class Efficiency(Reporter):
                                 self.start_time,
                                 self.end_time),
                             {"html": self.text},
-                            (self.config.get("email", "realname"),
+                            (self.config.get("email", "realname_from"),
                              self.config.get("email", "from")),
                             self.config.get("email", "smtphost"))
 

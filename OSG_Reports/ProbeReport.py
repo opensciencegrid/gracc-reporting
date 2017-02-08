@@ -278,7 +278,7 @@ class ProbeReport(Reporter):
         report = "Probe"
         Reporter.__init__(self, report, configuration, start, end=start,
                           verbose=verbose, logfile=logfile, is_test=is_test,
-                          no_email=no_email)
+                          no_email=no_email, allraw=True)
         self.configuration = configuration
         self.probematch = re.compile("(.+):(.+)")
         self.estimeformat = re.compile("(.+)T(.+)\.\d+Z")
@@ -312,6 +312,10 @@ class ProbeReport(Reporter):
             day=1) - datetime.timedelta(days=1)
         self.end_time = today
         self.indexpattern = self.indexpattern_generate()
+
+        if self.verbose:
+            print "New index pattern is {0}".format(self.indexpattern)
+
         return
 
     def lastreportquery(self):
@@ -339,7 +343,7 @@ class ProbeReport(Reporter):
         if buckets:
             try:
                 rawdate = buckets[0]['datemax'].value_as_string
-                return "{0} at {1}".format(*self.estimeformat.match(rawdate)
+                return "{0} at {1} UTC".format(*self.estimeformat.match(rawdate)
                                                  .groups())
             except Exception as e:
                 self.logger.exception(e)
@@ -389,6 +393,10 @@ class ProbeReport(Reporter):
             sys.exit(1)
 
         probes = self.get_probenames()
+
+        if self.verbose:
+            self.logger.info("Probes in last two days of records: {0}".format(probes))
+
         self.logger.info("Successfully analyzed ES data vs. OIM data")
         oimset = set((key for key in oimdict))
         return oimset.difference(probes)
@@ -474,10 +482,12 @@ class ProbeReport(Reporter):
         """Format the text for our emails"""
         text = 'The probe installed on {0} at {1} has not reported'\
                ' GRACC records to OSG for the last two days. The last ' \
-               'date we received a record from {0} was {2} UTC.  If this '\
+               'date we received a record from {0} was {2}.  If this '\
                'is due to maintenance or a retirement of this '\
                'node, please let us know.  If not, please check to see '\
-               'if your Gratia reporting is active.'.format(self.probe, self.resource, self.lastreport_date)
+               'if your Gratia reporting is active.  The GRACC page at '\
+               'https://gracc.opensciencegrid.org/dashboard/db/probe-status'\
+               ' shows the latest date a probe has reported records to OSG.'.format(self.probe, self.resource, self.lastreport_date)
         return text
 
     def send_report(self):
