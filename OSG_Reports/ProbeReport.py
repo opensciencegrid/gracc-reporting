@@ -517,7 +517,7 @@ class ProbeReport(Reporter):
         msg['Subject'] = self.emailsubject()
 
         try:
-            smtpObj = smtplib.SMTP('smtp.fnal.gov')
+            smtpObj = smtplib.SMTP(self.config.get('email', 'smtphost'))
             smtpObj.sendmail(emailfrom, emails, msg.as_string())
             smtpObj.quit()
             self.logger.info("Sent Email for {0}".format(self.resource))
