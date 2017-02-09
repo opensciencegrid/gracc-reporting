@@ -145,12 +145,6 @@ class OSGPerSiteReporter(Reporter):
                        "Percentage Change Month-Month"]
         self.start_time, self.end_time = \
             monthrange(self.dateparse(self.start_time))
-
-        try:
-            self.client = self.establish_client()
-        except Exception as e:
-            self.logger.exception(e)
-
         self.title = 'VOs Usage of OSG Sites: {0} - {1}'.format(
             self.start_time, self.end_time)
         self.current = True
