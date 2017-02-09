@@ -4,6 +4,7 @@ import datetime
 import json
 import traceback
 import sys
+from re import split
 
 from elasticsearch_dsl import Search
 
@@ -40,6 +41,7 @@ class FlockingReport(Reporter):
         self.header = ["VOName", "SiteName", "ProbeName", "ProjectName",
                        "Wall Hours"]
 
+    @property
     def query(self):
         """Method to query Elasticsearch cluster for Flocking Report
         information"""
@@ -50,21 +52,14 @@ class FlockingReport(Reporter):
         if self.verbose:
             self.logger.info(self.indexpattern)
 
+        probes = self.config.get('{0}_report'.format(self.report_type.lower()),
+                                 'flocking_probe_list')
+        probeslist = split(',', probes)
+
         # Elasticsearch query and aggregations
         s = Search(using=self.client, index=self.indexpattern) \
                 .filter("range", EndTime={"gte": starttimeq, "lt": endtimeq}) \
-                .filter("terms", ProbeName=["condor:amundsen.grid.uchicago.edu",
-                    "condor:csiu.grid.iu.edu",
-                    "condor:glide.bakerlab.org",
-                    "condor:gw68.quarry.iu.teragrid.org",
-                    "condor:iplant-condor-iu.tacc.utexas.edu",
-                    "condor:iplant-condor.tacc.utexas.edu",
-                    "condor:otsgrid.iit.edu",
-                    "condor:scott.grid.uchicago.edu",
-                    "condor:submit1.bioinformatics.vt.edu",
-                    "condor:submit.mit.edu",
-                    "condor:SUBMIT.MIT.EDU",
-                    "condor:workflow.isi.edu"])\
+                .filter("terms", ProbeName=probeslist)\
                 .filter("term", ResourceType="Payload")[0:0]
         # Size 0 to return only aggregations
 
@@ -81,7 +76,7 @@ class FlockingReport(Reporter):
 
     def run_query(self):
         """Execute the query and check the status code before returning the response"""
-        s = self.query()
+        s = self.query
         t = s.to_dict()
         if self.verbose:
             print json.dumps(t, sort_keys=True, indent=4)
@@ -160,7 +155,6 @@ def main():
                            template=args.template)
         f.run_report()
         print "OSG Flocking Report execution successful"
-
     except Exception as e:
         errstring = '{0}: Error running OSG Flocking Report. ' \
                     '{1}'.format(datetime.datetime.now(), traceback.format_exc())
