@@ -215,17 +215,27 @@ class Reporter(TimeUtils):
         htmldata = emailReport.printAsTextTable("html", content,
                                                 template=self.template)
 
+        if self.header:
+            htmlheader = "\n".join(['<th>{0}</th>'.format(headerelt)
+                                    for headerelt in self.header])
+
         if self.template:
             with open(self.template, 'r') as t:
                 htmltext= "".join(t.readlines())
+
+            # Build the HTML file from the template
             htmltext = htmltext.replace('$TITLE', use_title)
+            if "$HEADER" in htmltext and htmlheader:
+                htmltext = htmltext.replace('$HEADER', htmlheader)
             text["html"] = htmltext.replace('$TABLE', htmldata)
+
         else:
             text["html"] = "<html><body><h2>{0}</h2><table border=1>{1}</table></body></html>".format(use_title, htmldata)
 
         TextUtils.sendEmail((names, emails), use_title, text,
                             ("GRACC Operations", emailfrom),
-                            self.config.get("email", "smtphost"))
+                            self.config.get("email", "smtphost"),
+                            html_template=self.template)
         return
 
     @abc.abstractmethod
