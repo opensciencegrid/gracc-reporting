@@ -59,15 +59,23 @@ def prev_month_shift(date):
     return monthrange(sd)
 
 
+def perc(num, den):
+    try:
+        return float(num/den) * 100.
+    except ZeroDivisionError:
+        if num == 0:
+            return 0.
+        else:
+            raise("Error: Tried to do division of {0}/{1}".format(num, den))
+
+
 def perc_change(old, new):
     """Calculates the percentage change between two numbers"""
     try:
-        return (float((new - old) / old)) * 100.
-    except ZeroDivisionError:
-        if new == 0:
-            return 0.
-        else:
-            return 100.
+        return perc(new - old, old)
+    except:
+        if new != 0:
+            return 100.     # If we have something like (10-0) / 0, return 100%
 
 
 class VO(object):
@@ -299,8 +307,8 @@ class OSGPerSiteReporter(Reporter):
                                          for pos in range(len(report["Site"]))]
 
         # Calculate the percent opportunistic usage from the above two columns
-        report["Percent Opportunistic"] = [report["Opportunistic Total"][pos] /
-                                           report["Total"][pos] * 100
+        report["Percent Opportunistic"] = [perc(report["Opportunistic Total"][pos],
+                                                report["Total"][pos])
                                            for pos in
                                            range(len(report["Site"]))]
 
