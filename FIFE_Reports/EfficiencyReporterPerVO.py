@@ -27,6 +27,7 @@ from Reporter import Reporter, runerror
 
 logfile = 'efficiencyreport.log'
 
+
 class Efficiency(Reporter):
     def __init__(self, config, start, end, vo, verbose, hour_limit, eff_limit,
                  facility, is_test=False, no_email=False):

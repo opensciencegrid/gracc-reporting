@@ -76,12 +76,12 @@ class TextUtils:
             row = ""
             space = ""
         if format_type == "html":
-            col = "</td><td align=center>"
+            col = "</td>\n<td align=center>"
             tbcol = "<tr><th align=center>"
             tecol = "</th></tr>"
             tcol = "</th><th align=center>"
-            rcol = "</td><td align=right>"
-            lcol = "</td><td align=left>"
+            rcol = "</td>\n<td align=right>"
+            lcol = "</td>\n<td align=left>"
             bcol = "<tr><td align=left>"
             ecol = "</td></tr>"
             space = "&nbsp;"
@@ -126,7 +126,7 @@ class TextUtils:
         return message
 
 
-def sendEmail(toList, subject, content, fromEmail=None, smtpServerHost=None):
+def sendEmail(toList, subject, content, fromEmail=None, smtpServerHost=None, html_template=False):
     """
     This turns the "report" into an email attachment and sends it to the EmailTarget(s).
     Args:
@@ -156,7 +156,10 @@ def sendEmail(toList, subject, content, fromEmail=None, smtpServerHost=None):
         msg1.attach(msgText2)
         msg1.attach(msgText1)
     msg.attach(msg1)
-    attachment_html = "<html><head><title>%s</title></head><body>%s</body>" \
+    if html_template:
+        attachment_html = content["html"]
+    else:
+        attachment_html = "<html><head><title>%s</title></head><body>%s</body>" \
                       "</html>" % (subject, content["html"])
     part = MIMEBase('text', "html")
     part.set_payload(attachment_html)

@@ -128,8 +128,7 @@ class FlockingReport(Reporter):
         for result_tuple in self.generate():
             vo, site, probe, project, wallhours = result_tuple
             if self.verbose:
-                print "{0}\t{1}\t{2}\t{3}\t{4}".format(vo, site, probe,
-                                                       project, wallhours)
+                print "{0}\t{1}\t{2}\t{3}\t{4}".format(*result_tuple)
             report["VOName"].append(vo)
             report["SiteName"].append(site)
             report["ProbeName"].append(probe)
