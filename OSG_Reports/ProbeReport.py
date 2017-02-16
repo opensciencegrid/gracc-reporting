@@ -562,8 +562,7 @@ def main():
         oiminfo = OIMInfo(args.verbose)
         oim_probe_fqdn_dict = oiminfo.get_fqdns_for_probes()
 
-        # startdate = today - datetime.timedelta(days=2)
-        startdate = datetime.date(2017, 2, 13)
+        startdate = today - datetime.timedelta(days=2)
 
         # Set up and send probe report
         preport = ProbeReport(config,
