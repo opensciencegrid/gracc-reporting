@@ -311,7 +311,7 @@ class ProbeReport(Reporter):
         self.start_time = today.replace(
             day=1) - datetime.timedelta(days=1)
         self.end_time = today
-        self.indexpattern = self.indexpattern_generate()
+        self.indexpattern = self.indexpattern_generate(allraw=True)
 
         if self.verbose:
             print "New index pattern is {0}".format(self.indexpattern)
@@ -328,9 +328,7 @@ class ProbeReport(Reporter):
             .filter("term", ResourceType="Batch")\
             .filter("wildcard", ProbeName="*:{0}".format(self.probe))
 
-        ls.aggs.bucket('group_probename', 'terms', field='ProbeName',
-                               size=2**31-1)\
-            .metric('datemax', 'max', field='@received')
+        ls.aggs.metric('datemax', 'max', field='@received')
 
         try:
             aggs = ls.execute().aggregations
@@ -339,16 +337,15 @@ class ProbeReport(Reporter):
             runerror(self.configuration, e, traceback.format_exc())
             sys.exit(1)
 
-        buckets = aggs.group_probename.buckets
-        if buckets:
-            try:
-                rawdate = buckets[0]['datemax'].value_as_string
-                return "{0} at {1} UTC".format(*self.estimeformat.match(rawdate)
-                                                 .groups())
-            except Exception as e:
-                self.logger.exception(e)
-        else:
+        try:
+            rawdate = aggs.datemax.value_as_string
+            return "{0} at {1} UTC".format(
+                *self.estimeformat.match(rawdate)
+                .groups())
+        except AttributeError:     # no value_as_string = no result
             return "over 1 month ago"
+        except Exception as e:
+            self.logger.exception(e)
 
     def get_probenames(self):
         """Function that parses the results of the elasticsearch query and
@@ -395,7 +392,7 @@ class ProbeReport(Reporter):
         probes = self.get_probenames()
 
         if self.verbose:
-            self.logger.info("Probes in last two days of records: {0}".format(probes))
+            self.logger.info("Probes in last two days of records: {0}".format(sorted(probes)))
 
         self.logger.info("Successfully analyzed ES data vs. OIM data")
         oimset = set((key for key in oimdict))
@@ -565,7 +562,8 @@ def main():
         oiminfo = OIMInfo(args.verbose)
         oim_probe_fqdn_dict = oiminfo.get_fqdns_for_probes()
 
-        startdate = today - datetime.timedelta(days=2)
+        # startdate = today - datetime.timedelta(days=2)
+        startdate = datetime.date(2017, 2, 13)
 
         # Set up and send probe report
         preport = ProbeReport(config,
