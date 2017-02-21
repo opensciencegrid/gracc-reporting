@@ -27,40 +27,23 @@ from Reporter import Reporter, runerror
 
 logfile = 'efficiencyreport.log'
 
+
 class Efficiency(Reporter):
     def __init__(self, config, start, end, vo, verbose, hour_limit, eff_limit,
                  facility, is_test=False, no_email=False):
-        Reporter.__init__(self, config, start, end, verbose = False)
-        self.no_email = no_email
+        report = 'Efficiency'
+        Reporter.__init__(self, report, config, start, end, verbose=verbose,
+                          logfile=logfile, no_email=no_email, is_test=is_test)
         self.hour_limit = hour_limit
         self.vo = vo
-        self.verbose = verbose
-        self.logfile = logfile
-        self.logger = self.setupgenLogger('efficiencypervo')
         self.eff_limit = eff_limit
         self.facility = facility
-        self.is_test = is_test
         self.text = ''
         self.table = ''
         self.fn = "{0}-efficiency.{1}".format(self.vo.lower(),
                                          self.start_time.replace("/", "-"))
         self.cilogon_match = re.compile('.+CN=UID:(\w+)')
         self.non_cilogon_match = re.compile('/CN=([\w\s]+)/?.+?')
-
-    @staticmethod
-    def calc_eff(wallhours, cpusec):
-        """Calculate the efficiency given the wall hours and cputime in seconds.  Returns percentage"""
-        return (cpusec / 3600) / wallhours
-
-    def parseCN(self, cn):
-        """Parse the CN to grab the username"""
-        m = self.cilogon_match.match(cn)  # CILogon certs
-        if m:
-            pass
-        else:
-            m = self.non_cilogon_match.match(cn)
-        user = m.group(1)
-        return user
 
     def query(self):
         """Method to query Elasticsearch cluster for EfficiencyReport information"""
@@ -70,10 +53,13 @@ class Efficiency(Reporter):
         wildcardVOq = '*' + self.vo.lower() + '*'
         wildcardProbeNameq = 'condor:fifebatch?.fnal.gov'
 
+        if self.verbose:
+            self.logger.info(self.indexpattern)
+
         # Elasticsearch query and aggregations
-        s = Search(using=self.establish_client(), index=self.indexpattern) \
-            .query("wildcard", VOName=wildcardVOq) \
-            .query("wildcard", ProbeName=wildcardProbeNameq) \
+        s = Search(using=self.client, index=self.indexpattern) \
+            .filter("wildcard", VOName=wildcardVOq) \
+            .filter("wildcard", ProbeName=wildcardProbeNameq) \
             .filter("range", EndTime={"gte": starttimeq, "lt": endtimeq}) \
             .filter("range", WallDuration={"gt": 0}) \
             .filter("term", Host_description="GPGrid") \
@@ -86,14 +72,14 @@ class Efficiency(Reporter):
             .bucket('group_CommonName', 'terms', field='CommonName')
 
         # Metric aggs
-        Bucket.metric('WallHours', 'sum',
-                      script="(doc['WallDuration'].value*doc['Processors'].value)/3600") \
+        Bucket.metric('WallHours', 'sum', field='CoreHours') \
             .metric('CPUDuration_sec', 'sum', field='CpuDuration')
 
         return s
 
-    def run_query(self):
-        """Execute the query and check the status code before returning the response"""
+    def generate(self):
+        """Main driver of activity in report.  Runs the ES query, checks for
+        success, and then returns the raw data for processing."""
         s = self.query()
         t = s.to_dict()
         if self.verbose:
@@ -105,7 +91,7 @@ class Efficiency(Reporter):
         try:
             response = s.execute()
             if not response.success():
-                raise
+                raise Exception("Error accessing Elasticsearch")
 
             if self.verbose:
                 print json.dumps(response.to_dict(), sort_keys=True, indent=4)
@@ -114,8 +100,8 @@ class Efficiency(Reporter):
             self.logger.info('Ran elasticsearch query successfully')
             return results
         except Exception as e:
-            self.logger.exception("Error accessing Elasticsearch")
-            sys.exit(1)
+            self.logger.exception(e)
+            raise
 
     def parse_lines(self):
         """For each set of dn, wall hours, cpu time, this gets username, calculates efficiency, and sends to
@@ -191,10 +177,7 @@ class Efficiency(Reporter):
             emails = re.split('[; ,]', self.config.get(self.vo.lower(), "email") +
                               ',' + self.config.get("email", "test_to"))
 
-        if self.no_email:
-            self.logger.info("Not sending report")
-            self.logger.info("Would have sent emails to {0}.".format(
-                ', '.join(emails)))
+        if self.test_no_email(emails):
             return
 
         TextUtils.sendEmail(
@@ -206,17 +189,34 @@ class Efficiency(Reporter):
                                 self.start_time,
                                 self.end_time),
                             {"html": self.text},
-                            ("GRACC Operations", "sbhat@fnal.gov"),
-                            "smtp.fnal.gov")
+                            (self.config.get("email", "realname_from"),
+                             self.config.get("email", "from")),
+                            self.config.get("email", "smtphost"))
 
         self.logger.info("Report sent for {0}".format(self.vo))
 
         return
 
+    @staticmethod
+    def calc_eff(wallhours, cpusec):
+        """Calculate the efficiency given the wall hours and cputime in
+        seconds.  Returns percentage"""
+        return (cpusec / 3600) / wallhours
+
+    def parseCN(self, cn):
+        """Parse the CN to grab the username"""
+        m = self.cilogon_match.match(cn)  # CILogon certs
+        if m:
+            pass
+        else:
+            m = self.non_cilogon_match.match(cn)
+        user = m.group(1)
+        return user
+
     def run_report(self):
-        """Handles the data flow throughout the report generation.  Runs the query, generates the HTML report,
-        and sends the email"""
-        results = self.run_query()
+        """Handles the data flow throughout the report generation.  Runs the
+        query, generates the HTML report, and sends the email"""
+        results = self.generate()
         pline = self.parse_lines()
         pline.send(None)
 

@@ -5,7 +5,6 @@ import os
 import inspect
 import traceback
 import json
-import logging
 from elasticsearch_dsl import A, Search
 
 parentdir = os.path.dirname(
@@ -24,6 +23,7 @@ import Configuration
 from Reporter import Reporter, runerror
 import TextUtils
 
+logfile = 'wastedhours.log'
 
 class User:
     def __init__(self, user_name):
@@ -136,7 +136,8 @@ class WastedHoursReport(Reporter):
     """
 
     """
-    def __init__(self, config_file, start, end, is_test=True, verbose=False):
+    def __init__(self, config_file, start, end, is_test=True,
+                 verbose=False, no_email=False):
         """
         :param config_file:
         :param start:
@@ -145,44 +146,40 @@ class WastedHoursReport(Reporter):
         :param verbose:
         :return:
         """
-        Reporter.__init__(self, config_file, start, end, verbose, raw=False)
-        self.is_test = is_test
+        report = 'WastedHours'
+        Reporter.__init__(self, report, config_file, start, end=end,
+                          verbose=verbose, raw=False, is_test=is_test,
+                          no_email=no_email, logfile=logfile)
         self.experiments = {}
         self.connect_str = None
         self.text = ''
         self.fn = "user_wasted_hours_report.{0}".format(
             self.end_time.split(" ")[0].replace("/", "-"))
 
-    def query(self, client):
+    def query(self):
         """Query method to grab wasted hours info, return query object"""
-
         wildcardProbeNameq = 'condor:fifebatch?.fnal.gov'
 
         starttimeq = self.dateparse_to_iso(self.start_time)
         endtimeq = self.dateparse_to_iso(self.end_time)
 
-        s = Search(using=client, index=self.indexpattern) \
-            .query("wildcard", ProbeName=wildcardProbeNameq) \
-            .filter("range", EndTime={"gt": starttimeq, "lt": endtimeq})
+        s = Search(using=self.client, index=self.indexpattern) \
+            .filter("wildcard", ProbeName=wildcardProbeNameq) \
+            .filter("range", EndTime={"gte": starttimeq, "lt": endtimeq})
 
         # Aggregations
-        a1 = A('filters', filters={
+
+        Buckets = s.aggs.bucket('group_status', 'filters', filters={
             'Success': {'bool': {'must': {'term': {'Resource_ExitCode': 0}}}},
             'Failure': {
-                'bool': {'must_not': {'term': {'Resource_ExitCode': 0}}}}})
-        a2 = A('terms', field='VOName', size=1000000000) # large size to
-                                                        # bring in all records
-        a3 = A('terms', field='CommonName', size=1000000000)
-
-        Buckets = s.aggs.bucket('group_status', a1)\
-            .bucket('group_VO', a2) \
-            .bucket('group_CommonName', a3)
+                'bool': {'must_not': {'term': {'Resource_ExitCode': 0}}}}})\
+            .bucket('group_VO', 'terms', field='VOName', size=2**31-1) \
+            .bucket('group_CommonName','terms', field='CommonName',
+                    size=2**31-1)
 
         # Metrics
-        Metric = Buckets.metric('numJobs', 'sum', field='Count')\
-            .metric('WallHours', 'sum',
-                    script="(doc['WallDuration'].value*doc['Processors'].value"
-                           "/3600)")
+        Buckets.metric('numJobs', 'sum', field='Count')\
+            .metric('WallHours', 'sum', field='CoreHours')
 
         if self.verbose:
             print s.to_dict()
@@ -191,11 +188,10 @@ class WastedHoursReport(Reporter):
 
     def generate(self):
         """
-
+        Generates the raw data for the report
         :return:
         """
-        client = self.establish_client()
-        resultquery = self.query(client)
+        resultquery = self.query()
 
         response = resultquery.execute()
         return_code_success = response.success()
@@ -245,6 +241,7 @@ class WastedHoursReport(Reporter):
         return
 
     def generate_report_file(self):
+        """Generates the report file"""
         if len(self.experiments) == 0:
             print "No experiments"
             return
@@ -288,13 +285,17 @@ class WastedHoursReport(Reporter):
         return
 
     def send_report(self):
+        """Emails the report"""
         emails = ""
+
         if self.is_test:
             emails = self.config.get("email", "test_to").split(", ")
         else:
-            pass
             emails = self.config.get("email", "{0}_email".format(self.vo.lower())).split(",")\
                      + self.config.get("email", "test_to").split(",")
+
+        if self.test_no_email(emails):
+            return
 
         TextUtils.sendEmail(([], emails),
                             "{0:s} Wasted Hours on the GPGrid ({1:s} - {2:s})"\
@@ -302,28 +303,37 @@ class WastedHoursReport(Reporter):
                             {"html": self.text},
                             ("GRACC Operations", "sbhat@fnal.gov"),
                             "smtp.fnal.gov")
+        return
+
+    def run_report(self):
+        """Higher-level method to run all the other methods in report
+        generation"""
+        self.generate()
+        self.generate_report_file()
+        self.send_report()
         os.unlink(self.fn)
+        return
 
 
 if __name__ == "__main__":
-    opts, args = Reporter.parse_opts()
-
-    if opts.debug:
-        logging.basicConfig(filename='wastedhoursreport.log', level=logging.DEBUG)
-    else:
-        logging.basicConfig(filename='wastedhoursreport.log', level=logging.ERROR)
-        logging.getLogger('elasticsearch.trace').addHandler(logging.StreamHandler())
+    args = Reporter.parse_opts()
 
     config = Configuration.Configuration()
-    config.configure(opts.config)
+    config.configure(args.config)
 
     try:
-        report = WastedHoursReport(config, opts.start, opts.end, opts.is_test, opts.verbose)
-        report.generate()
-        report.generate_report_file()
-        report.send_report()
+        report = WastedHoursReport(config, args.start, args.end, args.is_test, args.verbose, args.no_email)
+        try:
+            report.run_report()
+        except (Exception, KeyboardInterrupt) as e:
+            # Make sure to clean up files if there's an error or
+            # keyboard interrupt
+            if os.path.exists(report.fn):
+                os.unlink(report.fn)
+            raise
     except Exception as e:
         print >> sys.stderr, traceback.format_exc()
         runerror(config, e, traceback.format_exc())
         sys.exit(1)
+
     sys.exit(0)
