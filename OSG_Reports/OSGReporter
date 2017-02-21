@@ -30,9 +30,6 @@ def key_to_lower(bucket):
     return bucket.key.lower()
 
 
-# Note:  When https://github.com/opensciencegrid/gracc-request/pull/43 is done,
-# I'll have to change the name of the OIM project fields to OIM_blah.
-
 class OSGReporter(Reporter):
     def __init__(self, config, report_type, limit, start, end=None, isSum=True,
                  verbose=False, no_email=False, is_test=False):
