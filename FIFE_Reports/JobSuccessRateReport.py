@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+import argparse
 import sys
 import os
 import re
@@ -33,6 +34,22 @@ config_vals = {'num_clusters': 100, 'jobs_per_cluster': 1e6,
                'num_failed_sites': 1000}
 logfile = 'jobsuccessratereport.log'
 
+
+def parse_opts():
+    """
+    Specific argument parser for this report
+
+    :return: argparse.Namespace object that contains parsed arguments for the
+    report
+    """
+    parser = Reporter.parse_opts()
+
+    # Report-specific args
+    parser.add_argument("-E", "--experiment", dest="vo",
+                        help="experiment name", default=None)
+
+    arguments = parser.parse_args()
+    return arguments
 
 
 def sum_errors(dic):
@@ -525,7 +542,7 @@ class JobSuccessRateReporter(Reporter):
 
 
 if __name__ == "__main__":
-    args = Reporter.parse_opts()
+    args = parse_opts()
 
     config = Configuration.Configuration()
     config.configure(args.config)
