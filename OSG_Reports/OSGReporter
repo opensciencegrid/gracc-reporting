@@ -31,7 +31,7 @@ def key_to_lower(bucket):
 
 
 class OSGReporter(Reporter):
-    def __init__(self, config, report_type, limit, start, end=None, isSum=True,
+    def __init__(self, report_type, config, limit, start, end=None, isSum=True,
                  verbose=False, no_email=False, is_test=False):
         Reporter.__init__(self, report_type, config, start, end, verbose, raw=False,
                           no_email=no_email, is_test=is_test)
@@ -42,7 +42,6 @@ class OSGReporter(Reporter):
         self.logger.info("Report Type: {0}".format(self.report_type))
         self.limit = limit
         self.isSum = isSum
-
 
     def validate_report_type(self, report_type):
         validtypes = {"OSG": "OSG-Direct", "XD": "OSG-XD",
@@ -186,8 +185,8 @@ if __name__=="__main__":
     config.configure(args.config)
 
     try:
-        r = OSGReporter(config,
-                        args.report_type,
+        r = OSGReporter(args.report_type,
+                        config,
                         args.limit,
                         args.start,
                         args.end,
