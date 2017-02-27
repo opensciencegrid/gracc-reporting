@@ -64,18 +64,18 @@ class Reporter(TimeUtils):
         """Parses command line options"""
         parser = argparse.ArgumentParser()
         parser.add_argument("-c", "--config", dest="config",
-                            default=None, help="report configuration file")
+                            default=None, help="report configuration file",
+                            required=True)
         parser.add_argument("-v", "--verbose", dest="verbose",
                             action="store_true", default=False,
                             help="print debug messages to stdout")
         parser.add_argument("-s", "--start", dest="start",
                             help="report start date YYYY/MM/DD HH:mm:SS or "
-                                 "YYYY-MM-DD HH:mm:SS (required)")
+                                 "YYYY-MM-DD HH:mm:SS",
+                            required=True)
         parser.add_argument("-e", "--end", dest="end",
                             help="report end date YYYY/MM/DD HH:mm:SS or "
                                  "YYYY-MM-DD HH:mm:SS")
-        # parser.add_argument("-F", "--facility", dest="facility",
-        #                     help="facility name", default=None)
         parser.add_argument("-T", "--template",dest="template",
                             help="template_file", default=None)
         # parser.add_argument("-r", "--report-type", dest = "report_type",
