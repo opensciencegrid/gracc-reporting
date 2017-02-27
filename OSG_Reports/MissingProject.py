@@ -164,55 +164,40 @@ class MissingProjectReport(Reporter):
             # else:       # What to do for N/A/ stuff?
             #     pass
 
+    #
+    # @staticmethod
+    # def no_name(name):
+    #     return name == 'N/A' or name == "UNKNOWN"
 
-    @staticmethod
-    def no_name(name):
-        return name == 'N/A' or name == "UNKNOWN"
+    def check_osg_or_osg_connect(self, data):
+        return ((self.report_type == 'OSG-Connect')
+                or (self.report_type == 'OSG' and data['VOName'].lower() in
+                    ['osg', 'osg-connect'])
+                )
 
-    def check_project(self, project):
+    def check_project(self, data):
         """
 
         :return:
         """
         PNC = ProjectNameCollector(self.config)
-        if self.no_name(project['RawProjectName']):
+        p_name = data['RawProjectName']
+        if PNC.no_name(p_name):
             print "No Name!"
+            PNC.create_request_to_register_oim(p_name, self.report_type)        # Probably need different method to handle these.  Talk to Tanya
             # Want to email OSG Support about this record
             return None
+        elif self.check_osg_or_osg_connect(data):
+            # Email Tanya, Rob, myself, etc. about why this isn't registered
+            pass
         else:
             # Do checks like in ProjectNameCollector
             # This was just a check - delete when committing
             # PNC2 =  ProjectNameCollector(self.config)
             # p_object = PNC2.get_project('TG-ENG150008', source=self.report_type)
+            # print p_object.__class__
             # print p_object.get_project_name(),p_object.get_pi(),p_object.get_institution(),p_object.get_fos()
-            return PNC.get_project(project['RawProjectName'],
-                                   source=self.report_type)
-
-
-    # def format_report(self, report=None):
-        # report = {}
-        # for name in self.header:
-        #     if name not in report:
-        #         report[name] = []
-        #
-        # for p_object in self.run_report():
-        #     pname, pi, org, fos = (p_object.get_project_name(),
-        #                                     p_object.get_pi(),
-        #                                     p_object.get_institution(),
-        #                                     p_object.get_fos())
-        #     if self.verbose:
-        #         print "{0}\t{1}\t{2}\t{3}".format(pname,
-        #                                                pi, org, fos)
-        #
-        #     report["Project Name"].append(pname)
-        #     report["PI"].append(pi)
-        #     report["Institution"].append(org)
-        #     report["Field of Science"].append(fos)
-        #
-        # print report
-        # exit(0)
-        # return report
-
+            return PNC.get_project(p_name, source=self.report_type)
 
 
 if __name__ == '__main__':

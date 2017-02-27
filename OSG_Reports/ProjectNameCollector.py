@@ -66,6 +66,16 @@ class ProjectNameCollector:
     #             continue
 
     def get_project(self, name, source):
+        """
+        Looks up project.  Currently, we only use it for XD projects, as every
+        other project should be in OIM -- confirm this with Tanya
+
+        :param str name:  The name of the project we're looking up
+        :param str source:  The type of lookup we're doing (XD, OSG,
+        or OSG-Connect)
+
+        :return: None or XDProject.XDProject object
+        """
         """Finds project in XD Database or OIM if it is not in cache
         Args:
             name(str) - name of the project
@@ -100,13 +110,12 @@ class ProjectNameCollector:
                     print "This project is not in XD database ", name
             else:
                 # Put the information in request file, will be sent later
-                # self.create_request_to_register_oim(name, source, xd)
-
+                self.create_request_to_register_oim(name, source, xd)
                 # We will still report this project
                 self.projects[name] = xd
                 return self.projects[name]
         else:
-            print >>sys.stderr, "This project %s is not registered " % (name,)
+            print "This project %s is not registered " % (name,)
             # Put the information in request file, will be sent later
             self.create_request_to_register_oim(name, source)
         return None
@@ -136,9 +145,6 @@ class ProjectNameCollector:
             source(str) - XD, OSG, or  OSG-Connect"
             p(Project) - project
         """
- 
-        if self.projects.has_key(name):
-            return
         if source == "XD" and name.startswith("TG-"):
             f = open("OIM_Project_Name_Request_for_XD", "a")
             f.write("****************START****************\n")
@@ -147,11 +153,18 @@ class ProjectNameCollector:
                      p.get_abstract()))
             f.write("****************END****************\n")
             f.close()
+        # elif self.no_name(name):
+            # Send email to OSG support with record info. Maybe this needs to be in MissingProject.py
+            # pass
         else:
             f = open("OIM_Project_Name_Request_for_%s" % (source,), "a")
-            f.write("Project names that are reported from %s but not registered  in OIM\n" % (source, ))
+            f.write("Project names that are reported from %s but not registered in OIM\n" % (source, ))
             f.write("ProjectName: %s\n" % (name,))
             f.close()
+
+    @staticmethod
+    def no_name(name):
+        return name == 'N/A' or name == "UNKNOWN"
 
 
 def parse_opts():
