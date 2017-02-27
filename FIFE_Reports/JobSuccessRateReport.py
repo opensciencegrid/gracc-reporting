@@ -46,7 +46,7 @@ def parse_opts():
 
     # Report-specific args
     parser.add_argument("-E", "--experiment", dest="vo",
-                        help="experiment name", default=None)
+                        help="experiment name", default=None, required=True)
 
     arguments = parser.parse_args()
     return arguments
