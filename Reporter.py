@@ -98,7 +98,7 @@ class Reporter(TimeUtils):
         return parser
 
     @staticmethod
-    def init_Reporter_parser(specific_parser):
+    def init_reporter_parser(specific_parser):
         """
         Decorator function that initializes all of our report-specific parser
         functions

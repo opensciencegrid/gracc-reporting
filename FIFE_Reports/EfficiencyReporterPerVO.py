@@ -28,15 +28,15 @@ from Reporter import Reporter, runerror
 logfile = 'efficiencyreport.log'
 
 
-def parse_opts():
+@Reporter.init_reporter_parser
+def parse_opts(parser):
     """
     Specific argument parser for this report
 
+    :param parser: argparse.ArgumentParser object that we intend to add to
     :return: argparse.Namespace object that contains parsed arguments for the
     report
     """
-    parser = Reporter.parse_opts()
-
     # Report-specific args
     parser.add_argument("-E", "--experiment", dest="vo",
                         help="experiment name", default=None, required=True)

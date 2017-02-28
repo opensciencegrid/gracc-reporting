@@ -33,7 +33,7 @@ config_vals = {'num_clusters': 100, 'jobs_per_cluster': 1e6,
 logfile = 'jobsuccessratereport.log'
 
 
-@Reporter.init_Reporter_parser
+@Reporter.init_reporter_parser
 def parse_opts(parser):
     """
     Specific argument parser for this report
