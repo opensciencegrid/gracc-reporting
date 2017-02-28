@@ -1,5 +1,6 @@
 import abc
 import argparse
+import functools
 from datetime import datetime
 import re
 import sys
@@ -95,8 +96,24 @@ class Reporter(TimeUtils):
                             help="Do not send email. ")
 
         return parser
-        # arguments = parser.parse_args()
-        # return arguments
+
+    @staticmethod
+    def init_Reporter_parser(specific_parser):
+        """
+        Decorator function that initializes all of our report-specific parser
+        functions
+
+        :param specific_parser: report-specific parser-function to parse
+        :return: Decorated report-specific wrapper function reference
+        """
+        def wrapper():
+            """
+            Wrapper function that calls the report-specific parser function
+            :return: argparse.ArgumentParser Namespace from specific_parser
+            """
+            args = specific_parser(Reporter.parse_opts())
+            return args
+        return wrapper
 
     def indexpattern_generate(self, raw=True, allraw=False):
         """Returns the Elasticsearch index pattern based on the class
@@ -247,7 +264,6 @@ class Reporter(TimeUtils):
         """Sorts the Elasticsearch Aggregation buckets based on the key you
         specify"""
         return sorted(agg.buckets, key=key)
-
 
     def test_no_email(self, emails):
         if self.no_email:

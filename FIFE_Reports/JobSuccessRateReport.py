@@ -1,10 +1,8 @@
 #!/usr/bin/python
 
-import argparse
 import sys
 import os
 import re
-import ast
 from time import sleep
 import traceback
 import inspect
@@ -35,15 +33,15 @@ config_vals = {'num_clusters': 100, 'jobs_per_cluster': 1e6,
 logfile = 'jobsuccessratereport.log'
 
 
-def parse_opts():
+@Reporter.init_Reporter_parser
+def parse_opts(parser):
     """
     Specific argument parser for this report
 
+    :param parser: argparse.ArgumentParser object that we intend to add to
     :return: argparse.Namespace object that contains parsed arguments for the
     report
     """
-    parser = Reporter.parse_opts()
-
     # Report-specific args
     parser.add_argument("-E", "--experiment", dest="vo",
                         help="experiment name", default=None, required=True)
@@ -544,6 +542,7 @@ class JobSuccessRateReporter(Reporter):
 if __name__ == "__main__":
     args = parse_opts()
 
+    print args
     config = Configuration.Configuration()
     config.configure(args.config)
 
