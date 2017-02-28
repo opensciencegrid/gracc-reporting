@@ -25,6 +25,15 @@ import TextUtils
 
 logfile = 'wastedhours.log'
 
+
+@Reporter.init_reporter_parser
+def parse_opts(parser):
+    """
+    Don't need to add any options to Reporter.parse_opts
+    """
+    pass
+
+
 class User:
     def __init__(self, user_name):
         self.user = user_name
@@ -316,7 +325,7 @@ class WastedHoursReport(Reporter):
 
 
 if __name__ == "__main__":
-    args = Reporter.parse_opts()
+    args = parse_opts()
 
     config = Configuration.Configuration()
     config.configure(args.config)
