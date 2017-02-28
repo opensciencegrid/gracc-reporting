@@ -26,6 +26,14 @@ from Reporter import Reporter, runerror
 logfile = 'osgflockingreport.log'
 
 
+@Reporter.init_reporter_parser
+def parse_opts(parser):
+    """
+    Don't need to add any options to Reporter.parse_opts
+    """
+    pass
+
+
 class FlockingReport(Reporter):
     """Class to generate the probe report"""
     def __init__(self, configuration, start, end, template=False,
@@ -138,7 +146,7 @@ class FlockingReport(Reporter):
 
 
 def main():
-    args = Reporter.parse_opts()
+    args = parse_opts()
 
     # Set up the configuration
     config = Configuration.Configuration()
