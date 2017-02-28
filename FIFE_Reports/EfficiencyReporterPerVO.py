@@ -31,20 +31,18 @@ logfile = 'efficiencyreport.log'
 @Reporter.init_reporter_parser
 def parse_opts(parser):
     """
-    Specific argument parser for this report
+    Specific argument parser for this report.  The decorator initializes the
+    argparse.ArgumentParser object, calls this function on that object to
+    modify it, and then returns the Namespace from that object.
 
     :param parser: argparse.ArgumentParser object that we intend to add to
-    :return: argparse.Namespace object that contains parsed arguments for the
-    report
+    :return: None
     """
     # Report-specific args
     parser.add_argument("-E", "--experiment", dest="vo",
                         help="experiment name", default=None, required=True)
     parser.add_argument("-F", "--facility", dest="facility",
                         help="facility name", default=None, required=True)
-
-    arguments = parser.parse_args()
-    return arguments
 
 
 class Efficiency(Reporter):

@@ -97,6 +97,24 @@ class Reporter(TimeUtils):
 
         return parser
 
+    # @staticmethod
+    # def init_reporter_parser(specific_parser):
+    #     """
+    #     Decorator function that initializes all of our report-specific parser
+    #     functions
+    #
+    #     :param specific_parser: report-specific parser-function to parse
+    #     :return: Decorated report-specific wrapper function reference
+    #     """
+    #     def wrapper():
+    #         """
+    #         Wrapper function that calls the report-specific parser function
+    #         :return: argparse.ArgumentParser Namespace from specific_parser
+    #         """
+    #         args = specific_parser(Reporter.parse_opts())
+    #         return args
+    #     return wrapper
+
     @staticmethod
     def init_reporter_parser(specific_parser):
         """
@@ -111,8 +129,9 @@ class Reporter(TimeUtils):
             Wrapper function that calls the report-specific parser function
             :return: argparse.ArgumentParser Namespace from specific_parser
             """
-            args = specific_parser(Reporter.parse_opts())
-            return args
+            parser = Reporter.parse_opts()
+            specific_parser(parser)
+            return parser.parse_args()
         return wrapper
 
     def indexpattern_generate(self, raw=True, allraw=False):
