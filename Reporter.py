@@ -72,8 +72,7 @@ class Reporter(TimeUtils):
                             help="print debug messages to stdout")
         parser.add_argument("-s", "--start", dest="start",
                             help="report start date YYYY/MM/DD HH:mm:SS or "
-                                 "YYYY-MM-DD HH:mm:SS",
-                            required=True)
+                                 "YYYY-MM-DD HH:mm:SS")
         parser.add_argument("-e", "--end", dest="end",
                             help="report end date YYYY/MM/DD HH:mm:SS or "
                                  "YYYY-MM-DD HH:mm:SS")
