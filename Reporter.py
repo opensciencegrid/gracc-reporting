@@ -1,6 +1,5 @@
 import abc
 import argparse
-import functools
 from datetime import datetime
 import re
 import sys
@@ -14,6 +13,7 @@ from elasticsearch import Elasticsearch
 import TextUtils
 from IndexPattern import indexpattern_generate
 from TimeUtils import TimeUtils
+
 
 class ContextFilter(logging.Filter):
     """This is a class to inject contextual information into the record"""
@@ -78,18 +78,9 @@ class Reporter(TimeUtils):
                                  "YYYY-MM-DD HH:mm:SS")
         parser.add_argument("-T", "--template",dest="template",
                             help="template_file", default=None)
-        # parser.add_argument("-r", "--report-type", dest = "report_type",
-        #                     help="Report type (name of Campus Grid): e.g. "
-        #                         "XD, OSG or OSG-Connect", default="OSG")
-        # parser.add_argument("-l", "--limit", dest="limit",
-        #                     help="Do not report about entity with WallHours"
-        #                          "less than this number", type=int, default=1)
         parser.add_argument("-d", "--dryrun", dest="is_test",
                             action="store_true", default=False,
                             help="send emails only to _testers")
-        # parser.add_argument("-D", "--debug", dest="debug",
-        #                     action="store_true", default=False,
-        #                     help="print detailed debug messages to log file")
         parser.add_argument("-n", "--nomail", dest="no_email",
                             action="store_true", default=False,
                             help="Do not send email. ")
