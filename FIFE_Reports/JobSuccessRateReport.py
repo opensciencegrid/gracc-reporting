@@ -3,7 +3,6 @@
 import sys
 import os
 import re
-import ast
 from time import sleep
 import traceback
 import inspect
@@ -33,6 +32,36 @@ config_vals = {'num_clusters': 100, 'jobs_per_cluster': 1e6,
                'num_failed_sites': 1000}
 logfile = 'jobsuccessratereport.log'
 
+
+# @Reporter.init_reporter_parser
+# def parse_opts(parser):
+#     """
+#     Specific argument parser for this report
+#
+#     :param parser: argparse.ArgumentParser object that we intend to add to
+#     :return: argparse.Namespace object that contains parsed arguments for the
+#     report
+#     """
+#     # Report-specific args
+#     parser.add_argument("-E", "--experiment", dest="vo",
+#                         help="experiment name", default=None, required=True)
+#
+#     arguments = parser.parse_args()
+#     return arguments
+
+@Reporter.init_reporter_parser
+def parse_opts(parser):
+    """
+    Specific argument parser for this report.  The decorator initializes the
+    argparse.ArgumentParser object, calls this function on that object to
+    modify it, and then returns the Namespace from that object.
+
+    :param parser: argparse.ArgumentParser object that we intend to add to
+    :return: None
+    """
+    # Report-specific args
+    parser.add_argument("-E", "--experiment", dest="vo",
+                        help="experiment name", default=None, required=True)
 
 
 def sum_errors(dic):
@@ -525,8 +554,9 @@ class JobSuccessRateReporter(Reporter):
 
 
 if __name__ == "__main__":
-    args = Reporter.parse_opts()
+    args = parse_opts()
 
+    print args
     config = Configuration.Configuration()
     config.configure(args.config)
 

@@ -14,6 +14,7 @@ import TextUtils
 from IndexPattern import indexpattern_generate
 from TimeUtils import TimeUtils
 
+
 class ContextFilter(logging.Filter):
     """This is a class to inject contextual information into the record"""
     def __init__(self, vo):
@@ -64,41 +65,46 @@ class Reporter(TimeUtils):
         """Parses command line options"""
         parser = argparse.ArgumentParser()
         parser.add_argument("-c", "--config", dest="config",
-                            default=None, help="report configuration file")
+                            default=None, help="report configuration file",
+                            required=True)
         parser.add_argument("-v", "--verbose", dest="verbose",
                             action="store_true", default=False,
                             help="print debug messages to stdout")
         parser.add_argument("-s", "--start", dest="start",
                             help="report start date YYYY/MM/DD HH:mm:SS or "
-                                 "YYYY-MM-DD HH:mm:SS (required)")
+                                 "YYYY-MM-DD HH:mm:SS")
         parser.add_argument("-e", "--end", dest="end",
                             help="report end date YYYY/MM/DD HH:mm:SS or "
                                  "YYYY-MM-DD HH:mm:SS")
-        parser.add_argument("-E", "--experiment", dest="vo",
-                            help="experiment name", default=None)
-        parser.add_argument("-F", "--facility", dest="facility",
-                            help="facility name", default=None)
         parser.add_argument("-T", "--template",dest="template",
                             help="template_file", default=None)
-        parser.add_argument("-r", "--report-type", dest = "report_type",
-                            help="Report type (name of Campus Grid): e.g. "
-                                "XD, OSG or OSG-Connect", default="OSG")
-        parser.add_argument("-l", "--limit", dest="limit",
-                            help="Do not report about entity with WallHours"
-                                 "less than this number", type=int, default=1)
         parser.add_argument("-d", "--dryrun", dest="is_test",
                             action="store_true", default=False,
                             help="send emails only to _testers")
-        parser.add_argument("-D", "--debug", dest="debug",
-                            action="store_true", default=False,
-                            help="print detailed debug messages to log file")
         parser.add_argument("-n", "--nomail", dest="no_email",
                             action="store_true", default=False,
-                            help="Do not send the email.  "
-                                 "Use this with -v to also get verbose output")
+                            help="Do not send email. ")
 
-        arguments = parser.parse_args()
-        return arguments
+        return parser
+
+    @staticmethod
+    def init_reporter_parser(specific_parser):
+        """
+        Decorator function that initializes all of our report-specific parser
+        functions
+
+        :param specific_parser: report-specific parser-function to parse
+        :return: Decorated report-specific wrapper function reference
+        """
+        def wrapper():
+            """
+            Wrapper function that calls the report-specific parser function
+            :return: argparse.ArgumentParser Namespace from specific_parser
+            """
+            parser = Reporter.parse_opts()
+            specific_parser(parser)
+            return parser.parse_args()
+        return wrapper
 
     def indexpattern_generate(self, raw=True, allraw=False):
         """Returns the Elasticsearch index pattern based on the class
@@ -249,7 +255,6 @@ class Reporter(TimeUtils):
         """Sorts the Elasticsearch Aggregation buckets based on the key you
         specify"""
         return sorted(agg.buckets, key=key)
-
 
     def test_no_email(self, emails):
         if self.no_email:

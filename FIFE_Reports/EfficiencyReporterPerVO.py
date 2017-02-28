@@ -28,9 +28,26 @@ from Reporter import Reporter, runerror
 logfile = 'efficiencyreport.log'
 
 
+@Reporter.init_reporter_parser
+def parse_opts(parser):
+    """
+    Specific argument parser for this report.  The decorator initializes the
+    argparse.ArgumentParser object, calls this function on that object to
+    modify it, and then returns the Namespace from that object.
+
+    :param parser: argparse.ArgumentParser object that we intend to add to
+    :return: None
+    """
+    # Report-specific args
+    parser.add_argument("-E", "--experiment", dest="vo",
+                        help="experiment name", default=None, required=True)
+    parser.add_argument("-F", "--facility", dest="facility",
+                        help="facility name", default=None, required=True)
+
+
 class Efficiency(Reporter):
     def __init__(self, config, start, end, vo, verbose, hour_limit, eff_limit,
-                 facility, is_test=False, no_email=False):
+                 facility, template, is_test=False, no_email=False):
         report = 'Efficiency'
         Reporter.__init__(self, report, config, start, end, verbose=verbose,
                           logfile=logfile, no_email=no_email, is_test=is_test)
@@ -38,6 +55,7 @@ class Efficiency(Reporter):
         self.vo = vo
         self.eff_limit = eff_limit
         self.facility = facility
+        self.template = template
         self.text = ''
         self.table = ''
         self.fn = "{0}-efficiency.{1}".format(self.vo.lower(),
@@ -162,7 +180,7 @@ class Efficiency(Reporter):
 
     def generate_report_file(self):
         """Takes the HTML template and inserts the appropriate information to generate the final report file"""
-        self.text = "".join(open("template_efficiency.html").readlines())
+        self.text = "".join(open(self.template).readlines())
         self.text = self.text.replace("$START", self.start_time)
         self.text = self.text.replace("$END", self.end_time)
         self.text = self.text.replace("$VO", self.vo)
@@ -239,7 +257,7 @@ class Efficiency(Reporter):
 
 
 if __name__ == "__main__":
-    args = Reporter.parse_opts()
+    args = parse_opts()
 
     # Set up the configuration
     config = Configuration.Configuration()
@@ -261,6 +279,7 @@ if __name__ == "__main__":
                        int(min_hours),
                        float(repeff),
                        args.facility,
+                       args.template,
                        args.is_test,
                        args.no_email)
         e.run_report()

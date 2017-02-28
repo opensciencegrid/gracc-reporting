@@ -78,6 +78,14 @@ def perc_change(old, new):
             return 100.     # If we have something like (10-0) / 0, return 100%
 
 
+@Reporter.init_reporter_parser
+def parse_opts(parser):
+    """
+    Don't need to add any options to Reporter.parse_opts
+    """
+    pass
+
+
 class VO(object):
     """Class to hold VO information"""
     def __init__(self, voname):
@@ -360,7 +368,7 @@ class OSGPerSiteReporter(Reporter):
 
 
 def main():
-    args = Reporter.parse_opts()
+    args = parse_opts()
 
     config = Configuration.Configuration()
     config.configure(args.config)

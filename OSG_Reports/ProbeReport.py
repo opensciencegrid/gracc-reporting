@@ -35,6 +35,14 @@ now = datetime.datetime.now()
 today = now.date()
 
 
+@Reporter.init_reporter_parser
+def parse_opts(parser):
+    """
+    Don't need to add any options to Reporter.parse_opts
+    """
+    pass
+
+
 class OIMInfo(object):
     """Class to hold and operate on OIM information"""
     def __init__(self, verbose=False):
@@ -552,7 +560,7 @@ class ProbeReport(Reporter):
 
 
 def main():
-    args = Reporter.parse_opts()
+    args = parse_opts()
 
     config = Configuration.Configuration()
     config.configure(args.config)
