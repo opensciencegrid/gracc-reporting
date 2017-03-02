@@ -64,7 +64,11 @@ class Efficiency(Reporter):
         self.non_cilogon_match = re.compile('/CN=([\w\s]+)/?.+?')
 
     def query(self):
-        """Method to query Elasticsearch cluster for EfficiencyReport information"""
+        """
+        Method to query Elasticsearch cluster for EfficiencyReport information
+
+        :return: elasticsearch_dsl.Search object
+        """
         # Gather parameters, format them for the query
         starttimeq = self.dateparse_to_iso(self.start_time)
         endtimeq = self.dateparse_to_iso(self.end_time)
@@ -96,8 +100,12 @@ class Efficiency(Reporter):
         return s
 
     def generate(self):
-        """Main driver of activity in report.  Runs the ES query, checks for
-        success, and then returns the raw data for processing."""
+        """
+        Main driver of activity in report.  Runs the ES query, checks for
+        success, and then returns the raw data for processing.
+
+        :return: Response.aggregations object
+        """
         s = self.query()
         t = s.to_dict()
         if self.verbose:
@@ -122,8 +130,10 @@ class Efficiency(Reporter):
             raise
 
     def parse_lines(self):
-        """For each set of dn, wall hours, cpu time, this gets username, calculates efficiency, and sends to
-        HTML formatter"""
+        """
+        Coroutine: For each set of dn, wall hours, cpu time,
+        this gets username, calculates efficiency, and sends to HTML formatter
+        """
         html_formatter = self.generate_report_lines()
         html_formatter.send(None)
         while True:
@@ -136,7 +146,8 @@ class Efficiency(Reporter):
                 html_formatter.send((user, wallhrs, eff))
 
     def generate_report_lines(self):
-        """This generates an HTML line from the raw data line and sends it to the tablebuilder"""
+        """Coroutine: This generates an HTML line from the raw data
+        line and sends it to the tablebuilder"""
         tablebuilder = self.generate_data_table()
         tablebuilder.send(None)
 
@@ -172,14 +183,20 @@ class Efficiency(Reporter):
             tablebuilder.send(htmlline)
 
     def generate_data_table(self):
-        """This compiles the data table lines and creates the table text (HTML) string"""
+        """Coroutine: This compiles the data table lines and creates
+        the table text (HTML) string"""
         self.table = ""
         while True:
             newline = yield
             self.table += newline
 
     def generate_report_file(self):
-        """Takes the HTML template and inserts the appropriate information to generate the final report file"""
+        """
+        Takes the HTML template and inserts the appropriate information to
+        generate the final report file
+
+        :return: None
+        """
         self.text = "".join(open(self.template).readlines())
         self.text = self.text.replace("$START", self.start_time)
         self.text = self.text.replace("$END", self.end_time)
@@ -188,7 +205,12 @@ class Efficiency(Reporter):
         return
 
     def send_report(self):
-        """Sends the HTML report file in an email (or doesn't if self.no_email is set to True)"""
+        """
+        Sends the HTML report file in an email (or doesn't if self.no_email
+        is set to True)
+
+        :return: None
+        """
         if self.is_test:
             emails = re.split('[; ,]', self.config.get("email", "test_to"))
         else:
@@ -217,12 +239,22 @@ class Efficiency(Reporter):
 
     @staticmethod
     def calc_eff(wallhours, cpusec):
-        """Calculate the efficiency given the wall hours and cputime in
-        seconds.  Returns percentage"""
+        """
+        Calculate the efficiency given the wall hours and cputime in
+        seconds.  Returns percentage
+
+        :param float wallhours: Wall Hours of a bucket
+        :param float cpusec: CPU time (in seconds) of a bucket
+        :return float: Efficiency of that bucket
+        """
         return (cpusec / 3600) / wallhours
 
     def parseCN(self, cn):
-        """Parse the CN to grab the username"""
+        """Parse the CN to grab the username
+
+        :param str cn: CN string from record
+        :return str: username as pulled from cn
+        """
         m = self.cilogon_match.match(cn)  # CILogon certs
         if m:
             pass
@@ -233,7 +265,10 @@ class Efficiency(Reporter):
 
     def run_report(self):
         """Handles the data flow throughout the report generation.  Runs the
-        query, generates the HTML report, and sends the email"""
+        query, generates the HTML report, and sends the email
+
+        :return None
+        """
         results = self.generate()
         pline = self.parse_lines()
         pline.send(None)
@@ -283,7 +318,6 @@ if __name__ == "__main__":
                        args.is_test,
                        args.no_email)
         e.run_report()
-
         print "Efficiency Report execution successful"
 
     except Exception as e:
