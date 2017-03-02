@@ -46,8 +46,26 @@ def parse_opts(parser):
 
 
 class Efficiency(Reporter):
-    def __init__(self, config, start, end, vo, verbose, hour_limit, eff_limit,
-                 facility, template, is_test=False, no_email=False):
+    """
+    Class to hold information about and to run Efficiency report.
+
+    :param str config: Filename of onfiguration File
+    :param str start: Start time of report range
+    :param str end: End time of report range
+    :param str vo: Experiment to run report on
+    :param float hour_limit: Minimum number of hours a user must have run to
+    get reported on
+    :param float eff_limit: Efficiency limit below which we want to report on a
+    user that satisfies hour_limit requirement
+    :param str facility: Facility on which we're running report
+    :param str template: Filename of HTML template to generate report
+    :param bool is_test: Whether or not this is a test run.
+    :param bool no_email: If true, don't actually send the email
+    :param bool verbose: Verbose flag
+    """
+    def __init__(self, config, start, end, vo, hour_limit, eff_limit,
+                 facility, template, is_test=False, no_email=False,
+                 verbose=False):
         report = 'Efficiency'
         Reporter.__init__(self, report, config, start, end, verbose=verbose,
                           logfile=logfile, no_email=no_email, is_test=is_test)
@@ -310,13 +328,13 @@ if __name__ == "__main__":
                        args.start,
                        args.end,
                        vo,
-                       args.verbose,
                        int(min_hours),
                        float(repeff),
                        args.facility,
                        args.template,
                        args.is_test,
-                       args.no_email)
+                       args.no_email,
+                       args.verbose)
         e.run_report()
         print "Efficiency Report execution successful"
 
