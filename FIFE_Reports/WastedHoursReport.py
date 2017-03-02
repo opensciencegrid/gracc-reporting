@@ -35,6 +35,12 @@ def parse_opts(parser):
 
 
 class User:
+    """
+    Holds all user-specific information for this report
+
+    :param str user_name: username of user
+    """
+
     def __init__(self, user_name):
         self.user = user_name
         self.success = [0, 0]
@@ -42,9 +48,10 @@ class User:
 
     def add_success(self, njobs, wall_duration):
         """
+        Adds to the Success list for user
 
-        :param njobs:
-        :param wall_duration:
+        :param njobs: Number of jobs in summary record
+        :param wall_duration: Wall duration in summary record
         :return:
         """
         self.success = [ex + new for ex, new in
@@ -52,9 +59,10 @@ class User:
 
     def add_failure(self, njobs, wall_duration):
         """
+        Adds to the Failure list for user
 
-        :param njobs:
-        :param wall_duration:
+        :param njobs: Number of jobs in summary record
+        :param wall_duration: Wall duration in summary record
         :return:
         """
         self.failure = [ex + new for ex, new in
@@ -62,8 +70,7 @@ class User:
 
     def get_failure_rate(self):
         """
-
-        :return:
+        Calculates the failure rate of a user's jobs
         """
         failure_rate = 0
         if self.success[0] + self.failure[0] > 0:
@@ -73,8 +80,7 @@ class User:
 
     def get_waste_per(self):
         """
-
-        :return:
+        Gets a user's wasted hours
         """
         waste_per = 0
         if self.success[1] + self.failure[1] > 0:
@@ -84,81 +90,46 @@ class User:
 
 
 class Experiment:
-    def __init__(self, exp_name):
-        """
+    """
+    Hold all experiment-specific information for this report
 
-        :param exp_name:
-        :return:
-        """
+    :param exp_name: Experiment name
+    """
+    def __init__(self, exp_name):
         self.experiment = exp_name
         self.success = [0, 0]
         self.failure = [0, 0]
         self.users = {}
 
     def add_user(self, user_name, user):
+        """
+        Adds user to an experiment
+
+        :param user_name: username of user
+        :param User user: User object holding user's info
+        :return: None
+        """
         self.users[user_name] = user
-
-    def add_success(self, njobs, wall_duration):
-        """
-
-        :param njobs:
-        :param wall_duration:
-        :return:
-        """
-        self.success = [ex + new for ex, new in
-                        zip(self.success, [njobs, wall_duration])]
-
-    def add_failure(self, njobs, wall_duration):
-        """
-
-        :param njobs:
-        :param wall_duration:
-        :return:
-        """
-        self.failure = [ex + new for ex, new in
-                        zip(self.failure, [njobs, wall_duration])]
-
-    def get_failure_rate(self):
-        """
-
-        :return:
-        """
-        failure_rate = 0
-        if self.success[0] + self.failure[0] > 0:
-            failure_rate = self.failure[0] * 100. /\
-                           (self.success[0] + self.failure[0])
-        return failure_rate
-
-    def get_waste_per(self):
-        """
-
-        :return:
-        """
-        waste_per = 0
-        if self.success[1] + self.failure[1] > 0:
-            waste_per = self.failure[1] * 100. /\
-                        (self.success[1] + self.failure[1])
-        return waste_per
 
 
 class WastedHoursReport(Reporter):
     """
-
+    Class to hold information about and run Wasted Hours report.
+    :param str config: Filename of configuration File
+    :param str start: Start time of report range
+    :param str end: End time of report range
+    :param str template: Filename of HTML template to generate report
+    :param bool is_test: Whether or not this is a test run.
+    :param bool verbose: Verbose flag
+    :param bool no_email: If true, don't actually send the email
     """
-    def __init__(self, config_file, start, end, is_test=True,
+    def __init__(self, config, start, end, template, is_test=True,
                  verbose=False, no_email=False):
-        """
-        :param config_file:
-        :param start:
-        :param end:
-        :param is_test:
-        :param verbose:
-        :return:
-        """
         report = 'WastedHours'
-        Reporter.__init__(self, report, config_file, start, end=end,
+        Reporter.__init__(self, report, config, start, end=end,
                           verbose=verbose, raw=False, is_test=is_test,
                           no_email=no_email, logfile=logfile)
+        self.template = template
         self.experiments = {}
         self.connect_str = None
         self.text = ''
@@ -166,7 +137,11 @@ class WastedHoursReport(Reporter):
             self.end_time.split(" ")[0].replace("/", "-"))
 
     def query(self):
-        """Query method to grab wasted hours info, return query object"""
+        """
+        Method to query Elasticsearch cluster for EfficiencyReport information
+
+        :return elasticsearch_dsl.Search: Search object containing ES query
+        """
         wildcardProbeNameq = 'condor:fifebatch?.fnal.gov'
 
         starttimeq = self.dateparse_to_iso(self.start_time)
@@ -197,8 +172,10 @@ class WastedHoursReport(Reporter):
 
     def generate(self):
         """
-        Generates the raw data for the report
-        :return:
+        Generates the raw data for the report, stores in Experiment, User
+        objects
+
+        :return: None
         """
         resultquery = self.query()
 
@@ -250,7 +227,11 @@ class WastedHoursReport(Reporter):
         return
 
     def generate_report_file(self):
-        """Generates the report file"""
+        """Reads the Experiment and User objects and generates the report
+        HTML file
+
+        :return: None
+        """
         if len(self.experiments) == 0:
             print "No experiments"
             return
@@ -281,7 +262,7 @@ class WastedHoursReport(Reporter):
                 if self.verbose:
                     total_hrs += (user.success[1] + user.failure[1])
                     total_jobs += (user.success[0] + user.failure[0])
-        self.text = "".join(open("template_wasted_hours.html").readlines())
+        self.text = "".join(open(self.template).readlines())
         self.text = self.text.replace("$START", self.start_time)
         self.text = self.text.replace("$END", self.end_time)
         self.text = self.text.replace("$TABLE", table)
@@ -294,8 +275,13 @@ class WastedHoursReport(Reporter):
         return
 
     def send_report(self):
-        """Emails the report"""
-        emails = ""
+        """
+        Sends the HTML report file in an email (or doesn't if self.no_email
+        is set to True)
+
+        :return: None
+        """
+        # emails = ""
 
         if self.is_test:
             emails = self.config.get("email", "test_to").split(", ")
@@ -310,8 +296,9 @@ class WastedHoursReport(Reporter):
                             "{0:s} Wasted Hours on the GPGrid ({1:s} - {2:s})"\
                             .format("FIFE", self.start_time, self.end_time),
                             {"html": self.text},
-                            ("GRACC Operations", "sbhat@fnal.gov"),
-                            "smtp.fnal.gov")
+                            (self.config.get("email", "realname_from"),
+                             self.config.get("email", "from")),
+                            self.config.get("email", "smtphost"))
         return
 
     def run_report(self):
@@ -320,7 +307,8 @@ class WastedHoursReport(Reporter):
         self.generate()
         self.generate_report_file()
         self.send_report()
-        os.unlink(self.fn)
+        if os.path.exists(self.fn):
+            os.unlink(self.fn)
         return
 
 
@@ -331,7 +319,13 @@ if __name__ == "__main__":
     config.configure(args.config)
 
     try:
-        report = WastedHoursReport(config, args.start, args.end, args.is_test, args.verbose, args.no_email)
+        report = WastedHoursReport(config,
+                                   args.start,
+                                   args.end,
+                                   args.template,
+                                   is_test=args.is_test,
+                                   verbose=args.verbose,
+                                   no_email=args.no_email)
         try:
             report.run_report()
         except (Exception, KeyboardInterrupt) as e:
