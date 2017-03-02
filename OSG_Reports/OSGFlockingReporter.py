@@ -97,7 +97,8 @@ class FlockingReport(Reporter):
         """Execute the query and check the status code before returning the
         response
 
-        :return Response: Returns elasticsearch response
+        :return Response.aggregations: Returns aggregations property of
+        elasticsearch response
         """
         s = self.query()
         t = s.to_dict()
@@ -137,9 +138,8 @@ class FlockingReport(Reporter):
                         yield (sitekey, vokey, probekey, project.key, project.CoreHours_sum.value)
 
     def format_report(self):
-        """Takes the results from the elasticsearch query and returns a dict
-        that can be used by the Reporter.send_report method to generate HTML,
-        CSV, and plain text output
+        """Report formatter.  Returns a dictionary called report containing the
+        columns of the report.
 
         :return dict: Constructed dict of report information for
         Reporter.send_report to send report from"""

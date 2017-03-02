@@ -28,10 +28,13 @@ opp_vos = ['glow', 'gluex', 'hcc', 'osg', 'sbgrid']
 
 # Helper Functions
 def monthrange(date):
-    """ Pass in date list (as returned by TimeUtils.dateparse) or
-    datetime.datetime object.
+    """
+    Takes a start date and finds out the start and end of the month that that
+    input date is in
 
-    Returns tuple of datetime.datetime objects that span the month
+    :param list date: Pass in date list (as returned by TimeUtils.dateparse) or
+    datetime.datetime object.
+    :return tuple:datetime.datetime objects that span the month
     (2016-12-05 --> 2016-12-01, 2016-12-31)
     """
     if isinstance(date, list):
@@ -51,15 +54,27 @@ def monthrange(date):
 
 
 def prev_month_shift(date):
-    """Takes a datetime.datetime object and return two datetime.datetime
-    objects that span the range of the _previous_ month
+    """
+    Take the date passed in, go back a month, and return the range of that
+    previous month
     (2016-12-05 --> 2016-11-01, 2016-11-30)
+
+    :param datetime.datetime date: datetime.datetime object
+    :return tuple: Consists of two datetime.datetime
+    objects that span the range of the _previous_ month
     """
     sd = date.replace(day=1)-datetime.timedelta(days=1)
     return monthrange(sd)
 
 
 def perc(num, den):
+    """
+    Converts fraction to percent
+
+    :param float num: Numerator of fraction
+    :param float den: Denominator of fraction
+    :return float: Returns fraction converted to percentage
+    """
     try:
         return float(num/den) * 100.
     except ZeroDivisionError:
@@ -70,7 +85,12 @@ def perc(num, den):
 
 
 def perc_change(old, new):
-    """Calculates the percentage change between two numbers"""
+    """Calculates the percentage change between two numbers
+
+    :param float old: Baseline number
+    :param float new: Changed number
+    :return float: Percentage change from old to new
+    """
     try:
         return perc(new - old, old)
     except:
@@ -87,7 +107,11 @@ def parse_opts(parser):
 
 
 class VO(object):
-    """Class to hold VO information"""
+    """
+    Class to hold VO information
+
+    :param str voname: Name of VO
+    """
     def __init__(self, voname):
         self.name = voname
         self.sites = {}
@@ -99,7 +123,11 @@ class VO(object):
 
     def add_site(self, sitename, corehours):
         """Add a new site data to the VO.  Also updates the core hours of
-         sitename and the total for the VO"""
+         sitename and the total for the VO
+
+         :param str sitename: Name of site a VO's job set ran on
+         :param float corehours: Core hours in the summary record
+         """
         if not self.current: self.pos = 1
 
         if sitename in self.sites:
@@ -141,11 +169,20 @@ class VO(object):
 
 class OSGPerSiteReporter(Reporter):
     """Class to store information and perform actions for the OSG Per Site
-    Report"""
-    def __init__(self, configuration, start, end, template=False,
+    Report
+
+    :param Configuration.Configuration config: Report Configuration object
+    :param str start: Start time of report range
+    :param str end: End time of report range
+    :param str template: Filename of HTML template to generate report
+    :param bool verbose: Verbose flag
+    :param bool is_test: Whether or not this is a test run.
+    :param bool no_email: If true, don't actually send the email
+    """
+    def __init__(self, config, start, end, template=False,
                      verbose=False, is_test=False, no_email=False):
         report = 'siteusage'
-        Reporter.__init__(self, report, configuration, start, end=end,
+        Reporter.__init__(self, report, config, start, end=end,
                           verbose=verbose, is_test=is_test, no_email=no_email,
                           logfile=logfile, raw=False, template=template)
         self.header = ["Site", "Total", "Opportunistic Total",
@@ -160,7 +197,11 @@ class OSGPerSiteReporter(Reporter):
         self.sitelist = []
 
     def query(self):
-        """Method to define the elasticsearch query for this report"""
+        """Method to query Elasticsearch cluster for Flocking Report
+        information
+
+        :return elasticsearch_dsl.Search: Search object containing ES query
+        """
         startdate = self.dateparse_to_iso(self.start_time)
         enddate = self.dateparse_to_iso(self.end_time)
 
@@ -182,7 +223,12 @@ class OSGPerSiteReporter(Reporter):
         return s
 
     def run_query(self):
-        """Code that runs the ES queries and returns the results"""
+        """Execute the query and check the status code before returning the
+        response
+
+        :return Response.aggregations: Returns aggregations property of
+        elasticsearch response
+        """
         qresults = self.query()
         t = qresults.to_dict()
 
@@ -210,7 +256,10 @@ class OSGPerSiteReporter(Reporter):
     @staticmethod
     def parse_results(results, consumer):
         """Method that parses the result and passes the values to the
-        consumer coroutine"""
+        consumer coroutine
+        :param Response.aggregations results: ES Response object from ES query
+        :param function consumer: Consumer function to pass data to
+        """
         for vo_bucket in results.vo_bucket.buckets:
             vo = vo_bucket['key'].lower()
             for site_bucket in vo_bucket.site_bucket.buckets:
@@ -227,7 +276,8 @@ class OSGPerSiteReporter(Reporter):
 
         # Run our query twice - once for this month, once for last month
         for self.start_time, self.end_time in (
-                monthrange(self.start_time), prev_month_shift(self.start_time)):
+                monthrange(self.start_time),
+                prev_month_shift(self.start_time)):
             results = self.run_query()
             self.parse_results(results, consumer)
             self.current = False
@@ -259,7 +309,11 @@ class OSGPerSiteReporter(Reporter):
         """Report formatter.  Returns a dictionary called report containing the
         columns of the report.
 
-        Note:  Each column here is a VO (or an aggregating column like Total)"""
+        Note:  Each column here is a VO (or an aggregating column like Total)
+
+        :return dict: Constructed dict of report information for
+        Reporter.send_report to send report from
+        """
         report = {}
         sitelist = sorted(self.sitelist)
 
