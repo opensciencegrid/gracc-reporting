@@ -67,7 +67,7 @@ class Efficiency(Reporter):
         """
         Method to query Elasticsearch cluster for EfficiencyReport information
 
-        :return: elasticsearch_dsl.Search object
+        :return elasticsearch_dsl.Search: Search object containing ES query
         """
         # Gather parameters, format them for the query
         starttimeq = self.dateparse_to_iso(self.start_time)

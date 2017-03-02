@@ -51,7 +51,9 @@ def parse_opts(parser):
 def sum_errors(dic):
     """Helper function to sum up number of failed jobs per host.
     Assumes that dic is in the form
-    {"error_code1":count1, "error_code2":count2, etc.}
+
+    :param dict dic: {"error_code1":count1, "error_code2":count2, etc.}
+    :return int: Sum of all values in dic
     """
     return sum(value for key, value in dic.iteritems())
 
@@ -62,6 +64,13 @@ class Jobs:
         self.jobs = {}
 
     def add_job(self, site, job):
+        """
+        Adds job to self.jobs dict
+
+        :param site: OSG site where job ran
+        :param job: Job object that contains info about a job
+        :return: None
+        """
         if site not in self.jobs:
             self.jobs[site] = []
 
@@ -109,7 +118,11 @@ class JobSuccessRateReporter(Reporter):
         return self.config.has_option(self.vo.lower(), 'num_failed_sites')
 
     def query(self):
-        """Method that actually queries elasticsearch"""
+        """
+        Method to query Elasticsearch cluster for EfficiencyReport information
+
+        :return elasticsearch_dsl.Search: Search object containing ES query
+        """
         # Set up our search parameters
         voq = self.config.get(self.vo.lower(), "voname".format(self.vo.lower()))
         productioncheck = '*Role=Production*'
@@ -138,11 +151,22 @@ class JobSuccessRateReporter(Reporter):
         return resultset
 
     def get_job_parts_from_jobid(self, jobid):
+        """
+        Parses the jobid string and grabs the relevant parts to generate
+        Fifemon link
+
+        :param str jobid: GlobalJobId field of a GRACC record
+        :return tuple: Tuple of jobid, schedd
+        """
         return self.jobpattern.match(jobid).groups()
 
     def generate_result_array(self, resultset):
         """Generator.  Compiles results from resultset into array.  Yields each
-        line."""
+        line.
+
+        :param elastisearch_dsl.Search resultset: ES Search object containing
+        query
+        """
         for hit in resultset.scan():
             try:
                 # Parse userid
@@ -241,7 +265,7 @@ class JobSuccessRateReporter(Reporter):
 
         return
 
-    def generate_report_file(self, report=None):
+    def generate_report_file(self):
         """This is the function that creates the report HTML file"""
         total_failed = 0
         if len(self.run.jobs) == 0:
@@ -501,7 +525,7 @@ class JobSuccessRateReporter(Reporter):
 
         return
 
-    def send_report(self, report_type=None):
+    def send_report(self):
         """Method to send emails of report file to intended recipients."""
 
         if self.is_test:
