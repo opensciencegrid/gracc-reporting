@@ -78,7 +78,14 @@ class Jobs:
 
 
 class Job:
-    """Class that holds job information"""
+    """Class that holds job information
+    :param str end_time: End time of job
+    :param str start_time: Start time of job
+    :param str jobid: JobID of job
+    :param str site: Site where job ran
+    :param str host: Host where job ran
+    :param str exit__code: Exit code of job
+    """
     def __init__(self, end_time, start_time, jobid, site, host, exit__code):
         self.end_time = end_time
         self.start_time = start_time
@@ -89,11 +96,22 @@ class Job:
 
 
 class JobSuccessRateReporter(Reporter):
-    """Reporting class for JSR"""
-    def __init__(self, configuration, start, end, vo, template, is_test,
+    """
+    Class to hold information about and run Job Success Rate report.
+
+    :param str config: Filename of configuration File
+    :param str start: Start time of report range
+    :param str end: End time of report range
+    :param str vo: Experiment to run report on
+    :param str template: Filename of HTML template to generate report
+    :param bool is_test: Whether or not this is a test run.
+    :param bool verbose: Verbose flag
+    :param bool no_email: If true, don't actually send the email
+    """
+    def __init__(self, config, start, end, vo, template, is_test,
                  verbose, no_email):
         report = 'JobSuccessRate'
-        Reporter.__init__(self, report, configuration, start, end, verbose,
+        Reporter.__init__(self, report, config, start, end, verbose,
                           is_test=is_test, no_email=no_email, logfile=logfile)
         self.vo = vo
         self.template = template
