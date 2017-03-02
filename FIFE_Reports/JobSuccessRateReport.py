@@ -99,7 +99,7 @@ class JobSuccessRateReporter(Reporter):
     """
     Class to hold information about and run Job Success Rate report.
 
-    :param str config: Filename of configuration File
+    :param Configuration.Configuration config: Report Configuration object
     :param str start: Start time of report range
     :param str end: End time of report range
     :param str vo: Experiment to run report on
