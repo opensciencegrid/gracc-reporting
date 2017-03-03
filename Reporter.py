@@ -16,30 +16,48 @@ from TimeUtils import TimeUtils
 
 
 class ContextFilter(logging.Filter):
-    """This is a class to inject contextual information into the record"""
+    """This is a class to inject contextual information into the record
+
+    :param str vo: VO to inject into Reporter information
+    """
     def __init__(self, vo):
         self.vo = vo
 
     def filter(self, record):
-        """Add vo to record"""
+        """Add vo to record
+
+        :param LogRecord record: Logger record to append info to
+        :return bool: Success or not
+        """
         record.vo = self.vo
         return True
 
 
 class Reporter(TimeUtils):
+    """
+    Base class for all OSG reports
+
+    :param str report: Which report is getting run
+    :param Configuration.Configuration config: Report Configuration object
+    :param str start: Start time of report range
+    :param str end: End time of report range
+    :param bool verbose: Verbose flag
+    :param bool raw: True = Use GRACC raw ES indices;
+        False = use Summary indices)
+    :param bool allraw: True = short-circuit index-pattern optimization and
+        search all raw indices
+    :param str template: Filename of HTML template to inject report data into
+    :param bool is_test: Dry-run or real run
+    :param bool no_email: If true, don't send any emails
+    :param str title: Report title
+    :param str logfile: Filename of log file for report
+    """
     __metaclass__ = abc.ABCMeta
 
     def __init__(self, report, config, start, end=None, verbose=False,
                  raw=True, allraw=False, template=None, is_test=False, no_email=False,
                  title=None, logfile=None):
-        """Constructor for OSGReporter
-        Args:
-                config(Configuration) - configuration file
-                start(str) - start date (YYYY/MM/DD) of the report
-                end(str,optional) - end date (YYYY/MM/DD) of the report,
-                    defaults to 1 month from start date
-                verbose(boolean,optional) - print debug messages to stdout
-        """
+
         TimeUtils.__init__(self)
         self.header = []
         if config:
@@ -57,12 +75,16 @@ class Reporter(TimeUtils):
             self.logfile = logfile
         else:
             self.logfile = 'reports.log'
+        self.email_info = self.__get_email_info()
         self.logger = self.__setupgenLogger()
         self.client = self.__establish_client()
 
     @staticmethod
     def parse_opts():
-        """Parses command line options"""
+        """Parses command line options
+
+        :return: argparse.ArgumentParser object with parsed arguments for report
+        """
         parser = argparse.ArgumentParser()
         parser.add_argument("-c", "--config", dest="config",
                             default=None, help="report configuration file",
@@ -108,7 +130,15 @@ class Reporter(TimeUtils):
 
     def indexpattern_generate(self, raw=True, allraw=False):
         """Returns the Elasticsearch index pattern based on the class
-        variables of start time and end time, and the flags raw and allraw."""
+        variables of start time and end time, and the flags raw and allraw.
+        Note that this doesn't inherit raw and allraw from the instance
+        attributes in case we want to switch these flags without creating a
+        new instance of this class.
+
+        :param bool raw:  Query GRACC raw records (False = query Summary records)
+        :param bool allraw: Short-circuit indexpattern_generate and simply look
+            at all raw records
+        """
         return indexpattern_generate(self.start_time, self.end_time, raw,
                                      allraw)
 
@@ -120,7 +150,7 @@ class Reporter(TimeUtils):
 
         For verbose use, use INFO level or above for messages to show on screen
 
-        Returns logging.getLogger object
+        :return: logging.getLogger object
         """
         logger = logging.getLogger(self.report_type)
         logger.setLevel(logging.DEBUG)
@@ -153,7 +183,10 @@ class Reporter(TimeUtils):
         return logger
 
     def __establish_client(self):
-        """Initialize and return the elasticsearch client"""
+        """Initialize and return the elasticsearch client
+
+        :return: elasticsearch.Elasticsearch object
+        """
         try:
             client = Elasticsearch('https://gracc.opensciencegrid.org/q',
                                    use_ssl=True,
@@ -168,6 +201,43 @@ class Reporter(TimeUtils):
             sys.exit(1)
         else:
             return client
+
+    def __get_email_info(self):
+        """
+        Parses config file to grab email-related information.
+
+        :return dict: Dict of sender, recipient(s), smtphost info
+        """
+        email_info = {}
+
+        # Get recipient(s) info
+        if self.is_test:
+            emails = re.split('[; ,]', self.config.get("email", "test_to_emails"))
+            names = re.split('[; ,]', self.config.get("email", "test_to_names"))
+        else:
+            try:
+                vo = self.vo
+                emails = re.split('[; ,]', self.config.get(vo.lower(), "to_emails") +
+                              ',' + self.config.get("email", "test_to_emails"))
+                names = []
+            except AttributeError:      # No vo-specific info in config file
+                emails = re.split('[; ,]', self.config.get("email",
+                                                           "{0}_to_emails".format(
+                                                               self.report_type))
+                                  + ',' + self.config.get("email", "test_to_emails"))
+                names = re.split('[; ,]', self.config.get("email",
+                                                           "{0}_to_names".format(
+                                                               self.report_type))
+                                  + ',' + self.config.get("email", "test_to_names"))
+
+        email_info["to_emails"] = emails
+        email_info["to_names"] = names
+
+        # Get other global info from config file
+        for key in ("from_email", "from_name", "smtphost"):
+            email_info[key] = self.config.get("email", key)
+
+        return email_info
 
     @abc.abstractmethod
     def query(self):
@@ -185,7 +255,10 @@ class Reporter(TimeUtils):
         pass
 
     def send_report(self, title=None):
-        """Send reports as ascii, csv, html attachments."""
+        """Send reports as ascii, csv, html attachments.
+
+        :param str title: Title of report
+        """
         text = {}
         content = self.format_report()
 
@@ -199,21 +272,8 @@ class Reporter(TimeUtils):
         else:
             use_title = "GRACC Report"
 
-        if self.is_test:
-            emails = re.split('[; ,]', self.config.get("email", "test_to"))
-            names = re.split('[; ,]', self.config.get("email", "test_realname"))
-        else:
-            emails = re.split('[; ,]', self.config.get("email", "{0}_to".format(self.report_type))
-                              + ',' + self.config.get("email", "test_to"))
-            names = re.split('[; ,]', self.config.get("email",
-                                    "{0}_realname".format(self.report_type)))
-
-        if self.no_email:
-            print "no_email flag was used.  Not sending email for this run."
-            print "Would have sent emails to {0}.".format(', '.join(emails))
+        if self.test_no_email(self.email_info["to_emails"]):
             return
-
-        emailfrom = self.config.get("email", "from")
 
         emailReport = TextUtils.TextUtils(self.header)
         text["text"] = emailReport.printAsTextTable("text", content)
@@ -238,9 +298,12 @@ class Reporter(TimeUtils):
         else:
             text["html"] = "<html><body><h2>{0}</h2><table border=1>{1}</table></body></html>".format(use_title, htmldata)
 
-        TextUtils.sendEmail((names, emails), use_title, text,
-                            ("GRACC Operations", emailfrom),
-                            self.config.get("email", "smtphost"),
+        TextUtils.sendEmail((self.email_info["to_names"],
+                             self.email_info["to_emails"]),
+                            use_title, text,
+                            (self.email_info["from_name"],
+                             self.email_info["from_email"]),
+                            self.email_info["smtphost"],
                             html_template=self.template)
         return
 
@@ -253,10 +316,22 @@ class Reporter(TimeUtils):
     @staticmethod
     def sorted_buckets(agg, key=operator.attrgetter('key')):
         """Sorts the Elasticsearch Aggregation buckets based on the key you
-        specify"""
+        specify
+
+        :param agg: Aggregations attribute of ES response containing buckets
+        :param key: Key to sort buckets on
+
+        :return: sorted buckets
+        """
         return sorted(agg.buckets, key=key)
 
     def test_no_email(self, emails):
+        """
+        Checks to see if the no_email flag is True, and takes actions if so.
+
+        :param emails: Emails to print out in info message
+        :return bool: True if no_email=True, False otherwise
+        """
         if self.no_email:
             self.logger.info("Not sending report")
             self.logger.info("Would have sent emails to {0}.".format(
@@ -266,20 +341,27 @@ class Reporter(TimeUtils):
             return False
 
 
-
 def runerror(config, error, traceback):
-    """Global method to email admins if report run errors out"""
-    admin_emails = re.split('[; ,]', config.config.get("email", "test_to"))
+    """
+    Global method to email admins if report run errors out
+
+    :param Configuration.Configuration config: Report config
+    :param str error: Error raised
+    :param str traceback: Traceback from error
+    :return None
+    """
+    admin_emails = re.split('[; ,]', config.config.get("email", "test_to_emails"))
+    fromemail = config.config.get("email", "from_email")
 
     msg = MIMEText("ERROR: {0}\n\n{1}".format(error, traceback))
     msg['Subject'] = "ERROR PRODUCING REPORT: Date Generated {0}".format(
         datetime.now())
-    msg['From'] = 'sbhat@fnal.gov'
+    msg['From'] = fromemail
     msg['To'] = ', '.join(admin_emails)
 
     try:
-        s = smtplib.SMTP('smtp.fnal.gov')
-        s.sendmail('sbhat@fnal.gov', admin_emails, msg.as_string())
+        s = smtplib.SMTP(config.config.get("email", "smtphost"))
+        s.sendmail(fromemail, admin_emails, msg.as_string())
         s.quit()
         print "Successfully sent error email"
     except Exception as e:
