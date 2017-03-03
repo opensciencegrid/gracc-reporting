@@ -561,7 +561,7 @@ class JobSuccessRateReporter(Reporter):
                              self.email_info["from_email"]),
                             self.email_info["smtphost"])
 
-        self.logger.info("Sent Report for {0}".format(self.vo)) # Perhaps move this to decorator that checks no_email flag?
+        self.logger.info("Sent Report for {0}".format(self.vo))
         return
 
     def run_report(self):
