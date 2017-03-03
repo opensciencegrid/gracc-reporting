@@ -80,6 +80,12 @@ class Efficiency(Reporter):
                                          self.start_time.replace("/", "-"))
         self.cilogon_match = re.compile('.+CN=UID:(\w+)')
         self.non_cilogon_match = re.compile('/CN=([\w\s]+)/?.+?')
+        self.title =  "{0} Jobs with Low Efficiency ({1}) on the  OSG Sites " \
+                      "({2} - {3})".format(
+                                self.vo,
+                                self.eff_limit,
+                                self.start_time,
+                                self.end_time)
 
     def query(self):
         """
@@ -235,12 +241,7 @@ class Efficiency(Reporter):
         TextUtils.sendEmail(
                             (self.email_info["to_names"],
                              self.email_info["to_emails"]),
-                            "{0} Jobs with Low Efficiency ({1}) "
-                            "on the  OSG Sites ({2} - {3})".format(
-                                self.vo,
-                                self.eff_limit,
-                                self.start_time,
-                                self.end_time),
+                            self.title,
                             {"html": self.text},
                             (self.email_info["from_name"],
                              self.email_info["from_email"]),
