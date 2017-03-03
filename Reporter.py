@@ -170,25 +170,11 @@ class Reporter(TimeUtils):
         else:
             return client
 
-    @abc.abstractmethod
-    def query(self):
-        """Method to define report's Elasticsearch query. Must be overridden"""
-        pass
-
-    def generate_report_file(self):
-        """Method to generate the report file, if format_report below is not
-        used."""
-        pass
-
-    def format_report(self):
-        """Method to be overridden by reports that need simultaneous
-        CSV and HTML generation"""
-        pass
-
     def __get_email_info(self):
         """
+        Parses config file to grab email-related information.
 
-        :return:
+        :return dict: Dict of sender, recipient(s), smtphost info
         """
         email_info = {}
 
@@ -220,6 +206,21 @@ class Reporter(TimeUtils):
             email_info[key] = self.config.get("email", key)
 
         return email_info
+
+    @abc.abstractmethod
+    def query(self):
+        """Method to define report's Elasticsearch query. Must be overridden"""
+        pass
+
+    def generate_report_file(self):
+        """Method to generate the report file, if format_report below is not
+        used."""
+        pass
+
+    def format_report(self):
+        """Method to be overridden by reports that need simultaneous
+        CSV and HTML generation"""
+        pass
 
     def send_report(self, title=None):
         """Send reports as ascii, csv, html attachments."""
