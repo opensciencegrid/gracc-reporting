@@ -67,10 +67,10 @@ class Efficiency(Reporter):
                  facility, template, is_test=False, no_email=False,
                  verbose=False):
         report = 'Efficiency'
+        self.vo = vo
         Reporter.__init__(self, report, config, start, end, verbose=verbose,
                           logfile=logfile, no_email=no_email, is_test=is_test)
         self.hour_limit = hour_limit
-        self.vo = vo
         self.eff_limit = eff_limit
         self.facility = facility
         self.template = template
@@ -229,17 +229,12 @@ class Efficiency(Reporter):
 
         :return: None
         """
-        if self.is_test:
-            emails = re.split('[; ,]', self.config.get("email", "test_to"))
-        else:
-            emails = re.split('[; ,]', self.config.get(self.vo.lower(), "email") +
-                              ',' + self.config.get("email", "test_to"))
-
-        if self.test_no_email(emails):
+        if self.test_no_email(self.email_info["to_emails"]):
             return
 
         TextUtils.sendEmail(
-                            ([], emails),
+                            (self.email_info["to_names"],
+                             self.email_info["to_emails"]),
                             "{0} Jobs with Low Efficiency ({1}) "
                             "on the  OSG Sites ({2} - {3})".format(
                                 self.vo,
@@ -247,9 +242,9 @@ class Efficiency(Reporter):
                                 self.start_time,
                                 self.end_time),
                             {"html": self.text},
-                            (self.config.get("email", "realname_from"),
-                             self.config.get("email", "from")),
-                            self.config.get("email", "smtphost"))
+                            (self.email_info["from_name"],
+                             self.email_info["from_email"]),
+                            self.email_info["smtphost"])
 
         self.logger.info("Report sent for {0}".format(self.vo))
 

@@ -57,6 +57,7 @@ class Reporter(TimeUtils):
             self.logfile = logfile
         else:
             self.logfile = 'reports.log'
+        self.email_info = self.__get_email_info()
         self.logger = self.__setupgenLogger()
         self.client = self.__establish_client()
 
@@ -183,6 +184,42 @@ class Reporter(TimeUtils):
         """Method to be overridden by reports that need simultaneous
         CSV and HTML generation"""
         pass
+
+    def __get_email_info(self):
+        """
+
+        :return:
+        """
+        email_info = {}
+
+        # Get recipient(s) info
+        if self.is_test:
+            emails = re.split('[; ,]', self.config.get("email", "test_to_emails"))
+            names = re.split('[; ,]', self.config.get("email", "test_to_names"))
+        else:
+            try:
+                vo = self.vo
+                emails = re.split('[; ,]', self.config.get(vo.lower(), "to_emails") +
+                              ',' + self.config.get("email", "test_to_emails"))
+                names = []
+            except AttributeError:      # No vo-specific info in config file
+                emails = re.split('[; ,]', self.config.get("email",
+                                                           "{0}_to_emails".format(
+                                                               self.report_type))
+                                  + ',' + self.config.get("email", "test_to_emails"))
+                names = re.split('[; ,]', self.config.get("email",
+                                                           "{0}_to_names".format(
+                                                               self.report_type))
+                                  + ',' + self.config.get("email", "test_to_names"))
+
+        email_info["to_emails"] = emails
+        email_info["to_names"] = names
+
+        # Get other global info from config file
+        for key in ("from_email", "from_name", "smtphost"):
+            email_info[key] = self.config.get("email", key)
+
+        return email_info
 
     def send_report(self, title=None):
         """Send reports as ascii, csv, html attachments."""
