@@ -551,8 +551,6 @@ class JobSuccessRateReporter(Reporter):
     def send_report(self):
         """Method to send emails of report file to intended recipients."""
         if self.test_no_email(self.email_info["to_emails"]):
-            if os.path.exists(self.fn):     # move this to run_report method
-                os.unlink(self.fn)  # Delete HTML file
             return
 
         TextUtils.sendEmail((self.email_info["to_names"],
@@ -562,8 +560,6 @@ class JobSuccessRateReporter(Reporter):
                             (self.email_info["from_name"],
                              self.email_info["from_email"]),
                             self.email_info["smtphost"])
-        if os.path.exists(self.fn):     # With line 555 proposed change, won't need this
-            os.unlink(self.fn)  # Delete HTML file
 
         self.logger.info("Sent Report for {0}".format(self.vo)) # Perhaps move this to decorator that checks no_email flag?
         return
@@ -573,6 +569,9 @@ class JobSuccessRateReporter(Reporter):
         self.generate()
         self.generate_report_file()
         self.send_report()
+
+        if os.path.exists(self.fn):
+            os.unlink(self.fn)  # Delete HTML file
 
 
 if __name__ == "__main__":
