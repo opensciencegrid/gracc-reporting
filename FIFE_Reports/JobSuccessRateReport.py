@@ -129,6 +129,11 @@ class JobSuccessRateReporter(Reporter):
         self.fn = "{0}-jobrate.{1}".format(self.vo.lower(),
                                            self.start_time.replace("/", "-"))
         self.limit_sites = self.limit_site_check()
+        self.title = "{0} Production Jobs Success Rate on the OSG Sites " \
+                     "({1} - {2})".format(
+                                self.vo,
+                                self.start_time,
+                                self.end_time)
 
     def limit_site_check(self):
         """Check to see if the num_failed_sites option is set in the config
@@ -552,10 +557,7 @@ class JobSuccessRateReporter(Reporter):
 
         TextUtils.sendEmail((self.email_info["to_names"],
                              self.email_info["to_emails"]),
-                            "{0} Production Jobs Success Rate on the OSG Sites ({1} - {2})".format(
-                                self.vo,
-                                self.start_time,
-                                self.end_time),
+                            self.title,
                             {"html": self.text},
                             (self.email_info["from_name"],
                              self.email_info["from_email"]),
