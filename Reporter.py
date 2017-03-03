@@ -294,20 +294,20 @@ class Reporter(TimeUtils):
             return False
 
 
-
 def runerror(config, error, traceback):
     """Global method to email admins if report run errors out"""
-    admin_emails = re.split('[; ,]', config.config.get("email", "test_emails_to"))
+    admin_emails = re.split('[; ,]', config.config.get("email", "test_to_emails"))
+    fromemail = config.config.get("email", "from_email")
 
     msg = MIMEText("ERROR: {0}\n\n{1}".format(error, traceback))
     msg['Subject'] = "ERROR PRODUCING REPORT: Date Generated {0}".format(
         datetime.now())
-    msg['From'] = 'sbhat@fnal.gov'
+    msg['From'] = fromemail
     msg['To'] = ', '.join(admin_emails)
 
     try:
-        s = smtplib.SMTP('smtp.fnal.gov')
-        s.sendmail('sbhat@fnal.gov', admin_emails, msg.as_string())
+        s = smtplib.SMTP(config.config.get("email", "smtphost"))
+        s.sendmail(fromemail, admin_emails, msg.as_string())
         s.quit()
         print "Successfully sent error email"
     except Exception as e:
