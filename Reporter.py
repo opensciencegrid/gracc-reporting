@@ -237,21 +237,8 @@ class Reporter(TimeUtils):
         else:
             use_title = "GRACC Report"
 
-        if self.is_test:
-            emails = re.split('[; ,]', self.config.get("email", "test_to"))
-            names = re.split('[; ,]', self.config.get("email", "test_realname"))
-        else:
-            emails = re.split('[; ,]', self.config.get("email", "{0}_to".format(self.report_type))
-                              + ',' + self.config.get("email", "test_to"))
-            names = re.split('[; ,]', self.config.get("email",
-                                    "{0}_realname".format(self.report_type)))
-
-        if self.no_email:
-            print "no_email flag was used.  Not sending email for this run."
-            print "Would have sent emails to {0}.".format(', '.join(emails))
+        if self.test_no_email(self.email_info["to_emails"]):
             return
-
-        emailfrom = self.config.get("email", "from")
 
         emailReport = TextUtils.TextUtils(self.header)
         text["text"] = emailReport.printAsTextTable("text", content)
@@ -276,9 +263,12 @@ class Reporter(TimeUtils):
         else:
             text["html"] = "<html><body><h2>{0}</h2><table border=1>{1}</table></body></html>".format(use_title, htmldata)
 
-        TextUtils.sendEmail((names, emails), use_title, text,
-                            ("GRACC Operations", emailfrom),
-                            self.config.get("email", "smtphost"),
+        TextUtils.sendEmail((self.email_info["to_names"],
+                             self.email_info["to_emails"]),
+                            use_title, text,
+                            (self.email_info["from_name"],
+                             self.email_info["from_email"]),
+                            self.email_info["smtphost"],
                             html_template=self.template)
         return
 
