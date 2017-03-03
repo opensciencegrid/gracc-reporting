@@ -529,15 +529,10 @@ class ProbeReport(Reporter):
 
     def send_report(self):
         """Send our emails"""
-        if self.is_test:
-            emails = re.split('[; ,]',self.config.get("email", "test_to"))
-        else:
-            emails = re.split('[; ,]', self.config.get("email", "{0}_to".format(self.report_type))
-                              + ',' + self.config.get("email", "test_to"))
+        emailfrom = self.email_info["from_email"]
+        emailsto = self.email_info["to_emails"]
 
-        emailfrom = self.config.get("email", "from")
-
-        if self.test_no_email(emails):
+        if self.test_no_email(emailsto):
             self.logger.info("Resource name: {0}\tProbe Name: {1}"
                              .format(self.resource, self.probe))
 
@@ -549,13 +544,14 @@ class ProbeReport(Reporter):
         with open(self.emailfile, 'rb') as fp:
             msg = MIMEText(fp.read())
 
-        msg['To'] = ', '.join(emails)
-        msg['From'] = email.utils.formataddr(('GRACC Operations', emailfrom))
+        msg['To'] = ', '.join(emailsto)
+        msg['From'] = email.utils.formataddr((self.email_info["from_name"],
+                                              emailfrom))
         msg['Subject'] = self.emailsubject()
 
         try:
-            smtpObj = smtplib.SMTP(self.config.get('email', 'smtphost'))
-            smtpObj.sendmail(emailfrom, emails, msg.as_string())
+            smtpObj = smtplib.SMTP(self.email_info["smtphost"])
+            smtpObj.sendmail(emailfrom, emailsto, msg.as_string())
             smtpObj.quit()
             self.logger.info("Sent Email for {0}".format(self.resource))
             os.unlink(self.emailfile)
