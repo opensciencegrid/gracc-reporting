@@ -297,7 +297,7 @@ class Reporter(TimeUtils):
 
 def runerror(config, error, traceback):
     """Global method to email admins if report run errors out"""
-    admin_emails = re.split('[; ,]', config.config.get("email", "test_to"))
+    admin_emails = re.split('[; ,]', config.config.get("email", "test_emails_to"))
 
     msg = MIMEText("ERROR: {0}\n\n{1}".format(error, traceback))
     msg['Subject'] = "ERROR PRODUCING REPORT: Date Generated {0}".format(
