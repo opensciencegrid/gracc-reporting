@@ -265,6 +265,7 @@ class WastedHoursReport(Reporter):
                     total_hrs += (user.success[1] + user.failure[1])
                     total_jobs += (user.success[0] + user.failure[0])
         self.text = "".join(open(self.template).readlines())
+        self.text = self.text.replace("$TITLE", self.title)
         self.text = self.text.replace("$START", self.start_time)
         self.text = self.text.replace("$END", self.end_time)
         self.text = self.text.replace("$TABLE", table)
