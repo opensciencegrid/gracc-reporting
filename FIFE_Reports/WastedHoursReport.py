@@ -135,6 +135,8 @@ class WastedHoursReport(Reporter):
         self.text = ''
         self.fn = "user_wasted_hours_report.{0}".format(
             self.end_time.split(" ")[0].replace("/", "-"))
+        self.title = "{0:s} Wasted Hours on GPGrid ({1:s} - {2:s})"\
+                            .format("FIFE", self.start_time, self.end_time)
 
     def query(self):
         """
@@ -281,24 +283,16 @@ class WastedHoursReport(Reporter):
 
         :return: None
         """
-        # emails = ""
-
-        if self.is_test:
-            emails = self.config.get("email", "test_to").split(", ")
-        else:
-            emails = self.config.get("email", "{0}_email".format(self.vo.lower())).split(",")\
-                     + self.config.get("email", "test_to").split(",")
-
-        if self.test_no_email(emails):
+        if self.test_no_email(self.email_info["to_emails"]):
             return
 
-        TextUtils.sendEmail(([], emails),
-                            "{0:s} Wasted Hours on the GPGrid ({1:s} - {2:s})"\
-                            .format("FIFE", self.start_time, self.end_time),
+        TextUtils.sendEmail((self.email_info["to_names"],
+                             self.email_info["to_emails"]),
+                            self.title,
                             {"html": self.text},
-                            (self.config.get("email", "realname_from"),
-                             self.config.get("email", "from")),
-                            self.config.get("email", "smtphost"))
+                            (self.email_info["from_name"],
+                             self.email_info["from_email"]),
+                            self.email_info["smtphost"])
         return
 
     def run_report(self):
