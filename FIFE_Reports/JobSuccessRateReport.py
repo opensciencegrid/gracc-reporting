@@ -111,9 +111,9 @@ class JobSuccessRateReporter(Reporter):
     def __init__(self, config, start, end, vo, template, is_test,
                  verbose, no_email):
         report = 'JobSuccessRate'
+        self.vo = vo
         Reporter.__init__(self, report, config, start, end, verbose,
                           is_test=is_test, no_email=no_email, logfile=logfile)
-        self.vo = vo
         self.template = template
         self.title = "Production Jobs Success Rate {0} - {1}".format(
             self.start_time, self.end_time)
@@ -545,31 +545,25 @@ class JobSuccessRateReporter(Reporter):
 
     def send_report(self):
         """Method to send emails of report file to intended recipients."""
-
-        if self.is_test:
-            emails = re.split('[; ,]', self.config.get("email", "test_to"))
-        else:
-            emails = re.split('[; ,]', self.config.get(self.vo.lower(), "email")
-                              + ',' + self.config.get("email", "test_to"))
-
-        if self.test_no_email(emails):
-            if os.path.exists(self.fn):
+        if self.test_no_email(self.email_info["to_emails"]):
+            if os.path.exists(self.fn):     # move this to run_report method
                 os.unlink(self.fn)  # Delete HTML file
             return
 
-        TextUtils.sendEmail(([], emails),
+        TextUtils.sendEmail((self.email_info["to_names"],
+                             self.email_info["to_emails"]),
                             "{0} Production Jobs Success Rate on the OSG Sites ({1} - {2})".format(
                                 self.vo,
                                 self.start_time,
                                 self.end_time),
                             {"html": self.text},
-                            (self.config.get("email", "realname_from"),
-                             self.config.get("email", "from")),
-                            self.config.get("email", "smtphost"))
-        if os.path.exists(self.fn):
+                            (self.email_info["from_name"],
+                             self.email_info["from_email"]),
+                            self.email_info["smtphost"])
+        if os.path.exists(self.fn):     # With line 555 proposed change, won't need this
             os.unlink(self.fn)  # Delete HTML file
 
-        self.logger.info("Sent Report for {0}".format(self.vo))
+        self.logger.info("Sent Report for {0}".format(self.vo)) # Perhaps move this to decorator that checks no_email flag?
         return
 
     def run_report(self):
