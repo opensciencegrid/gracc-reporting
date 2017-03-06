@@ -26,12 +26,29 @@ from Reporter import Reporter, runerror
 logfile = 'osgflockingreport.log'
 
 
+@Reporter.init_reporter_parser
+def parse_opts(parser):
+    """
+    Don't need to add any options to Reporter.parse_opts
+    """
+    pass
+
+
 class FlockingReport(Reporter):
-    """Class to generate the probe report"""
-    def __init__(self, configuration, start, end, template=False,
+    """Class to hold information for and to run OSG Flocking report
+
+    :param Configuration.Configuration config: Report Configuration object
+    :param str start: Start time of report range
+    :param str end: End time of report range
+    :param str template: Filename of HTML template to generate report
+    :param bool verbose: Verbose flag
+    :param bool is_test: Whether or not this is a test run.
+    :param bool no_email: If true, don't actually send the email
+    """
+    def __init__(self, config, start, end, template=False,
                  verbose=False, is_test=False, no_email=False):
         report = 'Flocking'
-        Reporter.__init__(self, report, configuration, start, end=end,
+        Reporter.__init__(self, report, config, start, end=end,
                           template=template, verbose=verbose,
                           no_email=no_email, raw=False, logfile=logfile)
         self.verbose = verbose
@@ -41,10 +58,12 @@ class FlockingReport(Reporter):
         self.header = ["VOName", "SiteName", "ProbeName", "ProjectName",
                        "Wall Hours"]
 
-    @property
     def query(self):
         """Method to query Elasticsearch cluster for Flocking Report
-        information"""
+        information
+
+        :return elasticsearch_dsl.Search: Search object containing ES query
+        """
         # Gather parameters, format them for the query
         starttimeq = self.dateparse_to_iso(self.start_time)
         endtimeq = self.dateparse_to_iso(self.end_time)
@@ -75,8 +94,13 @@ class FlockingReport(Reporter):
         return s
 
     def run_query(self):
-        """Execute the query and check the status code before returning the response"""
-        s = self.query
+        """Execute the query and check the status code before returning the
+        response
+
+        :return Response.aggregations: Returns aggregations property of
+        elasticsearch response
+        """
+        s = self.query()
         t = s.to_dict()
         if self.verbose:
             print json.dumps(t, sort_keys=True, indent=4)
@@ -97,6 +121,8 @@ class FlockingReport(Reporter):
     def generate(self):
         """Higher-level generator method that calls the lower-level functions
         to generate the raw data for this report.
+
+        Yields rows of raw data
         """
         results = self.run_query()
 
@@ -112,9 +138,11 @@ class FlockingReport(Reporter):
                         yield (sitekey, vokey, probekey, project.key, project.CoreHours_sum.value)
 
     def format_report(self):
-        """Takes the results from the elasticsearch query and returns a dict
-        that can be used by the Reporter.send_report method to generate HTML,
-        CSV, and plain text output"""
+        """Report formatter.  Returns a dictionary called report containing the
+        columns of the report.
+
+        :return dict: Constructed dict of report information for
+        Reporter.send_report to send report from"""
         report = {}
         for name in self.header:
             if name not in report:
@@ -138,7 +166,7 @@ class FlockingReport(Reporter):
 
 
 def main():
-    args = Reporter.parse_opts()
+    args = parse_opts()
 
     # Set up the configuration
     config = Configuration.Configuration()

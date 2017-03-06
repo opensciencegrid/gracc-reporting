@@ -21,7 +21,7 @@ set_dates $1
 cd /home/gratia/gracc_email_reports/FIFE_Reports
 echo "START" `date` >> efficiencyreport_run.log
 
-./EfficiencyReporterPerVO.py -F GPGrid -c efficiency.config -E $vo -s "$starttime" -e "$endtime"
+./EfficiencyReporterPerVO.py -F GPGrid -c efficiency.config -E $vo -s "$starttime" -e "$endtime" -T template_efficiency.html
 
 if [ $? -ne 0 ]
 then
