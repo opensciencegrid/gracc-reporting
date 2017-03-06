@@ -5,6 +5,9 @@ import inspect
 import re
 import json
 import traceback
+import smtplib
+import email.utils
+from email.mime.text import MIMEText
 import sys
 import copy
 
@@ -45,6 +48,7 @@ class MissingProjectReport(Reporter):
         #     self.logger.exception(e)
         self.report_type = report_type
         self.logger.info("Report Type: {0}".format(self.report_type))
+        self.fname = 'OIM_Project_Name_Request_for_{0}'.format(self.report_type)
 
     def query(self):
         """
@@ -163,7 +167,7 @@ class MissingProjectReport(Reporter):
             #     yield p_object
             # else:       # What to do for N/A/ stuff?
             #     pass
-
+        self.send_email_to_OSG_support()
     #
     # @staticmethod
     # def no_name(name):
@@ -184,7 +188,8 @@ class MissingProjectReport(Reporter):
         p_name = data['RawProjectName']
         if PNC.no_name(p_name):
             print "No Name!"
-            PNC.create_request_to_register_oim(p_name, self.report_type)        # Probably need different method to handle these.  Talk to Tanya
+            PNC.create_request_to_register_oim(p_name, self.report_type)
+            # self.send_email_to_OSG_support(fname)# Probably need different method to handle these.  Talk to Tanya
             # Want to email OSG Support about this record
             return None
         elif self.check_osg_or_osg_connect(data):
@@ -198,6 +203,27 @@ class MissingProjectReport(Reporter):
             # print p_object.__class__
             # print p_object.get_project_name(),p_object.get_pi(),p_object.get_institution(),p_object.get_fos()
             return PNC.get_project(p_name, source=self.report_type)
+
+    def send_email_to_OSG_support(self, fname):
+        """
+
+        :return:
+        """
+        COMMASPACE = ', '
+
+        try:
+            smtpObj = smtplib.SMTP(self.config.get('email', 'smtphost'))
+        except Exception as e:
+            self.logger.error(e)
+            return
+
+        with open(self.fname, 'r') as f:
+            msg = MIMEText(f.read())
+
+
+
+
+
 
 
 if __name__ == '__main__':

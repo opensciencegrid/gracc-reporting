@@ -146,21 +146,27 @@ class ProjectNameCollector:
             p(Project) - project
         """
         if source == "XD" and name.startswith("TG-"):
-            f = open("OIM_Project_Name_Request_for_XD", "a")
-            f.write("****************START****************\n")
-            f.write("ProjectName: %s\nPI: %s\nEmail: %s\nInstitution: %s\nDepartment: %s\nField of Science: %s\nDescription: %s\n" %
-                    (name, p.get_pi(), p.get_email(), p.get_institution(), p.get_department(), p.get_fos(),
-                     p.get_abstract()))
-            f.write("****************END****************\n")
-            f.close()
+            filename = "OIM_Project_Name_Request_for_XD"
+            with open(filename, 'a') as f:
+                f.write("****************START****************\n")
+                f.write(
+                    "ProjectName: {0}\nPI: {1}\nEmail: {2}\nInstitution: {3}"
+                    "\nDepartment: {4}\nField of Science: {5}\nDescription: {6}"
+                    "\n".format(name, p.get_pi(), p.get_email(),
+                                p.get_institution(), p.get_department(),
+                                p.get_fos(),p.get_abstract()))
+                f.write("****************END****************\n")
         # elif self.no_name(name):
             # Send email to OSG support with record info. Maybe this needs to be in MissingProject.py
             # pass
         else:
-            f = open("OIM_Project_Name_Request_for_%s" % (source,), "a")
-            f.write("Project names that are reported from %s but not registered in OIM\n" % (source, ))
-            f.write("ProjectName: %s\n" % (name,))
-            f.close()
+            filename = "OIM_Project_Name_Request_for_{0}".format(source)
+            with open(filename, 'a') as f:
+                f.write("Project names that are reported from {0} but not "
+                        "registered in OIM\n".format(source))
+                f.write("ProjectName: {0}\n".format(name))
+
+        return filename
 
     @staticmethod
     def no_name(name):
