@@ -212,13 +212,22 @@ class MissingProjectReport(Reporter):
         COMMASPACE = ', '
 
         try:
-            smtpObj = smtplib.SMTP(self.config.get('email', 'smtphost'))
+            smtpObj = smtplib.SMTP(self.email_info['smtphost'])
         except Exception as e:
             self.logger.error(e)
             return
 
         with open(self.fname, 'r') as f:
             msg = MIMEText(f.read())
+
+        to_stage = [email.utils.formataddr(pair) for pair in zip(self.email_info['to_names'], self.email_info['to_emails'])]
+
+        msg['Subject'] = "Test to OSG Support"
+        msg['To'] = COMMASPACE.join(self.email_info['to_emails'])
+        msg['From'] = email.utils.formataddr((self.email_info['from_name'],
+                                              self.email_info['from_email']))
+
+
 
 
 
