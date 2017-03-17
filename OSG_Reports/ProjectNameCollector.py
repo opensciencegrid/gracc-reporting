@@ -106,7 +106,7 @@ class ProjectNameCollector:
         if source == "XD":
             xd = XDProject(name, self.config, self.verbose)
             if not xd.execute_query(url_type='project'):
-                    # Email Mats about this project
+                    # Email Mats about this project.  New method
                     print "This project is not in XD database ", name
             else:
                 # Put the information in request file, will be sent later
@@ -138,15 +138,19 @@ class ProjectNameCollector:
     #     except:
     #         print >>sys.stderr, "Failed add to cache", self.cache
 
-    def create_request_to_register_oim(self, name, source, p=None):
+    def create_request_to_register_oim(self, name, source, p=None, altfile=None):
         """Creates file with information related to project that will be sent later to OSG secretary
         Args:
             name(str) - project name
             source(str) - XD, OSG, or  OSG-Connect"
             p(Project) - project
         """
+        if not altfile:
+            filename = "OIM_Project_Name_Request_for_{0}".format(source)
+        else:
+            filename = altfile
+
         if source == "XD" and name.startswith("TG-"):
-            filename = "OIM_Project_Name_Request_for_XD"
             with open(filename, 'a') as f:
                 f.write("****************START****************\n")
                 f.write(
@@ -160,7 +164,6 @@ class ProjectNameCollector:
             # Send email to OSG support with record info. Maybe this needs to be in MissingProject.py
             # pass
         else:
-            filename = "OIM_Project_Name_Request_for_{0}".format(source)
             with open(filename, 'a') as f:
                 f.write("Project names that are reported from {0} but not "
                         "registered in OIM\n".format(source))
@@ -170,7 +173,7 @@ class ProjectNameCollector:
 
     @staticmethod
     def no_name(name):
-        return name == 'N/A' or name == "UNKNOWN"
+        return name == 'N/A' or name.upper() == "UNKNOWN"
 
 
 def parse_opts():

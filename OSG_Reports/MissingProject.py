@@ -32,6 +32,21 @@ from ProjectNameCollector import ProjectNameCollector
 
 MAXINT = 2**31 - 1
 
+
+@Reporter.init_reporter_parser
+def parse_opts(parser):
+    """
+    Specific argument parser for this report.  The decorator initializes the
+    argparse.ArgumentParser object, calls this function on that object to
+    modify it, and then returns the Namespace from that object.
+    :param parser: argparse.ArgumentParser object that we intend to add to
+    :return: None
+    """
+    # Report-specific args
+    parser.add_argument("-r", "--report-type", dest="report_type",
+                        help="Report type (OSG, XD. or OSG-Connect")
+
+
 class MissingProjectReport(Reporter):
     def __init__(self, report_type, config, start, end=None,
                  verbose=False, no_email=False, is_test=False):
@@ -49,6 +64,8 @@ class MissingProjectReport(Reporter):
         self.report_type = report_type
         self.logger.info("Report Type: {0}".format(self.report_type))
         self.fname = 'OIM_Project_Name_Request_for_{0}'.format(self.report_type)
+        self.fadminname = 'OIM_Admin_email_for_{0}'.format(self.report_type)
+        self.fxdadminname = 'OIM_XD_Admin_email_for_{0}'.format(self.report_type)
 
     def query(self):
         """
@@ -167,11 +184,12 @@ class MissingProjectReport(Reporter):
             #     yield p_object
             # else:       # What to do for N/A/ stuff?
             #     pass
-        self.send_email_to_OSG_support()
-    #
-    # @staticmethod
-    # def no_name(name):
-    #     return name == 'N/A' or name == "UNKNOWN"
+        for pair in ((self.fadminname, True, False),
+                     (self.fname, False, False),
+                     (self.fxdadminname, False, True)):
+            if os.path.exists(pair[0]):
+                self.send_email(admins=pair[1], xd_admins=pair[2])
+                os.unlink(pair[0])
 
     def check_osg_or_osg_connect(self, data):
         return ((self.report_type == 'OSG-Connect')
@@ -185,31 +203,98 @@ class MissingProjectReport(Reporter):
         :return:
         """
         PNC = ProjectNameCollector(self.config)
-        p_name = data['RawProjectName']
+
+        try:
+            p_name = data['RawProjectName']
+        except AttributeError:
+            pass    # What to do if no RawProjectName?
+
         if PNC.no_name(p_name):
             print "No Name!"
-            PNC.create_request_to_register_oim(p_name, self.report_type)
-            # self.send_email_to_OSG_support(fname)# Probably need different method to handle these.  Talk to Tanya
-            # Want to email OSG Support about this record
-            return None
+            self.write_noname_message(data)
+            return
         elif self.check_osg_or_osg_connect(data):
-            # Email Tanya, Rob, myself, etc. about why this isn't registered
-            pass
-        else:
-            # Do checks like in ProjectNameCollector
-            # This was just a check - delete when committing
-            # PNC2 =  ProjectNameCollector(self.config)
-            # p_object = PNC2.get_project('TG-ENG150008', source=self.report_type)
-            # print p_object.__class__
-            # print p_object.get_project_name(),p_object.get_pi(),p_object.get_institution(),p_object.get_fos()
-            return PNC.get_project(p_name, source=self.report_type)
+            print "OSG-Connect flag"
+            PNC.create_request_to_register_oim(p_name, self.report_type, altfile=self.fadminname)
+            return
+        else:   # We found project info in ProjectNameCollector - XD project
+            print "something else"
+            p_info = PNC.get_project(p_name, source=self.report_type)
+            # PNC.create_request_to_register_oim(p_name, self.report_type)
+            if p_info:
+                # Pass the project info back
+                return
+            else:
+                self.write_XD_not_in_db_message(p_name)
+            return
 
-    def send_email_to_OSG_support(self, fname):
+
+    def write_XD_not_in_db_message(self, name):
         """
+
+        :param name:
+        :return:
+        """
+        msg = "The project {0} that was reported in Payload records to GRACC" \
+              " is not registered in the XD database.  Please investigate and" \
+              " register it if it is needed.\n".format(name)
+
+        with open(self.fxdadminname, 'a') as f:
+            f.write(msg)
+
+        return
+
+
+    def write_noname_message(self, data):
+        """
+        Message to be sent to GOC for records with no project name.
+
+        :param data:
+        :return:
+        """
+        msg = "Payload records dated between {start} and {end} with:\n" \
+              "\t Host description: {hd}\n" \
+              "\t VOName: {vo}\n" \
+              "\t ProbeName: {probe}\n" \
+              "were reported with no ProjectName to GRACC.  Please " \
+              "investigate.\n\n".format(start=self.start_time,
+                                        end=self.end_time,
+                                        hd=data['Host_description'],
+                                        vo=data['VOName'],
+                                        probe=data['ProbeName'])
+
+        with open(self.fname, 'a') as f:
+            f.write(msg)
+
+        return
+
+
+    def send_email(self, admins=False, xd_admins=False):
+        """
+        Sets email parameters and sends email
 
         :return:
         """
         COMMASPACE = ', '
+        # emailfrom = self.email_info["from_email"]
+
+        if admins:
+            self.email_info["to_emails"] = \
+                self.config.get('email', 'osg-connect_to_emails').split(',')
+            self.email_info["to_names"] = \
+                self.config.get('email', 'osg-connect_to_names').split(',')
+            fname = self.fadminname
+        elif xd_admins:
+            self.email_info["to_emails"] = \
+                self.config.get('email', 'xd_admins_to_emails').split(
+                    ',')
+            self.email_info["to_names"] = \
+                self.config.get('email', 'xd_admins_to_names').split(',')
+            fname = self.fxdadminname
+        else:
+            fname = self.fname
+
+        # print emailsto
 
         try:
             smtpObj = smtplib.SMTP(self.email_info['smtphost'])
@@ -217,26 +302,36 @@ class MissingProjectReport(Reporter):
             self.logger.error(e)
             return
 
-        with open(self.fname, 'r') as f:
+        with open(fname, 'r') as f:
             msg = MIMEText(f.read())
 
-        to_stage = [email.utils.formataddr(pair) for pair in zip(self.email_info['to_names'], self.email_info['to_emails'])]
+        to_stage = [email.utils.formataddr(pair)
+                    for pair in zip(
+                self.email_info['to_names'],
+                self.email_info['to_emails'])]
 
         msg['Subject'] = "Test to OSG Support"
-        msg['To'] = COMMASPACE.join(self.email_info['to_emails'])
+        msg['To'] = COMMASPACE.join(to_stage)
         msg['From'] = email.utils.formataddr((self.email_info['from_name'],
                                               self.email_info['from_email']))
 
+        try:
+            smtpObj = smtplib.SMTP(self.email_info["smtphost"])
+            smtpObj.sendmail(
+                self.email_info['from_email'],
+                self.email_info['to_emails'],
+                msg.as_string())
+            smtpObj.quit()
+            # self.logger.info("Sent Email for {0}".format(self.resource))
+            # os.unlink(self.emailfile)
+        except Exception as e:
+            self.logger.exception("Error:  unable to send email.\n{0}\n".format(e))
+            raise
 
-
-
-
-
-
-
+        return
 
 if __name__ == '__main__':
-    args = Reporter.parse_opts()
+    args = parse_opts()
 
     config = Configuration.Configuration()
     config.configure(args.config)
