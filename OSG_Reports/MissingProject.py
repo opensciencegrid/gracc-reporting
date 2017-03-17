@@ -210,24 +210,20 @@ class MissingProjectReport(Reporter):
             pass    # What to do if no RawProjectName?
 
         if PNC.no_name(p_name):
-            print "No Name!"
+            # print "No Name!"
             self.write_noname_message(data)
             return
         elif self.check_osg_or_osg_connect(data):
-            print "OSG-Connect flag"
+            # print "OSG-Connect flag"
             PNC.create_request_to_register_oim(p_name, self.report_type, altfile=self.fadminname)
             return
         else:   # We found project info in ProjectNameCollector - XD project
-            print "something else"
+            # print "something else"
             p_info = PNC.get_project(p_name, source=self.report_type)
             # PNC.create_request_to_register_oim(p_name, self.report_type)
-            if p_info:
-                # Pass the project info back
-                return
-            else:
+            if not p_info:
                 self.write_XD_not_in_db_message(p_name)
             return
-
 
     def write_XD_not_in_db_message(self, name):
         """
