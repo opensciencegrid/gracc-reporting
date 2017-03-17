@@ -45,12 +45,15 @@ def parse_opts(parser):
 
 class OSGReporter(Reporter):
     def __init__(self, report_type, config, start, end=None, isSum=True,
-                 verbose=False, no_email=False, is_test=False):
+                 verbose=False, no_email=False, is_test=False, template=None):
         Reporter.__init__(self, report_type, config, start, end, verbose, raw=False,
-                          no_email=no_email, is_test=is_test)
+                          no_email=no_email, is_test=is_test, template=template)
         self.report_type = self.validate_report_type(report_type)
         self.header = ["Project Name", "PI", "Institution", "Field of Science",
                      "Wall Hours"]
+        self.title = "{0} Project Report for {1}-{2}".format(self.report_type,
+                                                             self.start_time,
+                                                             self.end_time)
         self.logfile = logfile
         self.logger.info("Report Type: {0}".format(self.report_type))
         self.isSum = isSum
@@ -138,7 +141,7 @@ class OSGReporter(Reporter):
             pass
         return
 
-    def run_report(self):
+    def generate_report_file(self):
         """Takes data from query response and parses it to send to other
         functions for processing"""
         results = self.runquery()
@@ -158,8 +161,8 @@ class OSGReporter(Reporter):
                         fos = fos_bucket.key
                         yield (pname, pi, org, fos, fos_bucket.CoreHours_sum.value)
 
-    def generate_report_file(self, report):
-        pass
+    # def generate_report_file(self, report):
+    #     pass
 
     def format_report(self, report=None):
         report = {}
@@ -167,7 +170,7 @@ class OSGReporter(Reporter):
             if name not in report:
                 report[name] = []
 
-        for result_tuple in self.run_report():
+        for result_tuple in self.generate_report_file():
             pname, pi, org, fos, wallhrs = result_tuple
             if self.verbose:
                 print "{0}\t{1}\t{2}\t{3}\t{4}".format(pname,
@@ -188,6 +191,9 @@ class OSGReporter(Reporter):
 
         return report
 
+    def run_report(self):
+        self.send_report(self.title)
+
 
 if __name__=="__main__":
     
@@ -201,13 +207,14 @@ if __name__=="__main__":
                         config,
                         args.start,
                         args.end,
+                        template=args.template,
                         isSum=True,
                         verbose=args.verbose,
                         is_test=args.is_test,
                         no_email=args.no_email)
         # print args.no_email
         r.run_report()
-        r.send_report("Project")
+        # r.send_report()
         r.logger.info("OSG Project Report executed successfully")
     except Exception as e:
         with open(logfile, 'a') as f:
