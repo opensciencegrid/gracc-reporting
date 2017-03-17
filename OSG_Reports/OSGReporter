@@ -29,9 +29,22 @@ logfile = 'osgreporter.log'
 def key_to_lower(bucket):
     return bucket.key.lower()
 
+@Reporter.init_reporter_parser
+def parse_opts(parser):
+    """
+    Specific argument parser for this report.  The decorator initializes the
+    argparse.ArgumentParser object, calls this function on that object to
+    modify it, and then returns the Namespace from that object.
+    :param parser: argparse.ArgumentParser object that we intend to add to
+    :return: None
+    """
+    # Report-specific args
+    parser.add_argument("-r", "--report-type", dest="report_type",
+                        help="Report type (OSG, XD. or OSG-Connect")
+
 
 class OSGReporter(Reporter):
-    def __init__(self, report_type, config, limit, start, end=None, isSum=True,
+    def __init__(self, report_type, config, start, end=None, isSum=True,
                  verbose=False, no_email=False, is_test=False):
         Reporter.__init__(self, report_type, config, start, end, verbose, raw=False,
                           no_email=no_email, is_test=is_test)
@@ -40,7 +53,6 @@ class OSGReporter(Reporter):
                      "Wall Hours"]
         self.logfile = logfile
         self.logger.info("Report Type: {0}".format(self.report_type))
-        self.limit = limit
         self.isSum = isSum
 
     def validate_report_type(self, report_type):
@@ -179,7 +191,7 @@ class OSGReporter(Reporter):
 
 if __name__=="__main__":
     
-    args = Reporter.parse_opts()
+    args = parse_opts()
 
     config = Configuration.Configuration()
     config.configure(args.config)
@@ -187,7 +199,6 @@ if __name__=="__main__":
     try:
         r = OSGReporter(args.report_type,
                         config,
-                        args.limit,
                         args.start,
                         args.end,
                         isSum=True,
