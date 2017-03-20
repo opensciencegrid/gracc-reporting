@@ -22,6 +22,7 @@ os.sys.path.insert(0, parentdir)
 
 import Configuration
 from Reporter import Reporter, runerror
+from MissingProject import MissingProjectReport
 
 logfile = 'osgreporter.log'
 MAXINT = 2**31 - 1
@@ -206,6 +207,15 @@ if __name__=="__main__":
                         no_email=args.no_email)
         r.run_report()
         r.logger.info("OSG Project Report executed successfully")
+
+        m = MissingProjectReport(args.report_type,
+                                 config,
+                                 args.start,
+                                 args.end,
+                                 verbose=args.verbose,
+                                 is_test=args.is_test,
+                                 no_email=args.no_email)
+        m.run_report()
     except Exception as e:
         with open(logfile, 'a') as f:
             f.write(traceback.format_exc())
