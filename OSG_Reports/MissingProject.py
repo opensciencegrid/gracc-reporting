@@ -114,7 +114,7 @@ class MissingProjectReport(Reporter):
         self.unique_terms = ['OIM_PIName', 'RawProjectName', 'ProbeName',
                  'Host_description', 'VOName']
 
-        curBucket = s.aggs.bucket("OIM_PIName", "missing", field="OIM_PIName", size=MAXINT)
+        curBucket = s.aggs.bucket("OIM_PIName", "missing", field="OIM_PIName")
 
         for term in self.unique_terms[1:]:
             curBucket = curBucket.bucket(term, "terms", field=term, size=MAXINT)
@@ -315,6 +315,9 @@ class MissingProjectReport(Reporter):
             fname = self.fxdadminname
         else:
             fname = self.fname
+
+        if self.test_no_email(self.email_info["to_emails"]):
+            return
 
         try:
             smtpObj = smtplib.SMTP(self.email_info['smtphost'])
