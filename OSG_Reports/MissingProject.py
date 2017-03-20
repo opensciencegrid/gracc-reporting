@@ -298,7 +298,6 @@ class MissingProjectReport(Reporter):
         :return:
         """
         COMMASPACE = ', '
-        # emailfrom = self.email_info["from_email"]
 
         if admins:
             self.email_info["to_emails"] = \
@@ -357,24 +356,21 @@ if __name__ == '__main__':
     config = Configuration.Configuration()
     config.configure(args.config)
 
-    # try:
-    r = MissingProjectReport(args.report_type,
-                             config,
-                             args.start,
-                             args.end,
-                             verbose=args.verbose,
-                             is_test=args.is_test,
-                             no_email=args.no_email)
-    r.run_report()
-    # r.format_report()
-        # r.send_report("Project")
-        # r.logger.info("OSG Project Report executed successfully")
-    # except Exception as e:
-    #     with open(logfile, 'a') as f:
-    #         f.write(traceback.format_exc())
-    #     print >> sys.stderr, traceback.format_exc()
-    #     runerror(config, e, traceback.format_exc())
-    #     sys.exit(1)
+    try:
+        r = MissingProjectReport(args.report_type,
+                                 config,
+                                 args.start,
+                                 args.end,
+                                 verbose=args.verbose,
+                                 is_test=args.is_test,
+                                 no_email=args.no_email)
+        r.run_report()
+    except Exception as e:
+        with open(logfile, 'a') as f:
+            f.write(traceback.format_exc())
+        print >> sys.stderr, traceback.format_exc()
+        runerror(config, e, traceback.format_exc())
+        sys.exit(1)
     sys.exit(0)
 
 
