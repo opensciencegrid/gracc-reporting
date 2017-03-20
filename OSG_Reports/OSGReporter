@@ -48,7 +48,7 @@ class OSGReporter(Reporter):
                  verbose=False, no_email=False, is_test=False, template=None):
         Reporter.__init__(self, report_type, config, start, end, verbose,
                           raw=False, no_email=no_email, is_test=is_test,
-                          template=template)
+                          template=template, logfile=logfile)
         self.report_type = self.validate_report_type(report_type)
         self.header = ["Project Name", "PI", "Institution", "Field of Science",
                      "Wall Hours"]
