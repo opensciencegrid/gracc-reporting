@@ -46,23 +46,31 @@ def parse_opts(parser):
 class OSGReporter(Reporter):
     def __init__(self, report_type, config, start, end=None, isSum=True,
                  verbose=False, no_email=False, is_test=False, template=None):
-        Reporter.__init__(self, report_type, config, start, end, verbose, raw=False,
-                          no_email=no_email, is_test=is_test, template=template)
+        Reporter.__init__(self, report_type, config, start, end, verbose,
+                          raw=False, no_email=no_email, is_test=is_test,
+                          template=template)
         self.report_type = self.validate_report_type(report_type)
         self.header = ["Project Name", "PI", "Institution", "Field of Science",
                      "Wall Hours"]
-        self.title = "{0} Project Report for {1}-{2}".format(self.report_type,
-                                                             self.start_time,
-                                                             self.end_time)
+        # self.title = "{0} Project Report for {1}-{2}".format(self.report_type,
+        #                                                      self.start_time,
+        #                                                      self.end_time)
         self.logfile = logfile
         self.logger.info("Report Type: {0}".format(self.report_type))
         self.isSum = isSum
 
     def validate_report_type(self, report_type):
+        """
+        Validates that the report being run is one of three types.  Sets
+        title of report if it's given a valid report type
+
+        :param str report_type: One of OSG, XD, or OSG-Connect
+        :return report_type: report type
+        """
         validtypes = {"OSG": "OSG-Direct", "XD": "OSG-XD",
                       "OSG-Connect": "OSG-Connect"}
         if report_type in validtypes:
-            self.title = "{0} Projects {1} - {2}".format(
+            self.title = "{0} Project Report for {1} - {2}".format(
                 validtypes[report_type], self.start_time, self.end_time)
             return report_type
         else:
@@ -81,9 +89,7 @@ class OSGReporter(Reporter):
 
         if self.verbose:
             print probes
-
-        print self.indexpattern
-        # self.indexpattern = 'gracc.osg.summary'
+            self.logger.debug(self.indexpattern)
 
         # Elasticsearch query and aggregations
         s = Search(using=self.client, index=self.indexpattern) \
@@ -121,25 +127,30 @@ class OSGReporter(Reporter):
             self.logger.debug("Elasticsearch query executed successfully")
             return results
         except Exception as e:
-            print e, "Error accessing Elasticsearch"
+            self.logger.exception(e + "\nError accessing Elasticsearch")
             sys.exit(1)
 
     @staticmethod
     def is_missing(string):
-        """Check to see a field is missing info"""
-        if string == "N/A" or string == "UNKNOWN":
+        """
+        Check to see a field is missing info
+
+        :param str string: Input string
+        :return bool: True if string is n/a or unknown, False otherwise
+        """
+        if string == "N/A" or string.upper() == "UNKNOWN":
             return True
         return False
 
-    def get_project_info(self):
-        """Method to handle logic of what to do with projects with missing OIM info"""
-        if self.report_type == "XD":
-            pass
-        elif self.report_type == "OSG":
-            pass
-        elif self.report_type == "OSG-Connect":
-            pass
-        return
+    # def get_project_info(self):
+    #     """Method to handle logic of what to do with projects with missing OIM info"""
+    #     if self.report_type == "XD":
+    #         pass
+    #     elif self.report_type == "OSG":
+    #         pass
+    #     elif self.report_type == "OSG-Connect":
+    #         pass
+    #     return
 
     def generate_report_file(self):
         """Takes data from query response and parses it to send to other
@@ -153,8 +164,8 @@ class OSGReporter(Reporter):
                 pass    # If no ProjectName, then email osg-support
             for pi_bucket in pname_bucket.group_PIName.buckets:
                 pi = pi_bucket.key
-                if self.is_missing(pi):
-                    self.get_project_info()
+                # if self.is_missing(pi):
+                #     self.get_project_info()
                 for org_bucket in pi_bucket.group_Organization.buckets:
                     org = org_bucket.key
                     for fos_bucket in org_bucket.group_FOS.buckets:
@@ -164,7 +175,12 @@ class OSGReporter(Reporter):
     # def generate_report_file(self, report):
     #     pass
 
-    def format_report(self, report=None):
+    def format_report(self):
+        """Report formatter.  Returns a dictionary called report containing the
+        columns of the report.
+
+        :return dict: Constructed dict of report information for
+        Reporter.send_report to send report from"""
         report = {}
         for name in self.header:
             if name not in report:
@@ -192,7 +208,9 @@ class OSGReporter(Reporter):
         return report
 
     def run_report(self):
-        self.send_report(self.title)
+        """Higher level method to handle the process flow of the report
+        being run"""
+        self.send_report(title=self.title)
 
 
 if __name__=="__main__":
