@@ -31,7 +31,6 @@ from ProjectNameCollector import ProjectNameCollector
 
 
 MAXINT = 2**31 - 1
-logfile = 'missingproject.log'
 
 
 @Reporter.init_reporter_parser
@@ -49,11 +48,13 @@ def parse_opts(parser):
 
 
 class MissingProjectReport(Reporter):
+    logfile = 'missingproject.log'
+
     def __init__(self, report_type, config, start, end=None,
                  verbose=False, no_email=False, is_test=False):
         Reporter.__init__(self, report_type, config, start, end, verbose,
                           raw=False, no_email=no_email, is_test=is_test,
-                          logfile=logfile)
+                          logfile=self.logfile)
         self.report_type = self.validate_report_type(report_type)
         # self.header = ["Project Name", "PI", "Institution", "Field of Science"]
         # self.logger = self.__setupgenLogger("MissingProject")
