@@ -24,7 +24,7 @@ import Configuration
 from Reporter import Reporter, runerror
 
 logfile = 'osgreporter.log'
-
+MAXINT = 2**31 - 1
 
 def key_to_lower(bucket):
     return bucket.key.lower()
@@ -52,9 +52,6 @@ class OSGReporter(Reporter):
         self.report_type = self.validate_report_type(report_type)
         self.header = ["Project Name", "PI", "Institution", "Field of Science",
                      "Wall Hours"]
-        # self.title = "{0} Project Report for {1}-{2}".format(self.report_type,
-        #                                                      self.start_time,
-        #                                                      self.end_time)
         self.logfile = logfile
         self.logger.info("Report Type: {0}".format(self.report_type))
         self.isSum = isSum
@@ -100,11 +97,11 @@ class OSGReporter(Reporter):
         # Size 0 to return only aggregations
         # Bucket, metric aggs
         Bucket = s.aggs.bucket("group_ProjectName", "terms", field="ProjectName",
-                               size=2**31-1, order={"_term":"asc"},
+                               size=MAXINT, order={"_term":"asc"},
                                missing="UNKNOWN")\
-                    .bucket("group_PIName", "terms", field="OIM_PIName", missing="UNKNOWN")\
-                    .bucket("group_Organization", "terms", field="OIM_Organization", missing="UNKNOWN")\
-                    .bucket("group_FOS", "terms", field="OIM_FieldOfScience", missing="UNKNOWN")
+                    .bucket("group_PIName", "terms", field="OIM_PIName", missing="UNKNOWN", size=MAXINT)\
+                    .bucket("group_Organization", "terms", field="OIM_Organization", missing="UNKNOWN", size=MAXINT)\
+                    .bucket("group_FOS", "terms", field="OIM_FieldOfScience", missing="UNKNOWN", size=MAXINT)
         Bucket.metric("CoreHours_sum", "sum", field="CoreHours")
 
         return s
