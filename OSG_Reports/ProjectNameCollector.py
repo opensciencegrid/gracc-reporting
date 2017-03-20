@@ -18,8 +18,8 @@ os.sys.path.insert(0, parentdir)
 
 import Configuration
 from XDProject import XDProject
-from OSGProject import OSGProject
-from ProjectName import ProjectName
+# from OSGProject import OSGProject
+# from ProjectName import ProjectName
 
 __author__ = "Tanya Levshina"
 __email__ = "tlevshin@fnal.gov"
@@ -37,10 +37,10 @@ class ProjectNameCollector:
         self.projects = {}
         self.config = config
         self.verbose = verbose
-        # Known projects are stored in a file, name of the file is under project_name csv in configuration
-        # self.cache = self.config.config.get("project_name", "csv")
-        # self.parse()
-
+    #     Known projects are stored in a file, name of the file is under project_name csv in configuration
+    #     self.cache = self.config.config.get("project_name", "csv")
+    #     self.parse()
+    #
     # def parse(self):
     #     """Parses the cache file with project names, skip failures"""
     #
@@ -68,7 +68,7 @@ class ProjectNameCollector:
     def get_project(self, name, source):
         """
         Looks up project.  Currently, we only use it for XD projects, as every
-        other project should be in OIM -- confirm this with Tanya
+        other project should be in OIM
 
         :param str name:  The name of the project we're looking up
         :param str source:  The type of lookup we're doing (XD, OSG,
