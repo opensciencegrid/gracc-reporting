@@ -24,7 +24,7 @@ import Configuration
 from Reporter import Reporter, runerror
 
 logfile = 'osgflockingreport.log'
-
+MAXINT = 2**31 - 1
 
 @Reporter.init_reporter_parser
 def parse_opts(parser):
@@ -83,10 +83,10 @@ class FlockingReport(Reporter):
         # Size 0 to return only aggregations
 
         # Bucket aggs
-        Bucket = s.aggs.bucket('group_Site', 'terms', field='SiteName') \
-            .bucket('group_VOName', 'terms', field='ReportableVOName') \
-            .bucket('group_ProbeName', 'terms', field='ProbeName') \
-            .bucket('group_ProjectName', 'terms', field='ProjectName', missing='N/A')
+        Bucket = s.aggs.bucket('group_Site', 'terms', field='SiteName', size=MAXINT) \
+            .bucket('group_VOName', 'terms', field='ReportableVOName', size=MAXINT) \
+            .bucket('group_ProbeName', 'terms', field='ProbeName', size=MAXINT) \
+            .bucket('group_ProjectName', 'terms', field='ProjectName', missing='N/A', size=MAXINT)
 
         # Metric aggs
         Bucket.metric("CoreHours_sum", "sum", field="CoreHours")
