@@ -127,28 +127,6 @@ class OSGReporter(Reporter):
             self.logger.exception(e + "\nError accessing Elasticsearch")
             sys.exit(1)
 
-    @staticmethod
-    def is_missing(string):
-        """
-        Check to see a field is missing info
-
-        :param str string: Input string
-        :return bool: True if string is n/a or unknown, False otherwise
-        """
-        if string == "N/A" or string.upper() == "UNKNOWN":
-            return True
-        return False
-
-    # def get_project_info(self):
-    #     """Method to handle logic of what to do with projects with missing OIM info"""
-    #     if self.report_type == "XD":
-    #         pass
-    #     elif self.report_type == "OSG":
-    #         pass
-    #     elif self.report_type == "OSG-Connect":
-    #         pass
-    #     return
-
     def generate_report_file(self):
         """Takes data from query response and parses it to send to other
         functions for processing"""
@@ -157,20 +135,13 @@ class OSGReporter(Reporter):
         for pname_bucket in self.sorted_buckets(results.group_ProjectName,
                                                 key=key_to_lower):
             pname = pname_bucket.key
-            if self.is_missing(pname):
-                pass    # If no ProjectName, then email osg-support
             for pi_bucket in pname_bucket.group_PIName.buckets:
                 pi = pi_bucket.key
-                # if self.is_missing(pi):
-                #     self.get_project_info()
                 for org_bucket in pi_bucket.group_Organization.buckets:
                     org = org_bucket.key
                     for fos_bucket in org_bucket.group_FOS.buckets:
                         fos = fos_bucket.key
                         yield (pname, pi, org, fos, fos_bucket.CoreHours_sum.value)
-
-    # def generate_report_file(self, report):
-    #     pass
 
     def format_report(self):
         """Report formatter.  Returns a dictionary called report containing the
@@ -227,9 +198,7 @@ if __name__=="__main__":
                         verbose=args.verbose,
                         is_test=args.is_test,
                         no_email=args.no_email)
-        # print args.no_email
         r.run_report()
-        # r.send_report()
         r.logger.info("OSG Project Report executed successfully")
     except Exception as e:
         with open(logfile, 'a') as f:
