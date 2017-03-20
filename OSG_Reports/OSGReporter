@@ -75,7 +75,10 @@ class OSGReporter(Reporter):
             )
 
     def query(self):
-        """Method to query Elasticsearch cluster for OSGReporter information"""
+        """Method to query Elasticsearch cluster for OSGReporter information
+
+        :return elasticsearch_dsl.Search: Search object containing ES query
+        """
         # Gather parameters, format them for the query
         starttimeq = self.dateparse_to_iso(self.start_time)
         endtimeq = self.dateparse_to_iso(self.end_time)
@@ -106,7 +109,11 @@ class OSGReporter(Reporter):
         return s
 
     def runquery(self):
-        """Execute the query and check the status code before returning the response"""
+        """Execute the query and check the status code before returning the response
+
+        :return Response.aggregations: Returns aggregations property of
+        elasticsearch response
+        """
         resultset = self.query()
         t = resultset.to_dict()
         if self.verbose:

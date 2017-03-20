@@ -31,6 +31,7 @@ from ProjectNameCollector import ProjectNameCollector
 
 
 MAXINT = 2**31 - 1
+logfile = 'missingproject.log'
 
 
 @Reporter.init_reporter_parser
@@ -50,28 +51,48 @@ def parse_opts(parser):
 class MissingProjectReport(Reporter):
     def __init__(self, report_type, config, start, end=None,
                  verbose=False, no_email=False, is_test=False):
-        Reporter.__init__(self, report_type, config, start, end, verbose, raw=False,
-                          no_email=no_email, is_test=is_test)
-
-        # self.report_type = self.validate_report_type(report_type)
-        self.header = ["Project Name", "PI", "Institution", "Field of Science"]
-        # self.logfile = logfile
+        Reporter.__init__(self, report_type, config, start, end, verbose,
+                          raw=False, no_email=no_email, is_test=is_test,
+                          logfile=logfile)
+        self.report_type = self.validate_report_type(report_type)
+        # self.header = ["Project Name", "PI", "Institution", "Field of Science"]
         # self.logger = self.__setupgenLogger("MissingProject")
         # # try:
         # #     self.client = self.establish_client()
         # # except Exception as e:
         #     self.logger.exception(e)
-        self.report_type = report_type
         self.logger.info("Report Type: {0}".format(self.report_type))
+        
+        # Temp files
         self.fname = 'OIM_Project_Name_Request_for_{0}'.format(self.report_type)
         self.fadminname = 'OIM_Admin_email_for_{0}'.format(self.report_type)
         self.fxdadminname = 'OIM_XD_Admin_email_for_{0}'.format(self.report_type)
+        for f in (self.fname, self.fadminname, self.fxdadminname):  # Cleanup
+            if os.path.exists(f):
+                os.unlink(f)
+
+    @staticmethod
+    def validate_report_type(report_type):
+        """
+        Validates that the report being run is one of three types.
+
+        :param str report_type: One of OSG, XD, or OSG-Connect
+        :return report_type: report type
+        """
+        validtypes = {"OSG": "OSG-Direct", "XD": "OSG-XD",
+                      "OSG-Connect": "OSG-Connect"}
+        if report_type in validtypes:
+            return report_type
+        else:
+            raise Exception("Must use report type {0}".format(
+                ', '.join((name for name in validtypes)))
+            )
 
     def query(self):
         """
         Method to query Elasticsearch cluster for OSGReporter information
 
-        :return:
+        :return elasticsearch_dsl.Search: Search object containing ES query
         """
 
         # Gather parameters, format them for the query
@@ -93,7 +114,7 @@ class MissingProjectReport(Reporter):
         self.unique_terms = ['OIM_PIName', 'RawProjectName', 'ProbeName',
                  'Host_description', 'VOName']
 
-        curBucket = s.aggs.bucket("OIM_PIName", "missing", field="OIM_PIName")
+        curBucket = s.aggs.bucket("OIM_PIName", "missing", field="OIM_PIName", size=MAXINT)
 
         for term in self.unique_terms[1:]:
             curBucket = curBucket.bucket(term, "terms", field=term, size=MAXINT)
@@ -103,7 +124,8 @@ class MissingProjectReport(Reporter):
     def runquery(self):
         """Execute the query and check the status code before returning the response
 
-        :return:
+        :return Response.aggregations: Returns aggregations property of
+        elasticsearch response
         """
         resultset = self.query()
         t = resultset.to_dict()
@@ -119,18 +141,14 @@ class MissingProjectReport(Reporter):
                 raise
             results = response.aggregations
             self.logger.debug("Elasticsearch query executed successfully")
-            # print response
-            # print results
             return results
         except Exception as e:
             print e, "Error accessing Elasticsearch"
             sys.exit(1)
 
     def run_report(self):
-        """
-
-        :return:
-        """
+        """Higher level method to handle the process flow of the report
+        being run"""
         results = self.runquery()
             # Some logic for if XD project, use similar logic as ProjectNameCollector does to get XD name
             # Else, in other cases, email us.
@@ -172,26 +190,32 @@ class MissingProjectReport(Reporter):
                     else:
                         recurseBucket(nowData, bucket, index + 1, data)
 
-        # print __recurse_buckets(results.OIM_PIName, {}, 1)
         data = []
         recurseBucket({}, results.OIM_PIName, 1, data)
-        print data
+        if self.verbose:
+            self.logger.info(data)
 
+        # Check the missing projects
         for item in data:
             self.check_project(item)
-            # p_object = self.check_project(item['RawProjectName'])
-            # if p_object:
-            #     yield p_object
-            # else:       # What to do for N/A/ stuff?
-            #     pass
-        for pair in ((self.fadminname, True, False),
+
+        # Send the emails, delete temp files
+        for group in ((self.fadminname, True, False),
                      (self.fname, False, False),
                      (self.fxdadminname, False, True)):
-            if os.path.exists(pair[0]):
-                self.send_email(admins=pair[1], xd_admins=pair[2])
-                os.unlink(pair[0])
+            if os.path.exists(group[0]):
+                self.send_email(admins=group[1], xd_admins=group[2])
+                self.logger.info("Sent email from file {0}".format(group[0]))
+                os.unlink(group[0])
 
     def check_osg_or_osg_connect(self, data):
+        """
+        Checks to see if data describing project is OSG's responsibility to
+        maintain
+
+        :param dict data: Aggregated data about a missing project from ES query
+        :return bool:
+        """
         return ((self.report_type == 'OSG-Connect')
                 or (self.report_type == 'OSG' and data['VOName'].lower() in
                     ['osg', 'osg-connect'])
@@ -199,7 +223,9 @@ class MissingProjectReport(Reporter):
 
     def check_project(self, data):
         """
+        Handles the logic for what to do with records that don't have OIM info
 
+        :param dict data: Aggregated data about a missing project from ES query
         :return:
         """
         PNC = ProjectNameCollector(self.config)
@@ -210,25 +236,27 @@ class MissingProjectReport(Reporter):
             pass    # What to do if no RawProjectName?
 
         if PNC.no_name(p_name):
-            # print "No Name!"
+            # No real Project Name in records
             self.write_noname_message(data)
             return
         elif self.check_osg_or_osg_connect(data):
-            # print "OSG-Connect flag"
+            # OSG should have kept this up to date
             PNC.create_request_to_register_oim(p_name, self.report_type, altfile=self.fadminname)
             return
-        else:   # We found project info in ProjectNameCollector - XD project
-            # print "something else"
+        else:
+            # XD project, most likely
             p_info = PNC.get_project(p_name, source=self.report_type)
-            # PNC.create_request_to_register_oim(p_name, self.report_type)
             if not p_info:
+                # Project not in XD database
                 self.write_XD_not_in_db_message(p_name)
             return
 
     def write_XD_not_in_db_message(self, name):
         """
+        Appends message to a temp file that indicates that an XD project is not
+        registered in the XD database.
 
-        :param name:
+        :param str name: name of XD project
         :return:
         """
         msg = "The project {0} that was reported in Payload records to GRACC" \
@@ -240,12 +268,11 @@ class MissingProjectReport(Reporter):
 
         return
 
-
     def write_noname_message(self, data):
         """
         Message to be sent to GOC for records with no project name.
 
-        :param data:
+        :param dict data: Aggregated data about a missing project from ES query
         :return:
         """
         msg = "Payload records dated between {start} and {end} with:\n" \
@@ -263,7 +290,6 @@ class MissingProjectReport(Reporter):
             f.write(msg)
 
         return
-
 
     def send_email(self, admins=False, xd_admins=False):
         """
@@ -289,8 +315,6 @@ class MissingProjectReport(Reporter):
             fname = self.fxdadminname
         else:
             fname = self.fname
-
-        # print emailsto
 
         try:
             smtpObj = smtplib.SMTP(self.email_info['smtphost'])
@@ -318,8 +342,6 @@ class MissingProjectReport(Reporter):
                 self.email_info['to_emails'],
                 msg.as_string())
             smtpObj.quit()
-            # self.logger.info("Sent Email for {0}".format(self.resource))
-            # os.unlink(self.emailfile)
         except Exception as e:
             self.logger.exception("Error:  unable to send email.\n{0}\n".format(e))
             raise
