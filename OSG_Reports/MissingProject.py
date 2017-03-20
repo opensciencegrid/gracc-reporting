@@ -56,12 +56,6 @@ class MissingProjectReport(Reporter):
                           raw=False, no_email=no_email, is_test=is_test,
                           logfile=self.logfile)
         self.report_type = self.validate_report_type(report_type)
-        # self.header = ["Project Name", "PI", "Institution", "Field of Science"]
-        # self.logger = self.__setupgenLogger("MissingProject")
-        # # try:
-        # #     self.client = self.establish_client()
-        # # except Exception as e:
-        #     self.logger.exception(e)
         self.logger.info("Report Type: {0}".format(self.report_type))
         
         # Temp files
