@@ -52,7 +52,6 @@ class OSGReporter(Reporter):
         self.report_type = self.validate_report_type(report_type)
         self.header = ["Project Name", "PI", "Institution", "Field of Science",
                      "Wall Hours"]
-        self.logfile = logfile
         self.logger.info("Report Type: {0}".format(self.report_type))
         self.isSum = isSum
 
