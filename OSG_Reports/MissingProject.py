@@ -60,9 +60,9 @@ class MissingProjectReport(Reporter):
         
         # Temp files
         self.fname = 'OIM_Project_Name_Request_for_{0}'.format(self.report_type)
-        self.fadminname = 'OIM_Admin_email_for_{0}'.format(self.report_type)
+        # self.fadminname = 'OIM_Admin_email_for_{0}'.format(self.report_type)
         self.fxdadminname = 'OIM_XD_Admin_email_for_{0}'.format(self.report_type)
-        for f in (self.fname, self.fadminname, self.fxdadminname):  # Cleanup
+        for f in (self.fname, self.fxdadminname):  # Cleanup
             if os.path.exists(f):
                 os.unlink(f)
 
@@ -199,11 +199,10 @@ class MissingProjectReport(Reporter):
             self.check_project(item)
 
         # Send the emails, delete temp files
-        for group in ((self.fadminname, True, False),
-                     (self.fname, False, False),
-                     (self.fxdadminname, False, True)):
+        for group in ((self.fname, False),
+                     (self.fxdadminname, True)):
             if os.path.exists(group[0]):
-                self.send_email(admins=group[1], xd_admins=group[2])
+                self.send_email(xd_admins=group[1])
                 self.logger.info("Sent email from file {0}".format(group[0]))
                 os.unlink(group[0])
 
@@ -240,7 +239,7 @@ class MissingProjectReport(Reporter):
             return
         elif self.check_osg_or_osg_connect(data):
             # OSG should have kept this up to date
-            PNC.create_request_to_register_oim(p_name, self.report_type, altfile=self.fadminname)
+            PNC.create_request_to_register_oim(p_name, self.report_type)
             return
         else:
             # XD project, most likely
@@ -293,7 +292,7 @@ class MissingProjectReport(Reporter):
 
         return
 
-    def send_email(self, admins=False, xd_admins=False):
+    def send_email(self, xd_admins=False):
         """
         Sets email parameters and sends email
 
@@ -301,13 +300,7 @@ class MissingProjectReport(Reporter):
         """
         COMMASPACE = ', '
 
-        if admins:
-            self.email_info["to_emails"] = \
-                self.config.get('email', 'osg-connect_to_emails').split(',')
-            self.email_info["to_names"] = \
-                self.config.get('email', 'osg-connect_to_names').split(',')
-            fname = self.fadminname
-        elif xd_admins:
+        if xd_admins:
             self.email_info["to_emails"] = \
                 self.config.get('email', 'xd_admins_to_emails').split(
                     ',')
@@ -316,6 +309,8 @@ class MissingProjectReport(Reporter):
             fname = self.fxdadminname
         else:
             fname = self.fname
+
+        print self.email_info["to_names"]
 
         if self.test_no_email(self.email_info["to_emails"]):
             return
