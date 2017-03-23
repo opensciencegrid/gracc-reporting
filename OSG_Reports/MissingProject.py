@@ -31,7 +31,7 @@ from ProjectNameCollector import ProjectNameCollector
 
 
 MAXINT = 2**31 - 1
-
+logfile = 'missingproject.log'
 
 @Reporter.init_reporter_parser
 def parse_opts(parser):
@@ -107,12 +107,15 @@ class MissingProjectReport(Reporter):
                 .filter("exists", field="RawProjectName")[0:0]
 
         self.unique_terms = ['OIM_PIName', 'RawProjectName', 'ProbeName',
-                 'Host_description', 'VOName']
+                 'CommonName', 'VOName']
+        self.metrics = ['CoreHours']
 
         curBucket = s.aggs.bucket("OIM_PIName", "missing", field="OIM_PIName")
 
         for term in self.unique_terms[1:]:
             curBucket = curBucket.bucket(term, "terms", field=term, size=MAXINT)
+
+        curBucket.metric(self.metrics[0], 'sum', field=self.metrics[0])
 
         return s
 
@@ -151,6 +154,7 @@ class MissingProjectReport(Reporter):
             # Also need to get more buckets (see GRACC-38 for more details)
 
         unique_terms = self.unique_terms
+        metrics = self.metrics
 
         def recurseBucket(curData, curBucket, index, data):
             """
@@ -177,8 +181,8 @@ class MissingProjectReport(Reporter):
                     nowData[curTerm] = bucket['key']
                     if index == (len(unique_terms) - 1):
                         # reached the end of the unique terms
-                        # for metric in metrics:
-                        #     nowData[metric[0]] = bucket[metric[0]].value
+                        for metric in metrics:
+                            nowData[metric] = bucket[metric].value
                             # Add the doc count
                         nowData["Count"] = bucket['doc_count']
                         data.append(nowData)
@@ -271,15 +275,18 @@ class MissingProjectReport(Reporter):
         :return:
         """
         msg = "Payload records dated between {start} and {end} with:\n" \
-              "\t Host description: {hd}\n" \
+              "\t CommonName: {cn}\n" \
               "\t VOName: {vo}\n" \
               "\t ProbeName: {probe}\n" \
-              "were reported with no ProjectName to GRACC.  Please " \
+              "\t Wall Hours: {ch}\n " \
+              "were reported with no ProjectName (\"{pn}\") to GRACC.  Please " \
               "investigate.\n\n".format(start=self.start_time,
                                         end=self.end_time,
-                                        hd=data['Host_description'],
+                                        cn=data['CommonName'],
                                         vo=data['VOName'],
-                                        probe=data['ProbeName'])
+                                        probe=data['ProbeName'],
+                                        ch=data['CoreHours'],
+                                        pn=data['RawProjectName'])
 
         with open(self.fname, 'a') as f:
             f.write(msg)
