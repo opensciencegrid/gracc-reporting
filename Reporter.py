@@ -221,7 +221,7 @@ class Reporter(TimeUtils):
         # Get recipient(s) info
         if self.is_test:
             emails = re.split('[; ,]', self.config.get("email", "test_to_emails"))
-            names = re.split('[; ,]', self.config.get("email", "test_to_names"))
+            names = re.split('[;,]', self.config.get("email", "test_to_names"))
         else:
             try:
                 vo = self.vo
@@ -233,7 +233,7 @@ class Reporter(TimeUtils):
                                                            "{0}_to_emails".format(
                                                                self.report_type))
                                   + ',' + self.config.get("email", "test_to_emails"))
-                names = re.split('[; ,]', self.config.get("email",
+                names = re.split('[;,]', self.config.get("email",
                                                            "{0}_to_names".format(
                                                                self.report_type))
                                   + ',' + self.config.get("email", "test_to_names"))
