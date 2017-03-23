@@ -24,7 +24,18 @@ import Configuration
 from Reporter import Reporter, runerror
 
 logfile = 'osgflockingreport.log'
+MAXINT = 2**31 - 1
 
+
+# Helper functions
+def running_total():
+    """Calculates the running total of numbers that are fed in.
+    Yields the running total so far
+    """
+    total = 0
+    while True:
+        number = yield total
+        total += number
 
 @Reporter.init_reporter_parser
 def parse_opts(parser):
@@ -83,10 +94,10 @@ class FlockingReport(Reporter):
         # Size 0 to return only aggregations
 
         # Bucket aggs
-        Bucket = s.aggs.bucket('group_Site', 'terms', field='SiteName') \
-            .bucket('group_VOName', 'terms', field='ReportableVOName') \
-            .bucket('group_ProbeName', 'terms', field='ProbeName') \
-            .bucket('group_ProjectName', 'terms', field='ProjectName', missing='N/A')
+        Bucket = s.aggs.bucket('group_Site', 'terms', field='SiteName', size=MAXINT) \
+            .bucket('group_VOName', 'terms', field='ReportableVOName', size=MAXINT) \
+            .bucket('group_ProbeName', 'terms', field='ProbeName', size=MAXINT) \
+            .bucket('group_ProjectName', 'terms', field='ProjectName', missing='N/A', size=MAXINT)
 
         # Metric aggs
         Bucket.metric("CoreHours_sum", "sum", field="CoreHours")
@@ -137,6 +148,8 @@ class FlockingReport(Reporter):
                     for project in projects:
                         yield (sitekey, vokey, probekey, project.key, project.CoreHours_sum.value)
 
+
+
     def format_report(self):
         """Report formatter.  Returns a dictionary called report containing the
         columns of the report.
@@ -144,6 +157,9 @@ class FlockingReport(Reporter):
         :return dict: Constructed dict of report information for
         Reporter.send_report to send report from"""
         report = {}
+        tot = running_total()
+        tot.send(None)
+
         for name in self.header:
             if name not in report:
                 report[name] = []
@@ -157,6 +173,19 @@ class FlockingReport(Reporter):
             report["ProbeName"].append(probe)
             report["ProjectName"].append(project)
             report["Wall Hours"].append(wallhours)
+            runtot = tot.send(wallhours)
+
+        for col in self.header:
+            if col == 'VOName':
+                report[col].append('Total')
+            elif col == 'Wall Hours':
+                report[col].append(runtot)
+            else:
+                report[col].append('')
+
+        if self.verbose:
+            print "The total Wall hours in this report are {0}".format(runtot)
+
         return report
 
     def run_report(self):
