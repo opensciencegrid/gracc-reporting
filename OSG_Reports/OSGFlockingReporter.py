@@ -26,7 +26,6 @@ from Reporter import Reporter, runerror
 logfile = 'osgflockingreport.log'
 MAXINT = 2**31 - 1
 
-
 # Helper functions
 def running_total():
     """Calculates the running total of numbers that are fed in.
