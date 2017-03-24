@@ -177,8 +177,16 @@ class Reporter(TimeUtils):
 
         fh.setFormatter(logfileformat)
 
-        logger.addHandler(ch)
         logger.addHandler(fh)
+
+        # We only want one Stream Handler
+        exists_ch = False
+        for handler in logger.handlers:
+            if handler.__class__.__name__ == "StreamHandler":
+                exists_ch = True
+                break
+        if not exists_ch:
+            logger.addHandler(ch)
 
         return logger
 
@@ -213,7 +221,7 @@ class Reporter(TimeUtils):
         # Get recipient(s) info
         if self.is_test:
             emails = re.split('[; ,]', self.config.get("email", "test_to_emails"))
-            names = re.split('[; ,]', self.config.get("email", "test_to_names"))
+            names = re.split('[;,]', self.config.get("email", "test_to_names"))
         else:
             try:
                 vo = self.vo
@@ -225,7 +233,7 @@ class Reporter(TimeUtils):
                                                            "{0}_to_emails".format(
                                                                self.report_type))
                                   + ',' + self.config.get("email", "test_to_emails"))
-                names = re.split('[; ,]', self.config.get("email",
+                names = re.split('[;,]', self.config.get("email",
                                                            "{0}_to_names".format(
                                                                self.report_type))
                                   + ',' + self.config.get("email", "test_to_names"))
@@ -287,7 +295,7 @@ class Reporter(TimeUtils):
 
         if self.template:
             with open(self.template, 'r') as t:
-                htmltext= "".join(t.readlines())
+                htmltext = "".join(t.readlines())
 
             # Build the HTML file from the template
             htmltext = htmltext.replace('$TITLE', use_title)
@@ -320,7 +328,6 @@ class Reporter(TimeUtils):
 
         :param agg: Aggregations attribute of ES response containing buckets
         :param key: Key to sort buckets on
-
         :return: sorted buckets
         """
         return sorted(agg.buckets, key=key)
