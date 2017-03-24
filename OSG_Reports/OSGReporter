@@ -6,6 +6,7 @@ import re
 import json
 import traceback
 import sys
+import copy
 
 from elasticsearch_dsl import Search
 
@@ -84,11 +85,13 @@ class OSGReporter(Reporter):
         starttimeq = self.dateparse_to_iso(self.start_time)
         endtimeq = self.dateparse_to_iso(self.end_time)
 
-        probes = [_.strip("'") for _ in re.split(",", self.config.get(
-            "query", "{0}_probe_list".format(self.report_type)))]
+        probes = [rawprobe.strip("'") for rawprobe in
+                  re.split(",", self.config.get(
+                               "query",
+                               "{0}_probe_list".format(self.report_type)))]
 
         if self.verbose:
-            print probes
+            self.logger.debug(probes)
             self.logger.debug(self.indexpattern)
 
         # Elasticsearch query and aggregations
@@ -99,13 +102,14 @@ class OSGReporter(Reporter):
                 .filter("term", ResourceType="Payload")[0:0]
         # Size 0 to return only aggregations
         # Bucket, metric aggs
-        Bucket = s.aggs.bucket("group_ProjectName", "terms", field="ProjectName",
+        Bucket = s.aggs.bucket("ProjectName", "terms", field="ProjectName",
                                size=MAXINT, order={"_term":"asc"},
                                missing="UNKNOWN")\
-                    .bucket("group_PIName", "terms", field="OIM_PIName", missing="UNKNOWN", size=MAXINT)\
-                    .bucket("group_Organization", "terms", field="OIM_Organization", missing="UNKNOWN", size=MAXINT)\
-                    .bucket("group_FOS", "terms", field="OIM_FieldOfScience", missing="UNKNOWN", size=MAXINT)
-        Bucket.metric("CoreHours_sum", "sum", field="CoreHours")
+                    .bucket("OIM_PIName", "terms", field="OIM_PIName", missing="UNKNOWN", size=MAXINT)\
+                    .bucket("OIM_Organization", "terms", field="OIM_Organization", missing="UNKNOWN", size=MAXINT)\
+                    .bucket("OIM_FieldOfScience", "terms", field="OIM_FieldOfScience", missing="UNKNOWN", size=MAXINT)
+
+        Bucket.metric("CoreHours", "sum", field="CoreHours")
 
         return s
 
@@ -131,24 +135,58 @@ class OSGReporter(Reporter):
             self.logger.debug("Elasticsearch query executed successfully")
             return results
         except Exception as e:
-            self.logger.exception(e + "\nError accessing Elasticsearch")
-            sys.exit(1)
+            self.logger.exception("{0}\nError accessing Elasticsearch".format(e))
+            raise
 
     def generate_report_file(self):
         """Takes data from query response and parses it to send to other
         functions for processing"""
         results = self.runquery()
 
-        for pname_bucket in self.sorted_buckets(results.group_ProjectName,
-                                                key=key_to_lower):
-            pname = pname_bucket.key
-            for pi_bucket in pname_bucket.group_PIName.buckets:
-                pi = pi_bucket.key
-                for org_bucket in pi_bucket.group_Organization.buckets:
-                    org = org_bucket.key
-                    for fos_bucket in org_bucket.group_FOS.buckets:
-                        fos = fos_bucket.key
-                        yield (pname, pi, org, fos, fos_bucket.CoreHours_sum.value)
+        unique_terms = ['ProjectName', 'OIM_PIName', 'OIM_Organization',
+                        'OIM_FieldOfScience']
+        metrics = ['CoreHours']
+
+        def recurseBucket(curData, curBucket, index, data):
+            """
+            Recursively process the buckets down the nested aggregations
+
+            :param curData: Current parsed data that describes curBucket and will be copied and appended to
+            :param bucket curBucket: A elasticsearch bucket object
+            :param int index: Index of the unique_terms that we are processing
+            :param data: list of dicts that holds results of processing
+
+            :return: None.  But this will operate on a list *data* that's passed in and modify it
+            """
+            curTerm = unique_terms[index]
+
+            # Check if we are at the end of the list
+            if not curBucket[curTerm]['buckets']:
+                # Make a copy of the data
+                nowData = copy.deepcopy(curData)
+                data.append(nowData)
+            else:
+                # Get the current key, and add it to the data
+                for bucket in self.sorted_buckets(curBucket[curTerm], key=key_to_lower):
+                    nowData = copy.deepcopy(
+                        curData)  # Hold a copy of curData so we can pass that in to any future recursion
+                    nowData[curTerm] = bucket['key']
+                    if index == (len(unique_terms) - 1):
+                        # reached the end of the unique terms
+                        for metric in metrics:
+                            nowData[metric] = bucket[metric].value
+                            # Add the doc count
+                        nowData["Count"] = bucket['doc_count']
+                        data.append(nowData)
+                    else:
+                        recurseBucket(nowData, bucket, index + 1, data)
+
+        data = []
+        recurseBucket({}, results, 0, data)
+        allterms = copy.copy(unique_terms)
+        allterms.extend(metrics)
+        for entry in data:
+            yield (entry[field] for field in allterms)
 
     def format_report(self):
         """Report formatter.  Returns a dictionary called report containing the

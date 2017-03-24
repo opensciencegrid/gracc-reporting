@@ -147,11 +147,6 @@ class MissingProjectReport(Reporter):
         """Higher level method to handle the process flow of the report
         being run"""
         results = self.runquery()
-            # Some logic for if XD project, use similar logic as ProjectNameCollector does to get XD name
-            # Else, in other cases, email us.
-
-            # Also need to get more buckets (see GRACC-38 for more details)
-
         unique_terms = self.unique_terms
         metrics = self.metrics
 
