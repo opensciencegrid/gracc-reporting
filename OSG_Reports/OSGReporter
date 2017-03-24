@@ -43,6 +43,8 @@ def parse_opts(parser):
     # Report-specific args
     parser.add_argument("-r", "--report-type", dest="report_type",
                         help="Report type (OSG, XD. or OSG-Connect")
+    parser.add_argument('--nosum', dest="isSum", action='store_false',
+                        help="Do not show a total line")
 
 
 class OSGReporter(Reporter):
@@ -51,6 +53,7 @@ class OSGReporter(Reporter):
         Reporter.__init__(self, report_type, config, start, end, verbose,
                           raw=False, no_email=no_email, is_test=is_test,
                           template=template, logfile=logfile)
+        self.isSum = isSum
         self.report_type = self.validate_report_type(report_type)
         self.header = ["Project Name", "PI", "Institution", "Field of Science",
                      "Wall Hours"]
@@ -212,11 +215,13 @@ class OSGReporter(Reporter):
             report["Wall Hours"].append(wallhrs)
 
         if self.isSum:
-            report["Project Name"].append("Total")
-            report["PI"].append("")
-            report["Institution"].append("")
-            report["Field of Science"].append("")
-            report["Wall Hours"].append(sum(report["Wall Hours"]))
+            for field in self.header:
+                if field == 'Project Name':
+                    report[field].append('Total')
+                elif field == 'Wall Hours':
+                    report[field].append(sum(report['Wall Hours']))
+                else:
+                    report[field].append('')
 
         return report
 
@@ -239,7 +244,7 @@ if __name__=="__main__":
                         args.start,
                         args.end,
                         template=args.template,
-                        isSum=True,
+                        isSum=args.isSum,
                         verbose=args.verbose,
                         is_test=args.is_test,
                         no_email=args.no_email)
