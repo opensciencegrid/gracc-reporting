@@ -11,7 +11,7 @@ from email.mime.text import MIMEText
 import sys
 import copy
 
-from elasticsearch import Elasticsearch
+# from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Search
 
 parentdir = os.path.dirname(
@@ -60,7 +60,6 @@ class MissingProjectReport(Reporter):
         
         # Temp files
         self.fname = 'OIM_Project_Name_Request_for_{0}'.format(self.report_type)
-        # self.fadminname = 'OIM_Admin_email_for_{0}'.format(self.report_type)
         self.fxdadminname = 'OIM_XD_Admin_email_for_{0}'.format(self.report_type)
         for f in (self.fname, self.fxdadminname):  # Cleanup
             if os.path.exists(f):
@@ -244,7 +243,7 @@ class MissingProjectReport(Reporter):
         else:
             # XD project, most likely
             p_info = PNC.get_project(p_name, source=self.report_type)
-            if not p_info:
+            if not p_info and self.report_type == 'XD':
                 # Project not in XD database
                 self.write_XD_not_in_db_message(p_name)
             return
@@ -294,8 +293,10 @@ class MissingProjectReport(Reporter):
 
     def send_email(self, xd_admins=False):
         """
-        Sets email parameters and sends email
+        Sets email parameters and sends email.
 
+        :param bool xd_admins: Flag to override self.email_info dict to send
+        a notification email to the xd_admins as listed in the config file.
         :return:
         """
         COMMASPACE = ', '
@@ -307,10 +308,10 @@ class MissingProjectReport(Reporter):
             self.email_info["to_names"] = \
                 self.config.get('email', 'xd_admins_to_names').split(',')
             fname = self.fxdadminname
+            self.logger.info("xd_admins flag is True.  Sending email to "
+                             "xd_admins")
         else:
             fname = self.fname
-
-        print self.email_info["to_names"]
 
         if self.test_no_email(self.email_info["to_emails"]):
             return
@@ -329,7 +330,11 @@ class MissingProjectReport(Reporter):
                 self.email_info['to_names'],
                 self.email_info['to_emails'])]
 
-        msg['Subject'] = "Test to OSG Support"
+        if xd_admins:
+            msg['Subject'] = 'XD Projects not found in XD database'
+        else:
+            msg['Subject'] = 'Records with no Project or Projects not ' \
+                             'registered in OIM'
         msg['To'] = COMMASPACE.join(to_stage)
         msg['From'] = email.utils.formataddr((self.email_info['from_name'],
                                               self.email_info['from_email']))

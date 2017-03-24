@@ -144,6 +144,7 @@ class ProjectNameCollector:
             name(str) - project name
             source(str) - XD, OSG, or  OSG-Connect"
             p(Project) - project
+            altfile(str) - alternative file to write to
         """
         if not altfile:
             filename = "OIM_Project_Name_Request_for_{0}".format(source)
