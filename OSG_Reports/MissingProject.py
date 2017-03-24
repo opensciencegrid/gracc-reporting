@@ -193,6 +193,9 @@ class MissingProjectReport(Reporter):
         if self.verbose:
             self.logger.info(data)
 
+        if len(data) == 1 and not data[0]:  # No data.
+            return
+
         # Check the missing projects
         for item in data:
             self.check_project(item)
@@ -227,12 +230,9 @@ class MissingProjectReport(Reporter):
         """
         PNC = ProjectNameCollector(self.config)
 
-        try:
-            p_name = data['RawProjectName']
-        except AttributeError:
-            pass    # What to do if no RawProjectName?
+        p_name = data.get('RawProjectName')
 
-        if PNC.no_name(p_name):
+        if not p_name or PNC.no_name(p_name):
             # No real Project Name in records
             self.write_noname_message(data)
             return
@@ -272,13 +272,21 @@ class MissingProjectReport(Reporter):
         :param dict data: Aggregated data about a missing project from ES query
         :return:
         """
-        msg = "Payload records dated between {start} and {end} with:\n" \
+
+        for field in ('CommonName', 'VOName', 'ProbeName', 'CoreHours',
+                      'RawProjectName', 'Count'):
+            if not data.get(field):
+                data[field] = "{0} not reported".format(field)
+
+
+        msg = "{count} Payload records dated between {start} and {end} with:\n" \
               "\t CommonName: {cn}\n" \
               "\t VOName: {vo}\n" \
               "\t ProbeName: {probe}\n" \
               "\t Wall Hours: {ch}\n " \
               "were reported with no ProjectName (\"{pn}\") to GRACC.  Please " \
-              "investigate.\n\n".format(start=self.start_time,
+              "investigate.\n\n".format(count=data['Count'],
+                                        start=self.start_time,
                                         end=self.end_time,
                                         cn=data['CommonName'],
                                         vo=data['VOName'],
