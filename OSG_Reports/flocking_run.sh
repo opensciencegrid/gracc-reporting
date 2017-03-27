@@ -20,7 +20,7 @@ set_dates $1
 
 echo "START" `date` >> $LOGFILE
 
-python OSGFlockingReporter.py -s "$starttime" -e "$endtime" -c osg.config -T template_flocking.html -d 
+python OSGFlockingReporter.py -s "$starttime" -e "$endtime" -c osg.config -T template_flocking.html
 
 
 if [ $? -ne 0 ]
