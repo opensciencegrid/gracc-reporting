@@ -60,7 +60,8 @@ class FlockingReport(Reporter):
         report = 'Flocking'
         Reporter.__init__(self, report, config, start, end=end,
                           template=template, verbose=verbose,
-                          no_email=no_email, raw=False, logfile=logfile)
+                          no_email=no_email, is_test=is_test,
+                          raw=False, logfile=logfile)
         self.verbose = verbose
         self.no_email = no_email
         self.is_test = is_test
