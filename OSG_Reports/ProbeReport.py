@@ -35,8 +35,19 @@ now = datetime.datetime.now()
 today = now.date()
 
 
+@Reporter.init_reporter_parser
+def parse_opts(parser):
+    """
+    Don't need to add any options to Reporter.parse_opts
+    """
+    pass
+
+
 class OIMInfo(object):
-    """Class to hold and operate on OIM information"""
+    """Class to hold and operate on OIM information
+
+    :param bool verbose: Verbose flag
+    """
     def __init__(self, verbose=False):
         self.verbose = verbose
         self.logfile = logfile
@@ -53,7 +64,12 @@ class OIMInfo(object):
             raise
 
     def setupgenLogger(self, reportname):
-        """Create logger for this class"""
+        """Create logger for this class
+
+        :param str reportname: Name of report that gets put in the log
+        :return logger: Note that this logger is separte from the ProbeReport
+        logger, though it writes to the same file
+        """
         logger = logging.getLogger(reportname)
         logger.setLevel(logging.DEBUG)
 
@@ -85,8 +101,13 @@ class OIMInfo(object):
                      for elt in rawdateslist]
 
     def get_file_from_OIM(self, rg=True):
-        """Get RG file from OIM for parsing, return the XML file"""
+        """Get RG file from OIM for parsing, return the XML file
 
+        :param bool rg: If true, go to the resource group OIM page and grab
+        that data.  If false, get downtimes page
+
+        :return Response: Response from URL we tried to contact
+        """
         if rg:
             oim_url = 'http://myosg.grid.iu.edu/rgsummary/xml?' \
                   'summary_attrs_showhierarchy=on&summary_attrs_showwlcg=on' \
@@ -133,7 +154,13 @@ class OIMInfo(object):
         return oim_xml
 
     def parse(self, other_xml_file=False):
-        """Parse XML file"""
+        """
+        Parse XML file
+
+        :param bool other_xml_file: If true, we're looking at a downtimes file.
+        If false, we're looking at an RG file.
+        :return: XML etree root
+        """
         if other_xml_file:
             xml_file = other_xml_file
             exit_on_fail = False
@@ -157,6 +184,8 @@ class OIMInfo(object):
         return root
 
     def rgparse_xml(self):
+        """Take the RG XML file and get relevant information, store it in class
+        structures"""
         self.root = self.parse()
         for resourcename_elt in self.root.findall('./ResourceGroup/Resources/Resource'
                                              '/Name'):
@@ -183,17 +212,13 @@ class OIMInfo(object):
         return
 
     def get_resource_information(self, rgpath, rname):
-        """Uses parsed XML file and finds the relevant information based on the
-         dictionary of XPaths.  Searches by resource.
+        """
+        Get Resource Info from OIM
 
-         Arguments:
-             resource_grouppath (string): XPath path to Resource Group
-             Element to be parsed
-             resourcename (string): Name of resource
-
-         Returns dictionary that has relevant OIM information
-         """
-
+        :param str rgpath: XPath path to Resource Group Element to be parsed
+        :param rname: Name of resource
+        :return dict: dictionary that has relevant OIM information
+        """
         # This could (and probably should) be moved to a config file
         rg_pathdictionary = {
             'Facility': './Facility/Name',
@@ -232,7 +257,10 @@ class OIMInfo(object):
 
     def get_downtimes(self):
         """Get downtimes from OIM, return list of probes on resources that are
-        in downtime currently"""
+        in downtime currently
+
+        :return list: List of probe FQDNs that are currently in downtime
+        """
         nolist = []
         xml_file = self.get_file_from_OIM(rg=False)
         if not xml_file:
@@ -260,7 +288,7 @@ class OIMInfo(object):
         """Parses resource dictionary and grabs the FQDNs and Resource Names
         if the resource is flagged as WLCG Interop Accting = True
 
-        Returns a dictionary with those two pieces of information
+        :return dict: dictionary with FQDNs and Resource Names
         """
         downtimes = self.get_downtimes()
         oim_probe_dict = {}
@@ -272,14 +300,22 @@ class OIMInfo(object):
 
 
 class ProbeReport(Reporter):
-    """Class to generate the probe report"""
-    def __init__(self, configuration, start, verbose=False, is_test=False,
+    """
+    Class to hold information about and generate the probe report
+
+    :param Configuration.Configuration config: Report Configuration object
+    :param str start: Start time of report range
+    :param bool verbose: Verbose flag
+    :param bool is_test: Whether or not this is a test run.
+    :param bool no_email: If true, don't actually send the email
+    """
+    def __init__(self, config, start, verbose=False, is_test=False,
                  no_email=False):
         report = "Probe"
-        Reporter.__init__(self, report, configuration, start, end=start,
+        Reporter.__init__(self, report, config, start, end=start,
                           verbose=verbose, logfile=logfile, is_test=is_test,
-                          no_email=no_email)
-        self.configuration = configuration
+                          no_email=no_email, allraw=True)
+        self.configuration = config
         self.probematch = re.compile("(.+):(.+)")
         self.estimeformat = re.compile("(.+)T(.+)\.\d+Z")
         self.emailfile = 'filetoemail.txt'
@@ -289,10 +325,10 @@ class ProbeReport(Reporter):
         self.reminder = False
 
     def query(self):
-        """Query that's sent to elasticsearch to get ProbeNames that have
-        been returned in the last two days
+        """Method to query Elasticsearch cluster for Flocking Report
+        information
 
-        Returns elasticsearch_dsl.Search object
+        :return elasticsearch_dsl.Search: Search object containing ES query
         """
         startdateq = self.dateparse_to_iso(self.start_time)
 
@@ -311,22 +347,26 @@ class ProbeReport(Reporter):
         self.start_time = today.replace(
             day=1) - datetime.timedelta(days=1)
         self.end_time = today
-        self.indexpattern = self.indexpattern_generate()
+        self.indexpattern = self.indexpattern_generate(allraw=True)
+
+        if self.verbose:
+            print "New index pattern is {0}".format(self.indexpattern)
+
         return
 
     def lastreportquery(self):
         """Queries ES to find the last time that a probe reported in.
         Returns a string with either that time or a string indicating that
         it has been over a month.
+
+        :return str: String describing last report date of a probe
         """
         ls = Search(using=self.client, index=self.indexpattern)\
             .filter(Q({"range":{"@received":{"gte":"now-1M"}}}))\
             .filter("term", ResourceType="Batch")\
             .filter("wildcard", ProbeName="*:{0}".format(self.probe))
 
-        ls.aggs.bucket('group_probename', 'terms', field='ProbeName',
-                               size=2**31-1)\
-            .metric('datemax', 'max', field='@received')
+        ls.aggs.metric('datemax', 'max', field='@received')
 
         try:
             aggs = ls.execute().aggregations
@@ -335,22 +375,21 @@ class ProbeReport(Reporter):
             runerror(self.configuration, e, traceback.format_exc())
             sys.exit(1)
 
-        buckets = aggs.group_probename.buckets
-        if buckets:
-            try:
-                rawdate = buckets[0]['datemax'].value_as_string
-                return "{0} at {1}".format(*self.estimeformat.match(rawdate)
-                                                 .groups())
-            except Exception as e:
-                self.logger.exception(e)
-        else:
+        try:
+            rawdate = aggs.datemax.value_as_string
+            return "{0} at {1} UTC".format(
+                *self.estimeformat.match(rawdate)
+                .groups())
+        except AttributeError:     # no value_as_string = no result
             return "over 1 month ago"
+        except Exception as e:
+            self.logger.exception(e)
 
     def get_probenames(self):
         """Function that parses the results of the elasticsearch query and
         parses the ProbeName field for the FQDN of the probename
 
-        Returns a set of these probenames
+        :return set: Set of all FQDNs of the probes returned by the ES query
         """
         proberecords = (rec for rec in self.results.group_probename.buckets)
         probenames = (self.probematch.match(proberecord.key)
@@ -363,7 +402,9 @@ class ProbeReport(Reporter):
         """Higher-level method that calls the lower-level functions to
         generate the raw data for this report.
 
-        Returns set of probes that are in OIM but not in the last two days of
+        :param dict oimdict:
+
+        :return set: set of probes that are in OIM but not in the last two days of
         records.
         """
         resultset = self.query()
@@ -389,6 +430,10 @@ class ProbeReport(Reporter):
             sys.exit(1)
 
         probes = self.get_probenames()
+
+        if self.verbose:
+            self.logger.info("Probes in last two days of records: {0}".format(sorted(probes)))
+
         self.logger.info("Successfully analyzed ES data vs. OIM data")
         oimset = set((key for key in oimdict))
         return oimset.difference(probes)
@@ -474,23 +519,20 @@ class ProbeReport(Reporter):
         """Format the text for our emails"""
         text = 'The probe installed on {0} at {1} has not reported'\
                ' GRACC records to OSG for the last two days. The last ' \
-               'date we received a record from {0} was {2} UTC.  If this '\
+               'date we received a record from {0} was {2}.  If this '\
                'is due to maintenance or a retirement of this '\
                'node, please let us know.  If not, please check to see '\
-               'if your Gratia reporting is active.'.format(self.probe, self.resource, self.lastreport_date)
+               'if your Gratia reporting is active.  The GRACC page at '\
+               'https://gracc.opensciencegrid.org/dashboard/db/probe-status'\
+               ' shows the latest date a probe has reported records to OSG.'.format(self.probe, self.resource, self.lastreport_date)
         return text
 
     def send_report(self):
         """Send our emails"""
-        if self.is_test:
-            emails = re.split('[; ,]',self.config.get("email", "test_to"))
-        else:
-            emails = re.split('[; ,]', self.config.get("email", "{0}_to".format(self.report_type))
-                              + ',' + self.config.get("email", "test_to"))
+        emailfrom = self.email_info["from_email"]
+        emailsto = self.email_info["to_emails"]
 
-        emailfrom = self.config.get("email", "from")
-
-        if self.test_no_email(emails):
+        if self.test_no_email(emailsto):
             self.logger.info("Resource name: {0}\tProbe Name: {1}"
                              .format(self.resource, self.probe))
 
@@ -502,13 +544,14 @@ class ProbeReport(Reporter):
         with open(self.emailfile, 'rb') as fp:
             msg = MIMEText(fp.read())
 
-        msg['To'] = ', '.join(emails)
-        msg['From'] = email.utils.formataddr(('GRACC Operations', emailfrom))
+        msg['To'] = ', '.join(emailsto)
+        msg['From'] = email.utils.formataddr((self.email_info["from_name"],
+                                              emailfrom))
         msg['Subject'] = self.emailsubject()
 
         try:
-            smtpObj = smtplib.SMTP('smtp.fnal.gov')
-            smtpObj.sendmail(emailfrom, emails, msg.as_string())
+            smtpObj = smtplib.SMTP(self.email_info["smtphost"])
+            smtpObj.sendmail(emailfrom, emailsto, msg.as_string())
             smtpObj.quit()
             self.logger.info("Sent Email for {0}".format(self.resource))
             os.unlink(self.emailfile)
@@ -545,7 +588,7 @@ class ProbeReport(Reporter):
 
 
 def main():
-    args = Reporter.parse_opts()
+    args = parse_opts()
 
     config = Configuration.Configuration()
     config.configure(args.config)

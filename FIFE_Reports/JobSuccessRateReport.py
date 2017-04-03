@@ -3,7 +3,6 @@
 import sys
 import os
 import re
-import ast
 from time import sleep
 import traceback
 import inspect
@@ -34,11 +33,27 @@ config_vals = {'num_clusters': 100, 'jobs_per_cluster': 1e6,
 logfile = 'jobsuccessratereport.log'
 
 
+@Reporter.init_reporter_parser
+def parse_opts(parser):
+    """
+    Specific argument parser for this report.  The decorator initializes the
+    argparse.ArgumentParser object, calls this function on that object to
+    modify it, and then returns the Namespace from that object.
+
+    :param parser: argparse.ArgumentParser object that we intend to add to
+    :return: None
+    """
+    # Report-specific args
+    parser.add_argument("-E", "--experiment", dest="vo",
+                        help="experiment name", default=None, required=True)
+
 
 def sum_errors(dic):
     """Helper function to sum up number of failed jobs per host.
     Assumes that dic is in the form
-    {"error_code1":count1, "error_code2":count2, etc.}
+
+    :param dict dic: {"error_code1":count1, "error_code2":count2, etc.}
+    :return int: Sum of all values in dic
     """
     return sum(value for key, value in dic.iteritems())
 
@@ -49,6 +64,13 @@ class Jobs:
         self.jobs = {}
 
     def add_job(self, site, job):
+        """
+        Adds job to self.jobs dict
+
+        :param site: OSG site where job ran
+        :param job: Job object that contains info about a job
+        :return: None
+        """
         if site not in self.jobs:
             self.jobs[site] = []
 
@@ -56,7 +78,14 @@ class Jobs:
 
 
 class Job:
-    """Class that holds job information"""
+    """Class that holds job information
+    :param str end_time: End time of job
+    :param str start_time: Start time of job
+    :param str jobid: JobID of job
+    :param str site: Site where job ran
+    :param str host: Host where job ran
+    :param str exit__code: Exit code of job
+    """
     def __init__(self, end_time, start_time, jobid, site, host, exit__code):
         self.end_time = end_time
         self.start_time = start_time
@@ -67,13 +96,24 @@ class Job:
 
 
 class JobSuccessRateReporter(Reporter):
-    """Reporting class for JSR"""
-    def __init__(self, configuration, start, end, vo, template, is_test,
+    """
+    Class to hold information about and run Job Success Rate report.
+
+    :param Configuration.Configuration config: Report Configuration object
+    :param str start: Start time of report range
+    :param str end: End time of report range
+    :param str vo: Experiment to run report on
+    :param str template: Filename of HTML template to generate report
+    :param bool is_test: Whether or not this is a test run.
+    :param bool verbose: Verbose flag
+    :param bool no_email: If true, don't actually send the email
+    """
+    def __init__(self, config, start, end, vo, template, is_test,
                  verbose, no_email):
         report = 'JobSuccessRate'
-        Reporter.__init__(self, report, configuration, start, end, verbose,
-                          is_test=is_test, no_email=no_email, logfile=logfile)
         self.vo = vo
+        Reporter.__init__(self, report, config, start, end, verbose,
+                          is_test=is_test, no_email=no_email, logfile=logfile)
         self.template = template
         self.title = "Production Jobs Success Rate {0} - {1}".format(
             self.start_time, self.end_time)
@@ -89,6 +129,11 @@ class JobSuccessRateReporter(Reporter):
         self.fn = "{0}-jobrate.{1}".format(self.vo.lower(),
                                            self.start_time.replace("/", "-"))
         self.limit_sites = self.limit_site_check()
+        self.title = "{0} Production Jobs Success Rate on the OSG Sites " \
+                     "({1} - {2})".format(
+                                self.vo,
+                                self.start_time,
+                                self.end_time)
 
     def limit_site_check(self):
         """Check to see if the num_failed_sites option is set in the config
@@ -96,7 +141,11 @@ class JobSuccessRateReporter(Reporter):
         return self.config.has_option(self.vo.lower(), 'num_failed_sites')
 
     def query(self):
-        """Method that actually queries elasticsearch"""
+        """
+        Method to query Elasticsearch cluster for EfficiencyReport information
+
+        :return elasticsearch_dsl.Search: Search object containing ES query
+        """
         # Set up our search parameters
         voq = self.config.get(self.vo.lower(), "voname".format(self.vo.lower()))
         productioncheck = '*Role=Production*'
@@ -125,11 +174,22 @@ class JobSuccessRateReporter(Reporter):
         return resultset
 
     def get_job_parts_from_jobid(self, jobid):
+        """
+        Parses the jobid string and grabs the relevant parts to generate
+        Fifemon link
+
+        :param str jobid: GlobalJobId field of a GRACC record
+        :return tuple: Tuple of jobid, schedd
+        """
         return self.jobpattern.match(jobid).groups()
 
     def generate_result_array(self, resultset):
         """Generator.  Compiles results from resultset into array.  Yields each
-        line."""
+        line.
+
+        :param elastisearch_dsl.Search resultset: ES Search object containing
+        query
+        """
         for hit in resultset.scan():
             try:
                 # Parse userid
@@ -228,7 +288,7 @@ class JobSuccessRateReporter(Reporter):
 
         return
 
-    def generate_report_file(self, report=None):
+    def generate_report_file(self):
         """This is the function that creates the report HTML file"""
         total_failed = 0
         if len(self.run.jobs) == 0:
@@ -488,31 +548,18 @@ class JobSuccessRateReporter(Reporter):
 
         return
 
-    def send_report(self, report_type=None):
+    def send_report(self):
         """Method to send emails of report file to intended recipients."""
-
-        if self.is_test:
-            emails = re.split('[; ,]', self.config.get("email", "test_to"))
-        else:
-            emails = re.split('[; ,]', self.config.get(self.vo.lower(), "email")
-                              + ',' + self.config.get("email", "test_to"))
-
-        if self.test_no_email(emails):
-            if os.path.exists(self.fn):
-                os.unlink(self.fn)  # Delete HTML file
+        if self.test_no_email(self.email_info["to_emails"]):
             return
 
-        TextUtils.sendEmail(([], emails),
-                            "{0} Production Jobs Success Rate on the OSG Sites ({1} - {2})".format(
-                                self.vo,
-                                self.start_time,
-                                self.end_time),
+        TextUtils.sendEmail((self.email_info["to_names"],
+                             self.email_info["to_emails"]),
+                            self.title,
                             {"html": self.text},
-                            (self.config.get("email", "realname"),
-                             self.config.get("email", "from")),
-                            self.config.get("email", "smtphost"))
-        if os.path.exists(self.fn):
-            os.unlink(self.fn)  # Delete HTML file
+                            (self.email_info["from_name"],
+                             self.email_info["from_email"]),
+                            self.email_info["smtphost"])
 
         self.logger.info("Sent Report for {0}".format(self.vo))
         return
@@ -523,10 +570,14 @@ class JobSuccessRateReporter(Reporter):
         self.generate_report_file()
         self.send_report()
 
+        if os.path.exists(self.fn):
+            os.unlink(self.fn)  # Delete HTML file
+
 
 if __name__ == "__main__":
-    args = Reporter.parse_opts()
+    args = parse_opts()
 
+    print args
     config = Configuration.Configuration()
     config.configure(args.config)
 

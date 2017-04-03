@@ -27,25 +27,72 @@ from Reporter import Reporter, runerror
 
 logfile = 'efficiencyreport.log'
 
+
+@Reporter.init_reporter_parser
+def parse_opts(parser):
+    """
+    Specific argument parser for this report.  The decorator initializes the
+    argparse.ArgumentParser object, calls this function on that object to
+    modify it, and then returns the Namespace from that object.
+
+    :param parser: argparse.ArgumentParser object that we intend to add to
+    :return: None
+    """
+    # Report-specific args
+    parser.add_argument("-E", "--experiment", dest="vo",
+                        help="experiment name", default=None, required=True)
+    parser.add_argument("-F", "--facility", dest="facility",
+                        help="facility name", default=None, required=True)
+
+
 class Efficiency(Reporter):
-    def __init__(self, config, start, end, vo, verbose, hour_limit, eff_limit,
-                 facility, is_test=False, no_email=False):
+    """
+    Class to hold information about and to run Efficiency report.
+
+    :param Configuration.Configuration config: Report Configuration object
+    :param str start: Start time of report range
+    :param str end: End time of report range
+    :param str vo: Experiment to run report on
+    :param float hour_limit: Minimum number of hours a user must have run to
+    get reported on
+    :param float eff_limit: Efficiency limit below which we want to report on a
+    user that satisfies hour_limit requirement
+    :param str facility: Facility on which we're running report
+    :param str template: Filename of HTML template to generate report
+    :param bool is_test: Whether or not this is a test run.
+    :param bool no_email: If true, don't actually send the email
+    :param bool verbose: Verbose flag
+    """
+    def __init__(self, config, start, end, vo, hour_limit, eff_limit,
+                 facility, template, is_test=False, no_email=False,
+                 verbose=False):
         report = 'Efficiency'
+        self.vo = vo
         Reporter.__init__(self, report, config, start, end, verbose=verbose,
                           logfile=logfile, no_email=no_email, is_test=is_test)
         self.hour_limit = hour_limit
-        self.vo = vo
         self.eff_limit = eff_limit
         self.facility = facility
+        self.template = template
         self.text = ''
         self.table = ''
         self.fn = "{0}-efficiency.{1}".format(self.vo.lower(),
                                          self.start_time.replace("/", "-"))
         self.cilogon_match = re.compile('.+CN=UID:(\w+)')
         self.non_cilogon_match = re.compile('/CN=([\w\s]+)/?.+?')
+        self.title = "{0} Users with Low Efficiency ({1}) on the OSG Sites " \
+                      "({2} - {3})".format(
+                                self.vo,
+                                self.eff_limit,
+                                self.start_time,
+                                self.end_time)
 
     def query(self):
-        """Method to query Elasticsearch cluster for EfficiencyReport information"""
+        """
+        Method to query Elasticsearch cluster for EfficiencyReport information
+
+        :return elasticsearch_dsl.Search: Search object containing ES query
+        """
         # Gather parameters, format them for the query
         starttimeq = self.dateparse_to_iso(self.start_time)
         endtimeq = self.dateparse_to_iso(self.end_time)
@@ -77,8 +124,12 @@ class Efficiency(Reporter):
         return s
 
     def generate(self):
-        """Main driver of activity in report.  Runs the ES query, checks for
-        success, and then returns the raw data for processing."""
+        """
+        Main driver of activity in report.  Runs the ES query, checks for
+        success, and then returns the raw data for processing.
+
+        :return: Response.aggregations object
+        """
         s = self.query()
         t = s.to_dict()
         if self.verbose:
@@ -103,8 +154,10 @@ class Efficiency(Reporter):
             raise
 
     def parse_lines(self):
-        """For each set of dn, wall hours, cpu time, this gets username, calculates efficiency, and sends to
-        HTML formatter"""
+        """
+        Coroutine: For each set of dn, wall hours, cpu time,
+        this gets username, calculates efficiency, and sends to HTML formatter
+        """
         html_formatter = self.generate_report_lines()
         html_formatter.send(None)
         while True:
@@ -117,7 +170,8 @@ class Efficiency(Reporter):
                 html_formatter.send((user, wallhrs, eff))
 
     def generate_report_lines(self):
-        """This generates an HTML line from the raw data line and sends it to the tablebuilder"""
+        """Coroutine: This generates an HTML line from the raw data
+        line and sends it to the tablebuilder"""
         tablebuilder = self.generate_data_table()
         tablebuilder.send(None)
 
@@ -153,44 +207,46 @@ class Efficiency(Reporter):
             tablebuilder.send(htmlline)
 
     def generate_data_table(self):
-        """This compiles the data table lines and creates the table text (HTML) string"""
+        """Coroutine: This compiles the data table lines and creates
+        the table text (HTML) string"""
         self.table = ""
         while True:
             newline = yield
             self.table += newline
 
     def generate_report_file(self):
-        """Takes the HTML template and inserts the appropriate information to generate the final report file"""
-        self.text = "".join(open("template_efficiency.html").readlines())
+        """
+        Takes the HTML template and inserts the appropriate information to
+        generate the final report file
+
+        :return: None
+        """
+        self.text = "".join(open(self.template).readlines())
         self.text = self.text.replace("$START", self.start_time)
         self.text = self.text.replace("$END", self.end_time)
         self.text = self.text.replace("$VO", self.vo)
+        self.text = self.text.replace("$TITLE", self.title)
         self.text = self.text.replace("$TABLE", self.table)
         return
 
     def send_report(self):
-        """Sends the HTML report file in an email (or doesn't if self.no_email is set to True)"""
-        if self.is_test:
-            emails = re.split('[; ,]', self.config.get("email", "test_to"))
-        else:
-            emails = re.split('[; ,]', self.config.get(self.vo.lower(), "email") +
-                              ',' + self.config.get("email", "test_to"))
+        """
+        Sends the HTML report file in an email (or doesn't if self.no_email
+        is set to True)
 
-        if self.test_no_email(emails):
+        :return: None
+        """
+        if self.test_no_email(self.email_info["to_emails"]):
             return
 
         TextUtils.sendEmail(
-                            ([], emails),
-                            "{0} Jobs with Low Efficiency ({1}) "
-                            "on the  OSG Sites ({2} - {3})".format(
-                                self.vo,
-                                self.eff_limit,
-                                self.start_time,
-                                self.end_time),
+                            (self.email_info["to_names"],
+                             self.email_info["to_emails"]),
+                            self.title,
                             {"html": self.text},
-                            (self.config.get("email", "realname"),
-                             self.config.get("email", "from")),
-                            self.config.get("email", "smtphost"))
+                            (self.email_info["from_name"],
+                             self.email_info["from_email"]),
+                            self.email_info["smtphost"])
 
         self.logger.info("Report sent for {0}".format(self.vo))
 
@@ -198,12 +254,22 @@ class Efficiency(Reporter):
 
     @staticmethod
     def calc_eff(wallhours, cpusec):
-        """Calculate the efficiency given the wall hours and cputime in
-        seconds.  Returns percentage"""
+        """
+        Calculate the efficiency given the wall hours and cputime in
+        seconds.  Returns percentage
+
+        :param float wallhours: Wall Hours of a bucket
+        :param float cpusec: CPU time (in seconds) of a bucket
+        :return float: Efficiency of that bucket
+        """
         return (cpusec / 3600) / wallhours
 
     def parseCN(self, cn):
-        """Parse the CN to grab the username"""
+        """Parse the CN to grab the username
+
+        :param str cn: CN string from record
+        :return str: username as pulled from cn
+        """
         m = self.cilogon_match.match(cn)  # CILogon certs
         if m:
             pass
@@ -214,7 +280,10 @@ class Efficiency(Reporter):
 
     def run_report(self):
         """Handles the data flow throughout the report generation.  Runs the
-        query, generates the HTML report, and sends the email"""
+        query, generates the HTML report, and sends the email
+
+        :return None
+        """
         results = self.generate()
         pline = self.parse_lines()
         pline.send(None)
@@ -238,7 +307,7 @@ class Efficiency(Reporter):
 
 
 if __name__ == "__main__":
-    args = Reporter.parse_opts()
+    args = parse_opts()
 
     # Set up the configuration
     config = Configuration.Configuration()
@@ -256,14 +325,14 @@ if __name__ == "__main__":
                        args.start,
                        args.end,
                        vo,
-                       args.verbose,
                        int(min_hours),
                        float(repeff),
                        args.facility,
+                       args.template,
                        args.is_test,
-                       args.no_email)
+                       args.no_email,
+                       args.verbose)
         e.run_report()
-
         print "Efficiency Report execution successful"
 
     except Exception as e:

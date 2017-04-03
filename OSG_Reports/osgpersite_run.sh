@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# VOS="NOvA SeaQuest MINERvA MINOS gm2 Mu2e UBooNe DarkSide DUNE CDMS MARS CDF" 
+LOGFILE=osgpersite_run.log
 endtime=`date +"%F %T"`
 
 function set_dates {
@@ -16,18 +16,18 @@ function set_dates {
         echo $starttime
 }
 
-vo=$2
 set_dates $1
-cd /home/gratia/gracc_email_reports/FIFE_Reports
-echo "START" `date` >> efficiencyreport_run.log
 
-./EfficiencyReporterPerVO.py -F GPGrid -c efficiency.config -E $vo -s "$starttime" -e "$endtime" -T template_efficiency.html
+echo "START" `date` >> $LOGFILE
+
+python OSGPerSiteReporter.py -s "$starttime" -c osg.config -T template_siteusage.html -d
+
 
 if [ $? -ne 0 ]
 then
-	echo "Error sending report for $vo . Please investigate" >> efficiencyreport_run.log
+	echo "Error sending report. Please investigate" >> $LOGFILE
 else
-	echo "Sent report for $vo" >> efficiencyreport_run.log
+	echo "Sent report" >> $LOGFILE
 fi
  
-echo "END" `date` >> efficiencyreport_run.log
+echo "END" `date` >> $LOGFILE
