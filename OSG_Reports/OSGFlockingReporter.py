@@ -148,8 +148,6 @@ class FlockingReport(Reporter):
                     for project in projects:
                         yield (sitekey, vokey, probekey, project.key, project.CoreHours_sum.value)
 
-
-
     def format_report(self):
         """Report formatter.  Returns a dictionary called report containing the
         columns of the report.
