@@ -80,7 +80,7 @@ class Efficiency(Reporter):
                                          self.start_time.replace("/", "-"))
         self.cilogon_match = re.compile('.+CN=UID:(\w+)')
         self.non_cilogon_match = re.compile('/CN=([\w\s]+)/?.+?')
-        self.title =  "{0} Jobs with Low Efficiency ({1}) on the  OSG Sites " \
+        self.title = "{0} Users with Low Efficiency ({1}) on the OSG Sites " \
                       "({2} - {3})".format(
                                 self.vo,
                                 self.eff_limit,
@@ -225,6 +225,7 @@ class Efficiency(Reporter):
         self.text = self.text.replace("$START", self.start_time)
         self.text = self.text.replace("$END", self.end_time)
         self.text = self.text.replace("$VO", self.vo)
+        self.text = self.text.replace("$TITLE", self.title)
         self.text = self.text.replace("$TABLE", self.table)
         return
 
