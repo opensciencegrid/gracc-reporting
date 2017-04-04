@@ -187,6 +187,26 @@ class JobSuccessRateReporter(Reporter):
 
         return resultset
 
+    def generate(self):
+        """Main driver of activity in report.  Runs the ES query, checks for
+        success, and then runs routines to generate the results lines, parse
+        those lines to add to Job, Jobs, and clusters structures."""
+        resultset = self.run_query()
+
+        # Add all of our results to the clusters dictionary
+        resultscount = 0
+        add_clusters = self.add_to_clusters()
+        add_clusters.send(None)
+        for line in self.generate_result_array(resultset):
+            if resultscount == 0:
+                if len(line.strip()) == 0:
+                    self.logger.info("Nothing to report")
+                    break
+            add_clusters.send(line)
+            resultscount += 1
+
+        return
+
     def generate_result_array(self, resultset):
         """Generator.  Compiles results from resultset into array.  Yields each
         line.
@@ -241,26 +261,6 @@ class JobSuccessRateReporter(Reporter):
                 # old MySQL report behaved.
                 pass
 
-    def generate(self):
-        """Main driver of activity in report.  Runs the ES query, checks for
-        success, and then runs routines to generate the results lines, parse
-        those lines to add to Job, Jobs, and clusters structures."""
-        resultset = self.run_query()
-
-        # Add all of our results to the clusters dictionary
-        resultscount = 0
-        add_clusters = self.add_to_clusters()
-        add_clusters.send(None)
-        for line in self.generate_result_array(resultset):
-            if resultscount == 0:
-                if len(line.strip()) == 0:
-                    self.logger.info("Nothing to report")
-                    break
-            add_clusters.send(line)
-            resultscount += 1
-
-        return
-
     def add_to_clusters(self):
         """Coroutine: For each line fed in, will
         instantiate Job class for each one, add to Jobs class dictionary,
@@ -270,10 +270,6 @@ class JobSuccessRateReporter(Reporter):
             tmp = line.split('\t')
             start_time, end_time, userid, jobid, site = (item.strip() for item in tmp[:5])
             start_time, end_time = (t.replace('T', ' ').replace('Z', '') for t in (start_time, end_time))
-            # end_time = end_time.replace('T', ' ').replace('Z', '')
-            # userid = tmp[2].strip()
-            # jobid = tmp[3].strip()
-            # site = tmp[4].strip()
             if site == "NULL":
                 pass
             else:
