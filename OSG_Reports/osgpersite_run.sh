@@ -20,7 +20,7 @@ set_dates $1
 
 echo "START" `date` >> $LOGFILE
 
-python OSGPerSiteReporter.py -s "$starttime" -c osg.config -T template_siteusage.html -d
+python OSGPerSiteReporter.py -s "$starttime" -c osg.config -T template_siteusage.html
 
 
 if [ $? -ne 0 ]
