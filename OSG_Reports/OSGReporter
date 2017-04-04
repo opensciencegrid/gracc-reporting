@@ -28,8 +28,10 @@ from MissingProject import MissingProjectReport
 logfile = 'osgreporter.log'
 MAXINT = 2**31 - 1
 
+
 def key_to_lower(bucket):
     return bucket.key.lower()
+
 
 @Reporter.init_reporter_parser
 def parse_opts(parser):
@@ -188,8 +190,9 @@ class OSGReporter(Reporter):
         recurseBucket({}, results, 0, data)
         allterms = copy.copy(unique_terms)
         allterms.extend(metrics)
+
         for entry in data:
-            yield (entry[field] for field in allterms)
+            yield [entry[field] for field in allterms]
 
     def format_report(self):
         """Report formatter.  Returns a dictionary called report containing the
@@ -202,26 +205,26 @@ class OSGReporter(Reporter):
             if name not in report:
                 report[name] = []
 
-        for result_tuple in self.generate_report_file():
-            pname, pi, org, fos, wallhrs = result_tuple
+        for result_list in self.generate_report_file():
             if self.verbose:
-                print "{0}\t{1}\t{2}\t{3}\t{4}".format(pname,
-                                                       pi, org, fos,
-                                                       wallhrs)
-            report["Project Name"].append(pname)
-            report["PI"].append(pi)
-            report["Institution"].append(org)
-            report["Field of Science"].append(fos)
-            report["Wall Hours"].append(wallhrs)
+                print "{0}\t{1}\t{2}\t{3}\t{4}".format(*result_list)
+            mapdict = dict(zip(self.header, result_list))
+            for key, item in mapdict.iteritems():
+                report[key].append(item)
 
         if self.isSum:
+            tot = sum(report['Wall Hours'])
             for field in self.header:
                 if field == 'Project Name':
                     report[field].append('Total')
                 elif field == 'Wall Hours':
-                    report[field].append(sum(report['Wall Hours']))
+                    report[field].append(tot)
                 else:
                     report[field].append('')
+
+            if self.verbose:
+                self.logger.info("The total wall hours in this report are "
+                                 "{0}".format(tot))
 
         return report
 
