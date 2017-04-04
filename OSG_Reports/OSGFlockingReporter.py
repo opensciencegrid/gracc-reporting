@@ -147,7 +147,6 @@ class FlockingReport(Reporter):
         :return dict: Constructed dict of report information for
         Reporter.send_report to send report from"""
         report = {}
-        runtot = 0
 
         for name in self.header:
             if name not in report:
@@ -160,18 +159,18 @@ class FlockingReport(Reporter):
             mapdict = dict(zip(self.header, result_tuple))
             for key, item in mapdict.iteritems():
                 report[key].append(item)
-            runtot += wallhours
 
+        tot = sum(report['Wall Hours'])
         for col in self.header:
             if col == 'VOName':
                 report[col].append('Total')
             elif col == 'Wall Hours':
-                report[col].append(runtot)
+                report[col].append(tot)
             else:
                 report[col].append('')
 
         if self.verbose:
-            print "The total Wall hours in this report are {0}".format(runtot)
+            print "The total Wall hours in this report are {0}".format(tot)
 
         return report
 
