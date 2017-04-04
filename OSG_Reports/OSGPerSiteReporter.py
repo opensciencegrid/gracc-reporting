@@ -411,7 +411,6 @@ class OSGPerSiteReporter(Reporter):
         for values in report.itervalues():
             values.insert(-3, '')
 
-
         return report
 
     def run_report(self):
