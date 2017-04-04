@@ -302,14 +302,6 @@ class Reporter(TimeUtils):
             htmltext = htmltext.format(**htmldict)
             text["html"] = htmltext
 
-            # # Build the HTML file from the template
-            # htmltext = htmltext.replace('$TITLE', use_title)
-            # if "$HEADER" in htmltext and htmlheader:
-            #     htmltext = htmltext.replace('$HEADER', htmlheader)
-            # text["html"] = htmltext.replace('$TABLE', htmldata)
-
-
-
         else:
             text["html"] = "<html><body><h2>{0}</h2><table border=1>{1}</table></body></html>".format(use_title, htmldata)
 
