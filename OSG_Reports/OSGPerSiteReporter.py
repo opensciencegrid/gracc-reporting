@@ -27,6 +27,19 @@ opp_vos = ['glow', 'gluex', 'hcc', 'osg', 'sbgrid']
 
 
 # Helper Functions
+def coroutine(func):
+    """Decorator to prime coroutines by advancing them to their first yield
+    point
+
+    :param function func: Coroutine function to prime
+    :return function: Coroutine that's been primed
+    """
+    def wrapper(*args, **kwargs):
+        cr = func(*args, **kwargs)
+        cr.next()
+        return cr
+    return wrapper
+
 def monthrange(date):
     """
     Takes a start date and finds out the start and end of the month that that
@@ -119,7 +132,6 @@ class VO(object):
         self.pos = 0
         self.total = [0,0]  # Position 0 = Current, Position 1 = Past
         self.totalcalc = self.running_totalhours()
-        self.totalcalc.send(None)
 
     def add_site(self, sitename, corehours):
         """Add a new site data to the VO.  Also updates the core hours of
@@ -139,6 +151,7 @@ class VO(object):
         self.totalcalc.send(corehours)
         return
 
+    @coroutine
     def running_totalhours(self):
         """Keeps running total of core hours for the VO"""
         while True:
@@ -272,7 +285,6 @@ class OSGPerSiteReporter(Reporter):
         """Higher-level method to run other methods to
         generate the raw data for the report."""
         consumer = self.create_vo_objects()
-        consumer.send(None)
 
         # Run our query twice - once for this month, once for last month
         for self.start_time, self.end_time in (
@@ -284,6 +296,7 @@ class OSGPerSiteReporter(Reporter):
 
         return
 
+    @coroutine
     def create_vo_objects(self):
         """Coroutine to create the VO objects and store the information
         in them"""

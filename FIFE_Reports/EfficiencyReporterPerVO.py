@@ -28,6 +28,21 @@ from Reporter import Reporter, runerror
 logfile = 'efficiencyreport.log'
 
 
+# Helper functions
+def coroutine(func):
+    """Decorator to prime coroutines by advancing them to their first yield
+    point
+
+    :param function func: Coroutine function to prime
+    :return function: Coroutine that's been primed
+    """
+    def wrapper(*args, **kwargs):
+        cr = func(*args, **kwargs)
+        cr.next()
+        return cr
+    return wrapper
+
+
 @Reporter.init_reporter_parser
 def parse_opts(parser):
     """
@@ -153,13 +168,13 @@ class Efficiency(Reporter):
             self.logger.exception(e)
             raise
 
+    @coroutine
     def parse_lines(self):
         """
         Coroutine: For each set of dn, wall hours, cpu time,
         this gets username, calculates efficiency, and sends to HTML formatter
         """
         html_formatter = self.generate_report_lines()
-        html_formatter.send(None)
         while True:
             dn, wallhrs, cputime = yield
             user = self.parseCN(dn)
@@ -169,12 +184,11 @@ class Efficiency(Reporter):
                     print "{0}\t{1}\t{2}%".format(user, wallhrs, round(eff*100, 1))
                 html_formatter.send((user, wallhrs, eff))
 
+    @coroutine
     def generate_report_lines(self):
         """Coroutine: This generates an HTML line from the raw data
         line and sends it to the tablebuilder"""
         tablebuilder = self.generate_data_table()
-        tablebuilder.send(None)
-
         epoch_stamps = self.get_epoch_stamps_for_grafana()
         elist = [elt for elt in epoch_stamps]
         elist_vo = [elt for elt in elist]
@@ -206,6 +220,7 @@ class Efficiency(Reporter):
                                                                    round(float(eff), 2))
             tablebuilder.send(htmlline)
 
+    @coroutine
     def generate_data_table(self):
         """Coroutine: This compiles the data table lines and creates
         the table text (HTML) string"""
@@ -283,7 +298,6 @@ class Efficiency(Reporter):
         """
         results = self.generate()
         pline = self.parse_lines()
-        pline.send(None)
 
         vos = (vo for vo in results.group_VOName.buckets)
         hostdesc = (hd for vo in vos for hd in vo.group_HostDescription.buckets)

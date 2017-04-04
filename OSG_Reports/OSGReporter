@@ -29,6 +29,7 @@ logfile = 'osgreporter.log'
 MAXINT = 2**31 - 1
 
 
+# Helper Functions
 def key_to_lower(bucket):
     return bucket.key.lower()
 
