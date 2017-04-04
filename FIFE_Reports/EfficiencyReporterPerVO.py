@@ -138,12 +138,12 @@ class Efficiency(Reporter):
 
         return s
 
-    def generate(self):
-        """
-        Main driver of activity in report.  Runs the ES query, checks for
-        success, and then returns the raw data for processing.
+    def run_query(self):
+        """Execute the query and check the status code before returning the
+        response
 
-        :return: Response.aggregations object
+        :return Response.aggregations: Returns aggregations property of
+        elasticsearch response
         """
         s = self.query()
         t = s.to_dict()
@@ -167,6 +167,25 @@ class Efficiency(Reporter):
         except Exception as e:
             self.logger.exception(e)
             raise
+
+    def generate(self):
+        """
+        Runs the ES query, checks for success, and then
+        sends the raw data to parser for processing.
+
+        :return: None
+        """
+        results = self.run_query()
+        pline = self.parse_lines()
+
+        vos = (vo for vo in results.group_VOName.buckets)
+        hostdesc = (hd for vo in vos for hd in vo.group_HostDescription.buckets)
+        cns = (cn for hd in hostdesc for cn in hd.group_CommonName.buckets)
+
+        for cn in cns:
+            if cn.WallHours.value > self.hour_limit:
+                pline.send((cn.key, cn.WallHours.value, cn.CPUDuration_sec.value))
+
 
     @coroutine
     def parse_lines(self):
@@ -294,21 +313,12 @@ class Efficiency(Reporter):
         return user
 
     def run_report(self):
-        """Handles the data flow throughout the report generation.  Runs the
-        query, generates the HTML report, and sends the email
+        """Handles the data flow throughout the report generation.  Generates
+        the raw data, the HTML report, and sends the email.
 
         :return None
         """
-        results = self.generate()
-        pline = self.parse_lines()
-
-        vos = (vo for vo in results.group_VOName.buckets)
-        hostdesc = (hd for vo in vos for hd in vo.group_HostDescription.buckets)
-        cns = (cn for hd in hostdesc for cn in hd.group_CommonName.buckets)
-
-        for cn in cns:
-            if cn.WallHours.value > self.hour_limit:
-                pline.send((cn.key, cn.WallHours.value, cn.CPUDuration_sec.value))
+        self.generate()
 
         if not self.table:
             self.no_email = True
