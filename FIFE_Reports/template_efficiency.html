@@ -1,22 +1,22 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <html>
        <head>
-               <title>$TITLE</title>
+               <title>{title}</title>
                <style>
-                 body {
+                 body {{
                    font-family: Helvetica, Arial, sans-serif;
                    font-size: 12px;
                    line-height: 17px;
                    margin:50px 0;
-                 }
-                 td {
+                 }}
+                 td {{
                    border-top: 2px solid #ccc;
-                 }
+                 }}
 
         /*  Define the background color for all the EVEN background rows  */
-        tr:nth-child(even){
+        tr:nth-child(even){{
                 background: #30cfbc;
-        }
+        }}
 
 
 
@@ -29,7 +29,7 @@
 </div>
 </div>
        <div style="width:770px; margin:0 auto; font-family: Helvetica, Arial, sans-serif; font-size: 12px; line-height: 17px;">
-<div style="background:#00B8F4; width:100%; padding:15px; margin:10px 0; font-size:20px; line-height:25px;">$TITLE</div>
+<div style="background:#00B8F4; width:100%; padding:15px; margin:10px 0; font-size:20px; line-height:25px;">{title}</div>
        <table cellpadding="7" cellspacing="0" border="0" width="100%" style="clear:both;">
        <tr>
         <th align="center" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Experiment</td>
@@ -38,7 +38,7 @@
         <th align="center" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Used Wall Hours</th>
         <th align="center" style="font-weight:bold; text-transform: uppercase; letter-spacing:1px; font-size:11px; color:#00B8F4">Efficiency</th>
         </tr>
-$TABLE
+{table}
 </table>
            Click on the experiment or user for more details.
        </div>

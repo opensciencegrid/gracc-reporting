@@ -221,12 +221,9 @@ class Efficiency(Reporter):
 
         :return: None
         """
+        htmldict = dict(title=self.title, table=self.table)
         self.text = "".join(open(self.template).readlines())
-        self.text = self.text.replace("$START", self.start_time)
-        self.text = self.text.replace("$END", self.end_time)
-        self.text = self.text.replace("$VO", self.vo)
-        self.text = self.text.replace("$TITLE", self.title)
-        self.text = self.text.replace("$TABLE", self.table)
+        self.text = self.text.format(**htmldict)
         return
 
     def send_report(self):
