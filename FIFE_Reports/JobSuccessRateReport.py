@@ -126,8 +126,6 @@ class JobSuccessRateReporter(Reporter):
         self.realhost_pattern = re.compile('\s\(primary\)')
         self.jobpattern = re.compile('(\d+).\d+@(fifebatch\d\.fnal\.gov)')
         self.text = ''
-        self.fn = "{0}-jobrate.{1}".format(self.vo.lower(),
-                                           self.start_time.replace("/", "-"))
         self.limit_sites = self.limit_site_check()
         self.title = "{0} Production Jobs Success Rate on the OSG Sites " \
                      "({1} - {2})".format(
@@ -158,30 +156,36 @@ class JobSuccessRateReporter(Reporter):
             sleep(3)
 
         # Elasticsearch query
-        resultset = Search(using=self.client, index=self.indexpattern) \
+        s = Search(using=self.client, index=self.indexpattern) \
             .filter("range", EndTime={"gte": starttimeq, "lt": endtimeq}) \
             .filter("term", ResourceType="Payload")
 
         if self.vo in re.split(',', self.config.get('noproduction', 'list')):
-            resultset = resultset.filter("wildcard", VOName=voq)
+            s = s.filter("wildcard", VOName=voq)
         else:
-            resultset = resultset.filter("wildcard", VOName=productioncheck)\
+            s = s.filter("wildcard", VOName=productioncheck)\
                 .filter("term", VOName=voq)
 
         if self.verbose:
-            print resultset.to_dict()
+            print s.to_dict()
+
+        return s
+
+    def run_query(self):
+        """Execute the query and check the status code before returning
+
+        :return: Elasticsearch search object
+        """
+        resultset = self.query()  # Generate Search object for ES
+        response = resultset.execute()  # Execute that Search
+        return_code_success = response.success()  # True if the elasticsearch
+                                                  # query completed without errors
+
+        if not return_code_success:
+            self.logger.exception('Error accessing ElasticSearch')
+            raise Exception('Error accessing ElasticSearch')
 
         return resultset
-
-    def get_job_parts_from_jobid(self, jobid):
-        """
-        Parses the jobid string and grabs the relevant parts to generate
-        Fifemon link
-
-        :param str jobid: GlobalJobId field of a GRACC record
-        :return tuple: Tuple of jobid, schedd
-        """
-        return self.jobpattern.match(jobid).groups()
 
     def generate_result_array(self, resultset):
         """Generator.  Compiles results from resultset into array.  Yields each
@@ -237,42 +241,11 @@ class JobSuccessRateReporter(Reporter):
                 # old MySQL report behaved.
                 pass
 
-    def add_to_clusters(self):
-        """Coroutine: For each line fed in, will
-        instantiate Job class for each one, add to Jobs class dictionary,
-        and add to clusters.  Then waits for next line"""
-        while True:
-            line = yield
-            tmp = line.split('\t')
-            start_time = tmp[0].strip().replace('T', ' ').replace('Z', '')
-            end_time = tmp[1].strip().replace('T', ' ').replace('Z', '')
-            userid = tmp[2].strip()
-            jobid = tmp[3].strip()
-            site = tmp[4].strip()
-            if site == "NULL":
-                pass
-            else:
-                host = tmp[5].strip()
-                status = int(tmp[6].strip())
-                job = Job(end_time, start_time, jobid, site, host, status)
-                self.run.add_job(site, job)
-                clusterid = jobid.split(".")[0]
-                if clusterid not in self.clusters:
-                    self.clusters[clusterid] = {'userid': userid, 'jobs': []}
-                self.clusters[clusterid]['jobs'].append(job)
-
     def generate(self):
         """Main driver of activity in report.  Runs the ES query, checks for
         success, and then runs routines to generate the results lines, parse
         those lines to add to Job, Jobs, and clusters structures."""
-        resultset = self.query()  # Generate Search object for ES
-        response = resultset.execute()  # Execute that Search
-        return_code_success = response.success()  # True if the elasticsearch
-                                                  # query completed without errors
-
-        if not return_code_success:
-            self.logger.exception('Error accessing ElasticSearch')
-            raise Exception('Error accessing ElasticSearch')
+        resultset = self.run_query()
 
         # Add all of our results to the clusters dictionary
         resultscount = 0
@@ -288,8 +261,34 @@ class JobSuccessRateReporter(Reporter):
 
         return
 
+    def add_to_clusters(self):
+        """Coroutine: For each line fed in, will
+        instantiate Job class for each one, add to Jobs class dictionary,
+        and add to clusters.  Then waits for next line"""
+        while True:
+            line = yield
+            tmp = line.split('\t')
+            start_time, end_time, userid, jobid, site = (item.strip() for item in tmp[:5])
+            start_time, end_time = (t.replace('T', ' ').replace('Z', '') for t in (start_time, end_time))
+            # end_time = end_time.replace('T', ' ').replace('Z', '')
+            # userid = tmp[2].strip()
+            # jobid = tmp[3].strip()
+            # site = tmp[4].strip()
+            if site == "NULL":
+                pass
+            else:
+                host = tmp[5].strip()
+                status = int(tmp[6].strip())
+                job = Job(end_time, start_time, jobid, site, host, status)
+                self.run.add_job(site, job)
+                clusterid = jobid.split(".")[0]
+                if clusterid not in self.clusters:
+                    self.clusters[clusterid] = {'userid': userid, 'jobs': []}
+                self.clusters[clusterid]['jobs'].append(job)
+
     def generate_report_file(self):
-        """This is the function that creates the report HTML file"""
+        """This is the function that parses the clusters data and
+        creates the report HTML file"""
         total_failed = 0
         if len(self.run.jobs) == 0:
             self.logger.info("no_email flag triggered - no jobs to report on")
@@ -307,6 +306,10 @@ class JobSuccessRateReporter(Reporter):
         job_table = ""
         job_table_cl_count = 0
 
+        def tdalign(info, align):
+            """HTML generator to wrap a table cell with alignment"""
+            return '<td align="{0}">{1}</td>'.format(align, info)
+
         # Look in clusters, figure out whether job failed or succeeded,
         # categorize appropriately, and generate HTML line for total jobs
         # failed by cluster
@@ -323,17 +326,15 @@ class JobSuccessRateReporter(Reporter):
                 continue
             if job_table_cl_count < config_vals['num_clusters']:  # Limit number of clusters
                                                    # shown in report based on config file
-                job_table += '\n<tr><td align = "left">{0}</td>' \
-                             '<td align = "right">{1}</td>' \
-                             '<td align = "right">{2}</td>' \
-                             '<td align = "right">{3}</td>' \
-                             '<td></td><td></td><td></td><td></td><td></td>'\
-                             '<td></td></tr>'.format(
-                                                cid,
-                                                cdict['userid'],
-                                                total_jobs,
-                                                total_jobs_failed)
-                # Generate HTML line for each failed job
+
+                linemap = ((cid, 'left'), (cdict['userid'], 'right'),
+                           (total_jobs, 'right'), (total_jobs_failed, 'right'))
+
+                job_table += '\n<tr>' + \
+                             ''.join((tdalign(key, al) for key, al in linemap)) + \
+                             '<td></td>' * 6 + '</tr>'
+
+            # Generate HTML line for each failed job
                 jcount = 0
 
                 for job in failures:
@@ -363,19 +364,11 @@ class JobSuccessRateReporter(Reporter):
                         job_html = '<a href="{0}">{1}</a>'.format(job_link,
                                                                   job.jobid)
 
-                        job_table += '\n<tr><td></td><td></td><td></td><td></td>' \
-                                     '<td align = "left">{0}</td>'\
-                                     '<td align = "left">{1}</td>' \
-                                     '<td align = "left">{2}</td>' \
-                                     '<td align = "right">{3}</td>'\
-                                     '<td align = "right">{4}</td>' \
-                                     '<td align = "right">{5}</td></tr>'.format(
-                                        job_html,
-                                        job.start_time,
-                                        job.end_time,
-                                        job.site,
-                                        job.host,
-                                        job.exit_code)
+
+                        linemap = ((job_html, 'left'), (job.start_time, 'left'),
+                                   (job.end_time, 'left'), (job.site, 'right'),
+                                   (job.host, 'right'), (job.exit_code, 'right'))
+                        job_table += '\n<tr>' + '<td></td>' * 4 + ''.join((tdalign(key, al) for key, al in linemap)) + '</tr>'
                         jcount += 1
                     else:
                         break
@@ -458,7 +451,6 @@ class JobSuccessRateReporter(Reporter):
 
         if self.limit_sites:
             # If a VO wants to limit the number of sites
-            # Make the value here (10) configurable
             try:
                 # Take top ten failed sites in descending order
                 failkeys = (site[0] for site in sorted(faildict.iteritems(),
@@ -470,34 +462,31 @@ class JobSuccessRateReporter(Reporter):
                                                        key=lambda x: x[1],
                                                        reverse=True))
             finally:
-                siteheader_add = " (Top {0} sites shown here, " \
+                sitetabletitle_add = " (Top {0} sites shown here, " \
                                  "top {1} hosts per site)".format(config_vals['num_failed_sites'],
                                                                   config_vals['num_hosts_per_site'])
         else:
             failkeys = (site[0] for site in
                         sorted(faildict.iteritems(), key=lambda x: x[1],
                                reverse=True))
-            siteheader_add = ""
+            sitetabletitle_add = ""
 
-        siteheader = "Site Details{0}".format(siteheader_add)
+        sitetabletitle = "Site Details{0}".format(sitetabletitle_add)
 
         table = ''.join(str(site_failed_dict[site]['HTMLLines']) for site in failkeys)
 
-        table += '\n<tr><td align = "left">Total</td>' \
-                 '<td align = "right">{0}</td>' \
-                 '<td align = "right">{1}</td>'\
-                 '<td align = "right">{2}</td>' \
-                 '<td></td><td></td><td></td></tr>'.format(
-                    total_jobs,
-                    total_failed,
-                    round((total_jobs - total_failed) * 100. / total_jobs, 1))
-        table_summary += '\n<tr><td align = "left">Total</td>' \
-                         '<td align = "right">{0}</td>' \
-                         '<td align = "right">{1}</td>'\
-                         '<td align = "right">{2}</td></td></tr>'.format(
-                                                                    total_jobs,
-                                                                    total_failed,
-                                                                    round((total_jobs - total_failed) * 100. / total_jobs, 1))
+        linemap = (('Total', 'left'), (total_jobs, 'right'),
+                   (total_failed, 'right'),
+                   (round((total_jobs - total_failed) * 100. / total_jobs, 1), 'right'))
+        table += '\n<tr>' + \
+                 ''.join((tdalign(key, al) for key, al in linemap)) + \
+                 '<td></td>' * 3 + '</tr>'
+
+
+        linemap = (('Total', 'left'), (total_jobs, 'right'),
+                   (total_failed, 'right'),
+                   (round((total_jobs - total_failed) * 100. / total_jobs, 1), 'right'))
+        table_summary += '\n<tr>' + ''.join((tdalign(key, al) for key, al in linemap)) + '</tr>'
 
         # Generate Grafana link for User Batch Details
         epoch_stamps = self.get_epoch_stamps_for_grafana()
@@ -523,30 +512,55 @@ class JobSuccessRateReporter(Reporter):
             string_per_cluster = ', {0} per cluster'.format(
                 int(config_vals['jobs_per_cluster']))
 
-        numclusterheader = 'Failed Job Details ' \
+        # Grab HTML template, replace variables shown
+        numclustertabletitle = 'Failed Job Details ' \
                            '({0} clusters shown here{1})'.format(int(config_vals['num_clusters']),
                                                                  string_per_cluster)
 
-        # Grab HTML template, replace variables shown
+        headerdict = {
+            "summaryheader": ['Site', 'Total Jobs', 'Failed Jobs', 'Success Rate'],
+            "clusterheader": ['Cluster', 'UserID', 'Total Jobs', 'Failed Jobs',
+                              'JobID', 'Start Time', 'End Time', 'Site',
+                              'Host', 'ExitCode'],
+            "siteheader": ['Site', 'Total Jobs', 'Failed Jobs', 'Success Rate',
+                           'Bad Host', 'Exit Code', 'Failed Jobs on Host'],
+        }
+
+        htmldict = dict(title=self.title, table_summary=table_summary,
+                        table_jobs=job_table, table=table,
+                        fifemon_link=fifemon_link, divopen=divopen,
+                        divclose=divclose,
+                        numclustertabletitle=numclustertabletitle,
+                        sitetabletitle=sitetabletitle)
+
+        for tag, l in headerdict.iteritems():
+            htmldict[tag] = self._generate_header(l)
+
         self.text = "".join(open(self.template).readlines())
-        self.text = self.text.replace("$START", self.start_time)
-        self.text = self.text.replace("$END", self.end_time)
-        self.text = self.text.replace("$TABLE_SUMMARY", table_summary)
-        self.text = self.text.replace("$DIVOPEN", divopen)
-        self.text = self.text.replace("$NUMCLUSTERHEADER", numclusterheader)
-        self.text = self.text.replace("$SITEHEADER", siteheader)
-        self.text = self.text.replace("$TABLE_JOBS", job_table)
-        self.text = self.text.replace("$DIVCLOSE", divclose)
-        self.text = self.text.replace("$TABLE", table)
-        self.text = self.text.replace("$FIFEMON_LINK", fifemon_link)
-        self.text = self.text.replace("$VO", self.vo)
-
-        # Generate HTML file to send
-
-        with open(self.fn, 'w') as f:
-            f.write(self.text)
+        self.text = self.text.format(**htmldict)
 
         return
+
+    def get_job_parts_from_jobid(self, jobid):
+        """
+        Parses the jobid string and grabs the relevant parts to generate
+        Fifemon link
+
+        :param str jobid: GlobalJobId field of a GRACC record
+        :return tuple: Tuple of jobid, schedd
+        """
+        return self.jobpattern.match(jobid).groups()
+
+    @staticmethod
+    def _generate_header(headerlist):
+        """Method that creates HTML for table headers
+
+        :param list headerlist: List of header columns
+        :return str: HTML for header
+        """
+        htmlheader = '<th style="text-align:center">' + \
+            '</th><th>'.join(headerlist) + '</th>'
+        return htmlheader
 
     def send_report(self):
         """Method to send emails of report file to intended recipients."""
@@ -569,9 +583,6 @@ class JobSuccessRateReporter(Reporter):
         self.generate()
         self.generate_report_file()
         self.send_report()
-
-        if os.path.exists(self.fn):
-            os.unlink(self.fn)  # Delete HTML file
 
 
 if __name__ == "__main__":

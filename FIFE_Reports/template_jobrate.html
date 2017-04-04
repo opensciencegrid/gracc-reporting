@@ -36,15 +36,13 @@
             <h3 class="muted"><img src="http://fife.fnal.gov/wp-content/uploads/2016/07/fife_logo_lowres.png" width="150"></h3>
         </div>
     </div>
+
     <div style="width:770px; margin:0 auto; font-family: Helvetica, Arial, sans-serif; font-size: 12px; line-height: 17px;">
         <div style="background:#00B8F4; width:100%; padding:15px; margin:10px 0; font-size:20px; line-height:25px; color:#000000">{title}</div>
         <h3>Summary</h3>
         <table cellpadding="7" cellspacing="0" border="0" width="100%" style="clear:both;">
             <tr>
-                <th style="text-align:center">Site</th>
-                <th>Total Jobs</th>
-                <th>Failed Jobs</th>
-                <th>Success Rate</th>
+                {summaryheader}
             </tr>
             {table_summary}
         </table>
@@ -56,16 +54,7 @@
 
         <table cellpadding="7" cellspacing="0" border="0" width="100%" style="clear:both;">
             <tr>
-                <th style="text-align:center">Cluster</td>
-                <th>UserId</th>
-                <th>Total Jobs</th>
-                <th>Failed Jobs</th>
-                <th>JobId</th>
-                <th>Start Time</th>
-                <th>End Time</th>
-                <th>Site</th>
-                <th>Host</th>
-                <th>ExitCode</th>
+                {clusterheader}
             </tr>
             {table_jobs}
         </table>
@@ -74,13 +63,7 @@
         <h3>{sitetabletitle}</h3>
         <table cellpadding="7" cellspacing="0" border="0" width="100%" style="clear:both;">
             <tr>
-                <th style="text-align:center">Site</td>
-                <th>Total Jobs</th>
-                <th>Failed Jobs</th>
-                <th>Success Rate</th>
-                <th style="text-align:center">Bad Host</th>
-                <th>Exit Code</th>
-                <th>Failed Jobs on Host</th>
+                {siteheader}
             </tr>
         {table}
         </table>
