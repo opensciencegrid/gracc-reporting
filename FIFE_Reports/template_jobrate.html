@@ -1,32 +1,32 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <html>
     <head>
-        <title>$VO Production Jobs Success Rate Report</title>
+        <title>{title}</title>
         <style>
-        body {
+        body {{
             font-family: Helvetica, Arial, sans-serif;
             font-size: 12px;
             line-height: 17px;
             margin:50px 0;
-        }
+        }}
 
-        td {
+        td {{
             border-top: 2px solid #ccc;
-        }
+        }}
 
-        th {
+        th {{
             text-align: right;
             font-weight: bold;
             text-transform: uppercase;
             letter-spacing:1px;
             font-size:11px;
             color:#00B8F4
-        }
+        }}
 
         /*  Define the background color for all the EVEN background rows  */
-        tr:nth-child(even){
+        tr:nth-child(even){{
             background: #30cfbc;
-        }
+        }}
         </style>
     </head>
 
@@ -37,7 +37,7 @@
         </div>
     </div>
     <div style="width:770px; margin:0 auto; font-family: Helvetica, Arial, sans-serif; font-size: 12px; line-height: 17px;">
-        <div style="background:#00B8F4; width:100%; padding:15px; margin:10px 0; font-size:20px; line-height:25px; color:#000000">$VO Production Jobs Success Rate on the OSG Resources ($START - $END)</div>
+        <div style="background:#00B8F4; width:100%; padding:15px; margin:10px 0; font-size:20px; line-height:25px; color:#000000">{title}</div>
         <h3>Summary</h3>
         <table cellpadding="7" cellspacing="0" border="0" width="100%" style="clear:both;">
             <tr>
@@ -46,12 +46,12 @@
                 <th>Failed Jobs</th>
                 <th>Success Rate</th>
             </tr>
-            $TABLE_SUMMARY
+            {table_summary}
         </table>
-        For more details, see $FIFEMON_LINK
+        For more details, see {fifemon_link}
 
-        $DIVOPEN
-        <h3>$NUMCLUSTERHEADER</h3>
+        {divopen}
+        <h3>{numclustertabletitle}</h3>
         Click on each job for more details.
 
         <table cellpadding="7" cellspacing="0" border="0" width="100%" style="clear:both;">
@@ -67,11 +67,11 @@
                 <th>Host</th>
                 <th>ExitCode</th>
             </tr>
-            $TABLE_JOBS
+            {table_jobs}
         </table>
-        $DIVCLOSE
+        {divclose}
 
-        <h3>$SITEHEADER</h3>
+        <h3>{sitetabletitle}</h3>
         <table cellpadding="7" cellspacing="0" border="0" width="100%" style="clear:both;">
             <tr>
                 <th style="text-align:center">Site</td>
@@ -82,7 +82,7 @@
                 <th>Exit Code</th>
                 <th>Failed Jobs on Host</th>
             </tr>
-        $TABLE
+        {table}
         </table>
 
     </div>
