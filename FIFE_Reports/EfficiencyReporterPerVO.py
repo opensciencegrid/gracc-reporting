@@ -236,7 +236,10 @@ class Efficiency(Reporter):
 
         :return: None
         """
-        htmldict = dict(title=self.title, table=self.table)
+        header = ['Experiment', 'Facility', 'User', 'Used Wall Hours',
+                  'Efficiency']
+        htmlheader = '<th>' + '</th><th>'.join(header) + '</th>'
+        htmldict = dict(title=self.title, header=htmlheader, table=self.table)
         self.text = "".join(open(self.template).readlines())
         self.text = self.text.format(**htmldict)
         return
