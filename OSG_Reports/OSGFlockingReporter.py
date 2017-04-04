@@ -27,14 +27,6 @@ logfile = 'osgflockingreport.log'
 MAXINT = 2**31 - 1
 
 # Helper functions
-def running_total():
-    """Calculates the running total of numbers that are fed in.
-    Yields the running total so far
-    """
-    total = 0
-    while True:
-        number = yield total
-        total += number
 
 @Reporter.init_reporter_parser
 def parse_opts(parser):
@@ -155,8 +147,7 @@ class FlockingReport(Reporter):
         :return dict: Constructed dict of report information for
         Reporter.send_report to send report from"""
         report = {}
-        tot = running_total()
-        tot.send(None)
+        runtot = 0
 
         for name in self.header:
             if name not in report:
@@ -166,12 +157,10 @@ class FlockingReport(Reporter):
             vo, site, probe, project, wallhours = result_tuple
             if self.verbose:
                 print "{0}\t{1}\t{2}\t{3}\t{4}".format(*result_tuple)
-            report["VOName"].append(vo)
-            report["SiteName"].append(site)
-            report["ProbeName"].append(probe)
-            report["ProjectName"].append(project)
-            report["Wall Hours"].append(wallhours)
-            runtot = tot.send(wallhours)
+            mapdict = dict(zip(self.header, result_tuple))
+            for key, item in mapdict.iteritems():
+                report[key].append(item)
+            runtot += wallhours
 
         for col in self.header:
             if col == 'VOName':
