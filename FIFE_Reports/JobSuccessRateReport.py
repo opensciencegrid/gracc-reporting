@@ -140,11 +140,6 @@ class JobSuccessRateReporter(Reporter):
         self.generate_report_file()
         self.send_report()
 
-    def _limit_site_check(self):
-        """Check to see if the num_failed_sites option is set in the config
-        file for the VO"""
-        return self.config.has_option(self.vo.lower(), 'num_failed_sites')
-
     def query(self):
         """
         Method to query Elasticsearch cluster for EfficiencyReport information
@@ -580,6 +575,11 @@ class JobSuccessRateReporter(Reporter):
 
         self.logger.info("Sent Report for {0}".format(self.vo))
         return
+
+    def _limit_site_check(self):
+        """Check to see if the num_failed_sites option is set in the config
+        file for the VO"""
+        return self.config.has_option(self.vo.lower(), 'num_failed_sites')
 
 
 if __name__ == "__main__":

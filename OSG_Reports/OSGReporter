@@ -57,30 +57,16 @@ class OSGReporter(Reporter):
                           raw=False, no_email=no_email, is_test=is_test,
                           template=template, logfile=logfile)
         self.isSum = isSum
-        self.report_type = self.validate_report_type(report_type)
+        self.report_type = self._validate_report_type(report_type)
         self.header = ["Project Name", "PI", "Institution", "Field of Science",
                      "Wall Hours"]
         self.logger.info("Report Type: {0}".format(self.report_type))
         self.isSum = isSum
 
-    def validate_report_type(self, report_type):
-        """
-        Validates that the report being run is one of three types.  Sets
-        title of report if it's given a valid report type
-
-        :param str report_type: One of OSG, XD, or OSG-Connect
-        :return report_type: report type
-        """
-        validtypes = {"OSG": "OSG-Direct", "XD": "OSG-XD",
-                      "OSG-Connect": "OSG-Connect"}
-        if report_type in validtypes:
-            self.title = "{0} Project Report for {1} - {2}".format(
-                validtypes[report_type], self.start_time, self.end_time)
-            return report_type
-        else:
-            raise Exception("Must use report type {0}".format(
-                ', '.join((name for name in validtypes)))
-            )
+    def run_report(self):
+        """Higher level method to handle the process flow of the report
+        being run"""
+        self.send_report(title=self.title)
 
     def query(self):
         """Method to query Elasticsearch cluster for OSGReporter information
@@ -119,7 +105,7 @@ class OSGReporter(Reporter):
 
         return s
 
-    def runquery(self):
+    def run_query(self):
         """Execute the query and check the status code before returning the response
 
         :return Response.aggregations: Returns aggregations property of
@@ -147,7 +133,7 @@ class OSGReporter(Reporter):
     def generate_report_file(self):
         """Takes data from query response and parses it to send to other
         functions for processing"""
-        results = self.runquery()
+        results = self.run_query()
 
         unique_terms = ['ProjectName', 'OIM_PIName', 'OIM_Organization',
                         'OIM_FieldOfScience']
@@ -229,10 +215,24 @@ class OSGReporter(Reporter):
 
         return report
 
-    def run_report(self):
-        """Higher level method to handle the process flow of the report
-        being run"""
-        self.send_report(title=self.title)
+    def _validate_report_type(self, report_type):
+        """
+        Validates that the report being run is one of three types.  Sets
+        title of report if it's given a valid report type
+
+        :param str report_type: One of OSG, XD, or OSG-Connect
+        :return report_type: report type
+        """
+        validtypes = {"OSG": "OSG-Direct", "XD": "OSG-XD",
+                      "OSG-Connect": "OSG-Connect"}
+        if report_type in validtypes:
+            self.title = "{0} Project Report for {1} - {2}".format(
+                validtypes[report_type], self.start_time, self.end_time)
+            return report_type
+        else:
+            raise Exception("Must use report type {0}".format(
+                ', '.join((name for name in validtypes)))
+            )
 
 
 if __name__=="__main__":

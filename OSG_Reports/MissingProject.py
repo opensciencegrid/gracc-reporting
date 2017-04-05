@@ -55,7 +55,7 @@ class MissingProjectReport(Reporter):
         Reporter.__init__(self, report_type, config, start, end, verbose,
                           raw=False, no_email=no_email, is_test=is_test,
                           logfile=self.logfile)
-        self.report_type = self.validate_report_type(report_type)
+        self.report_type = self._validate_report_type(report_type)
         self.logger.info("Report Type: {0}".format(self.report_type))
         
         # Temp files
@@ -65,22 +65,10 @@ class MissingProjectReport(Reporter):
             if os.path.exists(f):
                 os.unlink(f)
 
-    @staticmethod
-    def validate_report_type(report_type):
-        """
-        Validates that the report being run is one of three types.
-
-        :param str report_type: One of OSG, XD, or OSG-Connect
-        :return report_type: report type
-        """
-        validtypes = {"OSG": "OSG-Direct", "XD": "OSG-XD",
-                      "OSG-Connect": "OSG-Connect"}
-        if report_type in validtypes:
-            return report_type
-        else:
-            raise Exception("Must use report type {0}".format(
-                ', '.join((name for name in validtypes)))
-            )
+    def run_report(self):
+        """Higher level method to handle the process flow of the report
+        being run"""
+        self.generate()
 
     def query(self):
         """
@@ -118,7 +106,7 @@ class MissingProjectReport(Reporter):
 
         return s
 
-    def runquery(self):
+    def run_query(self):
         """Execute the query and check the status code before returning the response
 
         :return Response.aggregations: Returns aggregations property of
@@ -142,11 +130,13 @@ class MissingProjectReport(Reporter):
         except Exception as e:
             print e, "Error accessing Elasticsearch"
             sys.exit(1)
-
-    def run_report(self):
-        """Higher level method to handle the process flow of the report
-        being run"""
-        results = self.runquery()
+            
+    def generate(self):
+        """Higher-level method that calls the lower-level functions
+        to generate the raw data for this report and pass it to the correct
+        checkers
+        """
+        results = self.run_query()
         unique_terms = self.unique_terms
         metrics = self.metrics
 
@@ -171,7 +161,8 @@ class MissingProjectReport(Reporter):
             else:
                 # Get the current key, and add it to the data
                 for bucket in curBucket[curTerm]['buckets']:
-                    nowData = copy.deepcopy(curData)    # Hold a copy of curData so we can pass that in to any future recursion
+                    nowData = copy.deepcopy(
+                        curData)  # Hold a copy of curData so we can pass that in to any future recursion
                     nowData[curTerm] = bucket['key']
                     if index == (len(unique_terms) - 1):
                         # reached the end of the unique terms
@@ -193,17 +184,17 @@ class MissingProjectReport(Reporter):
 
         # Check the missing projects
         for item in data:
-            self.check_project(item)
+            self._check_project(item)
 
         # Send the emails, delete temp files
         for group in ((self.fname, False),
-                     (self.fxdadminname, True)):
+                      (self.fxdadminname, True)):
             if os.path.exists(group[0]):
                 self.send_email(xd_admins=group[1])
                 self.logger.info("Sent email from file {0}".format(group[0]))
                 os.unlink(group[0])
 
-    def check_osg_or_osg_connect(self, data):
+    def _check_osg_or_osg_connect(self, data):
         """
         Checks to see if data describing project is OSG's responsibility to
         maintain
@@ -216,7 +207,7 @@ class MissingProjectReport(Reporter):
                     ['osg', 'osg-connect'])
                 )
 
-    def check_project(self, data):
+    def _check_project(self, data):
         """
         Handles the logic for what to do with records that don't have OIM info
 
@@ -229,9 +220,9 @@ class MissingProjectReport(Reporter):
 
         if not p_name or PNC.no_name(p_name):
             # No real Project Name in records
-            self.write_noname_message(data)
+            self._write_noname_message(data)
             return
-        elif self.check_osg_or_osg_connect(data):
+        elif self._check_osg_or_osg_connect(data):
             # OSG should have kept this up to date
             PNC.create_request_to_register_oim(p_name, self.report_type)
             return
@@ -240,10 +231,10 @@ class MissingProjectReport(Reporter):
             p_info = PNC.get_project(p_name, source=self.report_type)
             if not p_info and self.report_type == 'XD':
                 # Project not in XD database
-                self.write_XD_not_in_db_message(p_name)
+                self._write_XD_not_in_db_message(p_name)
             return
 
-    def write_XD_not_in_db_message(self, name):
+    def _write_XD_not_in_db_message(self, name):
         """
         Appends message to a temp file that indicates that an XD project is not
         registered in the XD database.
@@ -260,7 +251,7 @@ class MissingProjectReport(Reporter):
 
         return
 
-    def write_noname_message(self, data):
+    def _write_noname_message(self, data):
         """
         Message to be sent to GOC for records with no project name.
 
@@ -354,6 +345,24 @@ class MissingProjectReport(Reporter):
             raise
 
         return
+
+    @staticmethod
+    def _validate_report_type(report_type):
+        """
+        Validates that the report being run is one of three types.
+
+        :param str report_type: One of OSG, XD, or OSG-Connect
+        :return report_type: report type
+        """
+        validtypes = {"OSG": "OSG-Direct", "XD": "OSG-XD",
+                      "OSG-Connect": "OSG-Connect"}
+        if report_type in validtypes:
+            return report_type
+        else:
+            raise Exception("Must use report type {0}".format(
+                ', '.join((name for name in validtypes)))
+            )
+
 
 if __name__ == '__main__':
     args = parse_opts()
