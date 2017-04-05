@@ -27,14 +27,6 @@ logfile = 'osgflockingreport.log'
 MAXINT = 2**31 - 1
 
 # Helper functions
-def running_total():
-    """Calculates the running total of numbers that are fed in.
-    Yields the running total so far
-    """
-    total = 0
-    while True:
-        number = yield total
-        total += number
 
 @Reporter.init_reporter_parser
 def parse_opts(parser):
@@ -68,6 +60,11 @@ class FlockingReport(Reporter):
         self.title = "OSG Flocking: Usage of OSG Sites for {0} - {1}".format(self.start_time, self.end_time)
         self.header = ["VOName", "SiteName", "ProbeName", "ProjectName",
                        "Wall Hours"]
+
+    def run_report(self):
+        """Higher level method to handle the process flow of the report
+        being run"""
+        self.send_report(title=self.title)
 
     def query(self):
         """Method to query Elasticsearch cluster for Flocking Report
@@ -148,8 +145,6 @@ class FlockingReport(Reporter):
                     for project in projects:
                         yield (sitekey, vokey, probekey, project.key, project.CoreHours_sum.value)
 
-
-
     def format_report(self):
         """Report formatter.  Returns a dictionary called report containing the
         columns of the report.
@@ -157,41 +152,32 @@ class FlockingReport(Reporter):
         :return dict: Constructed dict of report information for
         Reporter.send_report to send report from"""
         report = {}
-        tot = running_total()
-        tot.send(None)
 
         for name in self.header:
             if name not in report:
                 report[name] = []
 
         for result_tuple in self.generate():
-            vo, site, probe, project, wallhours = result_tuple
             if self.verbose:
                 print "{0}\t{1}\t{2}\t{3}\t{4}".format(*result_tuple)
-            report["VOName"].append(vo)
-            report["SiteName"].append(site)
-            report["ProbeName"].append(probe)
-            report["ProjectName"].append(project)
-            report["Wall Hours"].append(wallhours)
-            runtot = tot.send(wallhours)
 
+            mapdict = dict(zip(self.header, result_tuple))
+            for key, item in mapdict.iteritems():
+                report[key].append(item)
+
+        tot = sum(report['Wall Hours'])
         for col in self.header:
             if col == 'VOName':
                 report[col].append('Total')
             elif col == 'Wall Hours':
-                report[col].append(runtot)
+                report[col].append(tot)
             else:
                 report[col].append('')
 
         if self.verbose:
-            print "The total Wall hours in this report are {0}".format(runtot)
+            print "The total Wall hours in this report are {0}".format(tot)
 
         return report
-
-    def run_report(self):
-        """Higher level method to handle the process flow of the report
-        being run"""
-        self.send_report(title=self.title)
 
 
 def main():

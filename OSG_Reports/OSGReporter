@@ -28,8 +28,11 @@ from MissingProject import MissingProjectReport
 logfile = 'osgreporter.log'
 MAXINT = 2**31 - 1
 
+
+# Helper Functions
 def key_to_lower(bucket):
     return bucket.key.lower()
+
 
 @Reporter.init_reporter_parser
 def parse_opts(parser):
@@ -54,30 +57,16 @@ class OSGReporter(Reporter):
                           raw=False, no_email=no_email, is_test=is_test,
                           template=template, logfile=logfile)
         self.isSum = isSum
-        self.report_type = self.validate_report_type(report_type)
+        self.report_type = self._validate_report_type(report_type)
         self.header = ["Project Name", "PI", "Institution", "Field of Science",
                      "Wall Hours"]
         self.logger.info("Report Type: {0}".format(self.report_type))
         self.isSum = isSum
 
-    def validate_report_type(self, report_type):
-        """
-        Validates that the report being run is one of three types.  Sets
-        title of report if it's given a valid report type
-
-        :param str report_type: One of OSG, XD, or OSG-Connect
-        :return report_type: report type
-        """
-        validtypes = {"OSG": "OSG-Direct", "XD": "OSG-XD",
-                      "OSG-Connect": "OSG-Connect"}
-        if report_type in validtypes:
-            self.title = "{0} Project Report for {1} - {2}".format(
-                validtypes[report_type], self.start_time, self.end_time)
-            return report_type
-        else:
-            raise Exception("Must use report type {0}".format(
-                ', '.join((name for name in validtypes)))
-            )
+    def run_report(self):
+        """Higher level method to handle the process flow of the report
+        being run"""
+        self.send_report(title=self.title)
 
     def query(self):
         """Method to query Elasticsearch cluster for OSGReporter information
@@ -116,7 +105,7 @@ class OSGReporter(Reporter):
 
         return s
 
-    def runquery(self):
+    def run_query(self):
         """Execute the query and check the status code before returning the response
 
         :return Response.aggregations: Returns aggregations property of
@@ -144,7 +133,7 @@ class OSGReporter(Reporter):
     def generate_report_file(self):
         """Takes data from query response and parses it to send to other
         functions for processing"""
-        results = self.runquery()
+        results = self.run_query()
 
         unique_terms = ['ProjectName', 'OIM_PIName', 'OIM_Organization',
                         'OIM_FieldOfScience']
@@ -188,8 +177,9 @@ class OSGReporter(Reporter):
         recurseBucket({}, results, 0, data)
         allterms = copy.copy(unique_terms)
         allterms.extend(metrics)
+
         for entry in data:
-            yield (entry[field] for field in allterms)
+            yield [entry[field] for field in allterms]
 
     def format_report(self):
         """Report formatter.  Returns a dictionary called report containing the
@@ -202,33 +192,47 @@ class OSGReporter(Reporter):
             if name not in report:
                 report[name] = []
 
-        for result_tuple in self.generate_report_file():
-            pname, pi, org, fos, wallhrs = result_tuple
+        for result_list in self.generate_report_file():
             if self.verbose:
-                print "{0}\t{1}\t{2}\t{3}\t{4}".format(pname,
-                                                       pi, org, fos,
-                                                       wallhrs)
-            report["Project Name"].append(pname)
-            report["PI"].append(pi)
-            report["Institution"].append(org)
-            report["Field of Science"].append(fos)
-            report["Wall Hours"].append(wallhrs)
+                print "{0}\t{1}\t{2}\t{3}\t{4}".format(*result_list)
+            mapdict = dict(zip(self.header, result_list))
+            for key, item in mapdict.iteritems():
+                report[key].append(item)
 
         if self.isSum:
+            tot = sum(report['Wall Hours'])
             for field in self.header:
                 if field == 'Project Name':
                     report[field].append('Total')
                 elif field == 'Wall Hours':
-                    report[field].append(sum(report['Wall Hours']))
+                    report[field].append(tot)
                 else:
                     report[field].append('')
 
+            if self.verbose:
+                self.logger.info("The total wall hours in this report are "
+                                 "{0}".format(tot))
+
         return report
 
-    def run_report(self):
-        """Higher level method to handle the process flow of the report
-        being run"""
-        self.send_report(title=self.title)
+    def _validate_report_type(self, report_type):
+        """
+        Validates that the report being run is one of three types.  Sets
+        title of report if it's given a valid report type
+
+        :param str report_type: One of OSG, XD, or OSG-Connect
+        :return report_type: report type
+        """
+        validtypes = {"OSG": "OSG-Direct", "XD": "OSG-XD",
+                      "OSG-Connect": "OSG-Connect"}
+        if report_type in validtypes:
+            self.title = "{0} Project Report for {1} - {2}".format(
+                validtypes[report_type], self.start_time, self.end_time)
+            return report_type
+        else:
+            raise Exception("Must use report type {0}".format(
+                ', '.join((name for name in validtypes)))
+            )
 
 
 if __name__=="__main__":

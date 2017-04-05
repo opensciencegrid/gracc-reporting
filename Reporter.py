@@ -79,36 +79,81 @@ class Reporter(TimeUtils):
         self.logger = self.__setupgenLogger()
         self.client = self.__establish_client()
 
-    @staticmethod
-    def parse_opts():
-        """Parses command line options
+    # Report methods that must or should be implemented
+    @abc.abstractmethod
+    def query(self):
+        """Method to define report's Elasticsearch query. Must be overridden"""
+        pass
 
-        :return: argparse.ArgumentParser object with parsed arguments for report
+    def generate_report_file(self):
+        """Method to generate the report file, if format_report below is not
+        used."""
+        pass
+
+    def format_report(self):
+        """Method to be overridden by reports that need simultaneous
+        CSV and HTML generation"""
+        pass
+
+    def send_report(self, title=None):
+        """Send reports as ascii, csv, html attachments.
+
+        :param str title: Title of report
         """
-        parser = argparse.ArgumentParser()
-        parser.add_argument("-c", "--config", dest="config",
-                            default=None, help="report configuration file",
-                            required=True)
-        parser.add_argument("-v", "--verbose", dest="verbose",
-                            action="store_true", default=False,
-                            help="print debug messages to stdout")
-        parser.add_argument("-s", "--start", dest="start",
-                            help="report start date YYYY/MM/DD HH:mm:SS or "
-                                 "YYYY-MM-DD HH:mm:SS")
-        parser.add_argument("-e", "--end", dest="end",
-                            help="report end date YYYY/MM/DD HH:mm:SS or "
-                                 "YYYY-MM-DD HH:mm:SS")
-        parser.add_argument("-T", "--template",dest="template",
-                            help="template_file", default=None)
-        parser.add_argument("-d", "--dryrun", dest="is_test",
-                            action="store_true", default=False,
-                            help="send emails only to _testers")
-        parser.add_argument("-n", "--nomail", dest="no_email",
-                            action="store_true", default=False,
-                            help="Do not send email. ")
+        text = {}
+        content = self.format_report()
 
-        return parser
+        if not content:
+            self.logger.error("There is no content being passed to generate a "
+                              "report file")
+            sys.exit(1)
 
+        if title:
+            use_title = title
+        else:
+            use_title = "GRACC Report"
+
+        if self.test_no_email(self.email_info["to_emails"]):
+            return
+
+        emailReport = TextUtils.TextUtils(self.header)
+        text["text"] = emailReport.printAsTextTable("text", content)
+        text["csv"] = emailReport.printAsTextTable("csv", content)
+        htmldata = emailReport.printAsTextTable("html", content,
+                                                template=self.template)
+
+        if self.header:
+            htmlheader = "\n".join(['<th>{0}</th>'.format(headerelt)
+                                    for headerelt in self.header])
+
+        if self.template:
+            with open(self.template, 'r') as t:
+                htmltext = "".join(t.readlines())
+
+            # Build the HTML file from the template
+            htmldict = dict(title=use_title, header=htmlheader, table=htmldata)
+            htmltext = htmltext.format(**htmldict)
+            text["html"] = htmltext
+
+        else:
+            text["html"] = "<html><body><h2>{0}</h2><table border=1>{1}</table></body></html>".format(use_title, htmldata)
+
+        TextUtils.sendEmail((self.email_info["to_names"],
+                             self.email_info["to_emails"]),
+                            use_title, text,
+                            (self.email_info["from_name"],
+                             self.email_info["from_email"]),
+                            self.email_info["smtphost"],
+                            html_template=self.template)
+        return
+
+    @abc.abstractmethod
+    def run_report(self):
+        """Method within report that actually runs the various other methods
+        in the Reporter and report-specific class.  Must be overridden."""
+        pass
+
+    # Helper methods that can be used in subclasses
     @staticmethod
     def init_reporter_parser(specific_parser):
         """
@@ -142,54 +187,63 @@ class Reporter(TimeUtils):
         return indexpattern_generate(self.start_time, self.end_time, raw,
                                      allraw)
 
-    def __setupgenLogger(self):
-        """Creates logger for Reporter class.
+    @staticmethod
+    def parse_opts():
+        """Parses command line options
 
-        For non-verbose use, use WARNING level (or above)
-        to have messages show up on screen, INFO or DEBUG otherwise.
-
-        For verbose use, use INFO level or above for messages to show on screen
-
-        :return: logging.getLogger object
+        :return: argparse.ArgumentParser object with parsed arguments for report
         """
-        logger = logging.getLogger(self.report_type)
-        logger.setLevel(logging.DEBUG)
+        parser = argparse.ArgumentParser()
+        parser.add_argument("-c", "--config", dest="config",
+                            default=None, help="report configuration file",
+                            required=True)
+        parser.add_argument("-v", "--verbose", dest="verbose",
+                            action="store_true", default=False,
+                            help="print debug messages to stdout")
+        parser.add_argument("-s", "--start", dest="start",
+                            help="report start date YYYY/MM/DD HH:mm:SS or "
+                                 "YYYY-MM-DD HH:mm:SS")
+        parser.add_argument("-e", "--end", dest="end",
+                            help="report end date YYYY/MM/DD HH:mm:SS or "
+                                 "YYYY-MM-DD HH:mm:SS")
+        parser.add_argument("-T", "--template",dest="template",
+                            help="template_file", default=None)
+        parser.add_argument("-d", "--dryrun", dest="is_test",
+                            action="store_true", default=False,
+                            help="send emails only to _testers")
+        parser.add_argument("-n", "--nomail", dest="no_email",
+                            action="store_true", default=False,
+                            help="Do not send email. ")
 
-        # Console handler - info
-        ch = logging.StreamHandler()
-        if self.verbose:
-            ch.setLevel(logging.INFO)
+        return parser
+
+    @staticmethod
+    def sorted_buckets(agg, key=operator.attrgetter('key')):
+        """Sorts the Elasticsearch Aggregation buckets based on the key you
+        specify
+
+        :param agg: Aggregations attribute of ES response containing buckets
+        :param key: Key to sort buckets on
+        :return: sorted buckets
+        """
+        return sorted(agg.buckets, key=key)
+
+    def test_no_email(self, emails):
+        """
+        Checks to see if the no_email flag is True, and takes actions if so.
+
+        :param emails: Emails to print out in info message
+        :return bool: True if no_email=True, False otherwise
+        """
+        if self.no_email:
+            self.logger.info("Not sending report")
+            self.logger.info("Would have sent emails to {0}.".format(
+                ', '.join(emails)))
+            return True
         else:
-            ch.setLevel(logging.WARNING)
+            return False
 
-        # FileHandler
-        fh = logging.FileHandler(self.logfile)
-        fh.setLevel(logging.DEBUG)
-
-        try:
-            f = ContextFilter(self.vo)
-            fh.addFilter(f)
-            logfileformat = logging.Formatter(
-                "%(asctime)s - %(name)s - %(levelname)s - %(vo)s - %(message)s")
-        except (NameError, AttributeError):
-            logfileformat = logging.Formatter(
-                "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-
-        fh.setFormatter(logfileformat)
-
-        logger.addHandler(fh)
-
-        # We only want one Stream Handler
-        exists_ch = False
-        for handler in logger.handlers:
-            if handler.__class__.__name__ == "StreamHandler":
-                exists_ch = True
-                break
-        if not exists_ch:
-            logger.addHandler(ch)
-
-        return logger
-
+    # Non-public methods
     def __establish_client(self):
         """Initialize and return the elasticsearch client
 
@@ -247,105 +301,53 @@ class Reporter(TimeUtils):
 
         return email_info
 
-    @abc.abstractmethod
-    def query(self):
-        """Method to define report's Elasticsearch query. Must be overridden"""
-        pass
+    def __setupgenLogger(self):
+        """Creates logger for Reporter class.
 
-    def generate_report_file(self):
-        """Method to generate the report file, if format_report below is not
-        used."""
-        pass
+        For non-verbose use, use WARNING level (or above)
+        to have messages show up on screen, INFO or DEBUG otherwise.
 
-    def format_report(self):
-        """Method to be overridden by reports that need simultaneous
-        CSV and HTML generation"""
-        pass
+        For verbose use, use INFO level or above for messages to show on screen
 
-    def send_report(self, title=None):
-        """Send reports as ascii, csv, html attachments.
-
-        :param str title: Title of report
+        :return: logging.getLogger object
         """
-        text = {}
-        content = self.format_report()
+        logger = logging.getLogger(self.report_type)
+        logger.setLevel(logging.DEBUG)
 
-        if not content:
-            self.logger.error("There is no content being passed to generate a "
-                              "report file")
-            sys.exit(1)
-
-        if title:
-            use_title = title
+        # Console handler - info
+        ch = logging.StreamHandler()
+        if self.verbose:
+            ch.setLevel(logging.INFO)
         else:
-            use_title = "GRACC Report"
+            ch.setLevel(logging.WARNING)
 
-        if self.test_no_email(self.email_info["to_emails"]):
-            return
+        # FileHandler
+        fh = logging.FileHandler(self.logfile)
+        fh.setLevel(logging.DEBUG)
 
-        emailReport = TextUtils.TextUtils(self.header)
-        text["text"] = emailReport.printAsTextTable("text", content)
-        text["csv"] = emailReport.printAsTextTable("csv", content)
-        htmldata = emailReport.printAsTextTable("html", content,
-                                                template=self.template)
+        try:
+            f = ContextFilter(self.vo)
+            fh.addFilter(f)
+            logfileformat = logging.Formatter(
+                "%(asctime)s - %(name)s - %(levelname)s - %(vo)s - %(message)s")
+        except (NameError, AttributeError):
+            logfileformat = logging.Formatter(
+                "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
-        if self.header:
-            htmlheader = "\n".join(['<th>{0}</th>'.format(headerelt)
-                                    for headerelt in self.header])
+        fh.setFormatter(logfileformat)
 
-        if self.template:
-            with open(self.template, 'r') as t:
-                htmltext = "".join(t.readlines())
+        logger.addHandler(fh)
 
-            # Build the HTML file from the template
-            htmltext = htmltext.replace('$TITLE', use_title)
-            if "$HEADER" in htmltext and htmlheader:
-                htmltext = htmltext.replace('$HEADER', htmlheader)
-            text["html"] = htmltext.replace('$TABLE', htmldata)
+        # We only want one Stream Handler
+        exists_ch = False
+        for handler in logger.handlers:
+            if handler.__class__.__name__ == "StreamHandler":
+                exists_ch = True
+                break
+        if not exists_ch:
+            logger.addHandler(ch)
 
-        else:
-            text["html"] = "<html><body><h2>{0}</h2><table border=1>{1}</table></body></html>".format(use_title, htmldata)
-
-        TextUtils.sendEmail((self.email_info["to_names"],
-                             self.email_info["to_emails"]),
-                            use_title, text,
-                            (self.email_info["from_name"],
-                             self.email_info["from_email"]),
-                            self.email_info["smtphost"],
-                            html_template=self.template)
-        return
-
-    @abc.abstractmethod
-    def run_report(self):
-        """Method within report that actually runs the various other methods
-        in the Reporter and report-specific class.  Must be overridden."""
-        pass
-
-    @staticmethod
-    def sorted_buckets(agg, key=operator.attrgetter('key')):
-        """Sorts the Elasticsearch Aggregation buckets based on the key you
-        specify
-
-        :param agg: Aggregations attribute of ES response containing buckets
-        :param key: Key to sort buckets on
-        :return: sorted buckets
-        """
-        return sorted(agg.buckets, key=key)
-
-    def test_no_email(self, emails):
-        """
-        Checks to see if the no_email flag is True, and takes actions if so.
-
-        :param emails: Emails to print out in info message
-        :return bool: True if no_email=True, False otherwise
-        """
-        if self.no_email:
-            self.logger.info("Not sending report")
-            self.logger.info("Would have sent emails to {0}.".format(
-                ', '.join(emails)))
-            return True
-        else:
-            return False
+        return logger
 
 
 def runerror(config, error, traceback):
