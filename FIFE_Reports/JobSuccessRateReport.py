@@ -97,7 +97,8 @@ class Job:
 
 class JobSuccessRateReporter(Reporter):
     """
-    Class to hold information about and run Job Success Rate report.
+    Class to hold information about and run Job Success Rate report.  To
+    execute, instantiate the class and then use the run_report() method.
 
     :param Configuration.Configuration config: Report Configuration object
     :param str start: Start time of report range
@@ -126,14 +127,20 @@ class JobSuccessRateReporter(Reporter):
         self.realhost_pattern = re.compile('\s\(primary\)')
         self.jobpattern = re.compile('(\d+).\d+@(fifebatch\d\.fnal\.gov)')
         self.text = ''
-        self.limit_sites = self.limit_site_check()
+        self.limit_sites = self._limit_site_check()
         self.title = "{0} Production Jobs Success Rate on the OSG Sites " \
                      "({1} - {2})".format(
                                 self.vo,
                                 self.start_time,
                                 self.end_time)
 
-    def limit_site_check(self):
+    def run_report(self):
+        """Method that runs all of the applicable actions in this class."""
+        self.generate()
+        self.generate_report_file()
+        self.send_report()
+
+    def _limit_site_check(self):
         """Check to see if the num_failed_sites option is set in the config
         file for the VO"""
         return self.config.has_option(self.vo.lower(), 'num_failed_sites')
@@ -195,9 +202,9 @@ class JobSuccessRateReporter(Reporter):
 
         # Add all of our results to the clusters dictionary
         resultscount = 0
-        add_clusters = self.add_to_clusters()
+        add_clusters = self._add_to_clusters()
         add_clusters.send(None)
-        for line in self.generate_result_array(resultset):
+        for line in self._generate_result_array(resultset):
             if resultscount == 0:
                 if len(line.strip()) == 0:
                     self.logger.info("Nothing to report")
@@ -207,7 +214,28 @@ class JobSuccessRateReporter(Reporter):
 
         return
 
-    def generate_result_array(self, resultset):
+    def _add_to_clusters(self):
+        """Coroutine: For each line fed in, will
+        instantiate Job class for each one, add to Jobs class dictionary,
+        and add to clusters.  Then waits for next line"""
+        while True:
+            line = yield
+            tmp = line.split('\t')
+            start_time, end_time, userid, jobid, site = (item.strip() for item in tmp[:5])
+            start_time, end_time = (t.replace('T', ' ').replace('Z', '') for t in (start_time, end_time))
+            if site == "NULL":
+                pass
+            else:
+                host = tmp[5].strip()
+                status = int(tmp[6].strip())
+                job = Job(end_time, start_time, jobid, site, host, status)
+                self.run.add_job(site, job)
+                clusterid = jobid.split(".")[0]
+                if clusterid not in self.clusters:
+                    self.clusters[clusterid] = {'userid': userid, 'jobs': []}
+                self.clusters[clusterid]['jobs'].append(job)
+
+    def _generate_result_array(self, resultset):
         """Generator.  Compiles results from resultset into array.  Yields each
         line.
 
@@ -260,27 +288,6 @@ class JobSuccessRateReporter(Reporter):
                 # listed in the ES document.  This is consistent with how the
                 # old MySQL report behaved.
                 pass
-
-    def add_to_clusters(self):
-        """Coroutine: For each line fed in, will
-        instantiate Job class for each one, add to Jobs class dictionary,
-        and add to clusters.  Then waits for next line"""
-        while True:
-            line = yield
-            tmp = line.split('\t')
-            start_time, end_time, userid, jobid, site = (item.strip() for item in tmp[:5])
-            start_time, end_time = (t.replace('T', ' ').replace('Z', '') for t in (start_time, end_time))
-            if site == "NULL":
-                pass
-            else:
-                host = tmp[5].strip()
-                status = int(tmp[6].strip())
-                job = Job(end_time, start_time, jobid, site, host, status)
-                self.run.add_job(site, job)
-                clusterid = jobid.split(".")[0]
-                if clusterid not in self.clusters:
-                    self.clusters[clusterid] = {'userid': userid, 'jobs': []}
-                self.clusters[clusterid]['jobs'].append(job)
 
     def generate_report_file(self):
         """This is the function that parses the clusters data and
@@ -339,7 +346,7 @@ class JobSuccessRateReporter(Reporter):
                         try:
                             job_link_parts = \
                                 [elt for elt in
-                                 self.get_job_parts_from_jobid(job.jobid)]
+                                 self._get_job_parts_from_jobid(job.jobid)]
 
                             timestamps_exact = self.get_epoch_stamps_for_grafana(
                                 start_time=job.start_time,
@@ -537,7 +544,7 @@ class JobSuccessRateReporter(Reporter):
 
         return
 
-    def get_job_parts_from_jobid(self, jobid):
+    def _get_job_parts_from_jobid(self, jobid):
         """
         Parses the jobid string and grabs the relevant parts to generate
         Fifemon link
@@ -573,12 +580,6 @@ class JobSuccessRateReporter(Reporter):
 
         self.logger.info("Sent Report for {0}".format(self.vo))
         return
-
-    def run_report(self):
-        """Method that runs all of the applicable actions in this class."""
-        self.generate()
-        self.generate_report_file()
-        self.send_report()
 
 
 if __name__ == "__main__":
