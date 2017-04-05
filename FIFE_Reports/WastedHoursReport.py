@@ -133,8 +133,6 @@ class WastedHoursReport(Reporter):
         self.experiments = {}
         self.connect_str = None
         self.text = ''
-        self.fn = "user_wasted_hours_report.{0}".format(
-            self.end_time.split(" ")[0].replace("/", "-"))
         self.title = "{0:s} Wasted Hours on GPGrid ({1:s} - {2:s})"\
                             .format("FIFE", self.start_time, self.end_time)
 
@@ -144,8 +142,6 @@ class WastedHoursReport(Reporter):
         self.generate()
         self.generate_report_file()
         self.send_report()
-        if os.path.exists(self.fn):
-            os.unlink(self.fn)
         return
 
     def query(self):
@@ -182,45 +178,67 @@ class WastedHoursReport(Reporter):
 
         return s
 
+    def run_query(self):
+        """Execute the query and check the status code before returning the
+        response
+
+        :return Response.aggregations: Returns aggregations property of
+        elasticsearch response
+        """
+        s = self.query()
+        t = s.to_dict()
+        if self.verbose:
+            print json.dumps(t, sort_keys=True, indent=4)
+            self.logger.debug(json.dumps(t, sort_keys=True))
+        else:
+            self.logger.debug(json.dumps(t, sort_keys=True))
+
+        try:
+            response = s.execute()
+            if not response.success():
+                raise Exception("Error accessing Elasticsearch")
+
+            if self.verbose:
+                print json.dumps(response.to_dict(), sort_keys=True, indent=4)
+
+            results = response.aggregations
+            self.logger.info('Ran elasticsearch query successfully')
+            return results
+        except Exception as e:
+            self.logger.exception(e)
+            raise
+
     def generate(self):
         """
-        Generates the raw data for the report, stores in Experiment, User
-        objects
+        Generates the raw data for the report, sends it to a parser
 
         :return: None
         """
-        resultquery = self.query()
+        results = self.run_query()
 
-        response = resultquery.execute()
-        return_code_success = response.success()
-        if not return_code_success:
-            raise Exception('Error querying elasticsearch')
-
-        results = response.aggregations
-
-        if self.verbose:
-            print json.dumps(response.to_dict(), sort_keys=True, indent=4)
-
-        table_results = []
+        data_parser = self._parse_data_to_experiments()
+        data_parser.send(None)
+        # table_results = []
         for status in results.group_status.buckets:
             for VO in results.group_status.buckets[status].group_VO.buckets:
                 for CommonName in VO['group_CommonName'].buckets:
-                    table_results.append([CommonName.key, VO.key, status,
+                    data_parser.send((CommonName.key, VO.key, status,
                                           CommonName['numJobs'].value,
-                                          CommonName['WallHours'].value])
+                                          CommonName['WallHours'].value))
 
-        if len(table_results) == 1 and len(table_results[0].strip()) == 0:
-            print >> sys.stdout, "Nothing to report"
-            return
+        return
 
-        for line in table_results:
+    def _parse_data_to_experiments(self):
+        """Coroutine that parses raw data and stores the information in the
+        Experiment and User class instances"""
+        while True:
+            name, expname, status, count, hours = yield
+            count = int(count)
+            hours = float(hours)
+
             if self.verbose:
-                print line
-            name = line[0]
-            expname = line[1]
-            status = line[2]
-            count = int(line[3])
-            hours = float(line[4])
+                print name, expname, status, count, hours
+
             if expname not in self.experiments:
                 exp = Experiment(expname)
                 self.experiments[expname] = exp
@@ -236,8 +254,6 @@ class WastedHoursReport(Reporter):
             else:
                 user.add_failure(count, hours)
 
-        return
-
     def generate_report_file(self):
         """Reads the Experiment and User objects and generates the report
         HTML file
@@ -245,32 +261,31 @@ class WastedHoursReport(Reporter):
         :return: None
         """
         if len(self.experiments) == 0:
-            print "No experiments"
+            print "No experiments; nothing to report"
+            self.no_email = True
             return
         total_hrs = 0
         total_jobs = 0
         table = ""
+
+        def tdalign(info, align):
+            """HTML generator to wrap a table cell with alignment"""
+            return '<td align="{0}">{1}</td>'.format(align, info)
+
         for key, exp in self.experiments.items():
             for uname, user in exp.users.items():
                 failure_rate = round(user.get_failure_rate(), 1)
-                waste_per = round(user.get_waste_per(), 2)
-                table += '\n<tr><td align="left">{0:s}</td>' \
-                         '<td align="left">{1:s}</td>' \
-                         '<td align="right">{2:s}</td>' \
-                         '<td align="right">{3:s}</td>' \
-                         '<td align="right">{4:.1f}</td>' \
-                         '<td align="right">{5:s}</td>' \
-                         '<td align="right">{6:s}</td>' \
-                         '<td align="right">{7:.1f}</td></tr>'.format(
-                    key,
-                    uname,
-                    NiceNum.niceNum(user.success[0] + user.failure[0]),
-                    NiceNum.niceNum(user.failure[0]),
-                    failure_rate,
-                    NiceNum.niceNum(user.success[1] + user.failure[1],1),
-                    NiceNum.niceNum(user.failure[1], 1),
-                    waste_per
-                )
+                waste_per = round(user.get_waste_per(), 1)
+
+                linemap = ((key, 'left'), (uname, 'left'),
+                           (NiceNum.niceNum(user.success[0] + user.failure[0]), 'right'),
+                           (NiceNum.niceNum(user.failure[0]), 'right'),
+                           (failure_rate, 'right'),
+                           (NiceNum.niceNum(user.success[1] + user.failure[1],1), 'right'),
+                           (NiceNum.niceNum(user.failure[1], 1), 'right'), (waste_per, 'right'))
+
+                table += '\n<tr>' + ''.join((tdalign(key, al) for key, al in linemap)) + '</tr>'
+
                 if self.verbose:
                     total_hrs += (user.success[1] + user.failure[1])
                     total_jobs += (user.success[0] + user.failure[0])
@@ -326,14 +341,7 @@ if __name__ == "__main__":
                                    is_test=args.is_test,
                                    verbose=args.verbose,
                                    no_email=args.no_email)
-        try:
-            report.run_report()
-        except (Exception, KeyboardInterrupt) as e:
-            # Make sure to clean up files if there's an error or
-            # keyboard interrupt
-            if os.path.exists(report.fn):
-                os.unlink(report.fn)
-            raise
+        report.run_report()
     except Exception as e:
         print >> sys.stderr, traceback.format_exc()
         runerror(config, e, traceback.format_exc())
