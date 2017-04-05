@@ -79,174 +79,7 @@ class Reporter(TimeUtils):
         self.logger = self.__setupgenLogger()
         self.client = self.__establish_client()
 
-    @staticmethod
-    def parse_opts():
-        """Parses command line options
-
-        :return: argparse.ArgumentParser object with parsed arguments for report
-        """
-        parser = argparse.ArgumentParser()
-        parser.add_argument("-c", "--config", dest="config",
-                            default=None, help="report configuration file",
-                            required=True)
-        parser.add_argument("-v", "--verbose", dest="verbose",
-                            action="store_true", default=False,
-                            help="print debug messages to stdout")
-        parser.add_argument("-s", "--start", dest="start",
-                            help="report start date YYYY/MM/DD HH:mm:SS or "
-                                 "YYYY-MM-DD HH:mm:SS")
-        parser.add_argument("-e", "--end", dest="end",
-                            help="report end date YYYY/MM/DD HH:mm:SS or "
-                                 "YYYY-MM-DD HH:mm:SS")
-        parser.add_argument("-T", "--template",dest="template",
-                            help="template_file", default=None)
-        parser.add_argument("-d", "--dryrun", dest="is_test",
-                            action="store_true", default=False,
-                            help="send emails only to _testers")
-        parser.add_argument("-n", "--nomail", dest="no_email",
-                            action="store_true", default=False,
-                            help="Do not send email. ")
-
-        return parser
-
-    @staticmethod
-    def init_reporter_parser(specific_parser):
-        """
-        Decorator function that initializes all of our report-specific parser
-        functions
-
-        :param specific_parser: report-specific parser-function to parse
-        :return: Decorated report-specific wrapper function reference
-        """
-        def wrapper():
-            """
-            Wrapper function that calls the report-specific parser function
-            :return: argparse.ArgumentParser Namespace from specific_parser
-            """
-            parser = Reporter.parse_opts()
-            specific_parser(parser)
-            return parser.parse_args()
-        return wrapper
-
-    def indexpattern_generate(self, raw=True, allraw=False):
-        """Returns the Elasticsearch index pattern based on the class
-        variables of start time and end time, and the flags raw and allraw.
-        Note that this doesn't inherit raw and allraw from the instance
-        attributes in case we want to switch these flags without creating a
-        new instance of this class.
-
-        :param bool raw:  Query GRACC raw records (False = query Summary records)
-        :param bool allraw: Short-circuit indexpattern_generate and simply look
-            at all raw records
-        """
-        return indexpattern_generate(self.start_time, self.end_time, raw,
-                                     allraw)
-
-    def __setupgenLogger(self):
-        """Creates logger for Reporter class.
-
-        For non-verbose use, use WARNING level (or above)
-        to have messages show up on screen, INFO or DEBUG otherwise.
-
-        For verbose use, use INFO level or above for messages to show on screen
-
-        :return: logging.getLogger object
-        """
-        logger = logging.getLogger(self.report_type)
-        logger.setLevel(logging.DEBUG)
-
-        # Console handler - info
-        ch = logging.StreamHandler()
-        if self.verbose:
-            ch.setLevel(logging.INFO)
-        else:
-            ch.setLevel(logging.WARNING)
-
-        # FileHandler
-        fh = logging.FileHandler(self.logfile)
-        fh.setLevel(logging.DEBUG)
-
-        try:
-            f = ContextFilter(self.vo)
-            fh.addFilter(f)
-            logfileformat = logging.Formatter(
-                "%(asctime)s - %(name)s - %(levelname)s - %(vo)s - %(message)s")
-        except (NameError, AttributeError):
-            logfileformat = logging.Formatter(
-                "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-
-        fh.setFormatter(logfileformat)
-
-        logger.addHandler(fh)
-
-        # We only want one Stream Handler
-        exists_ch = False
-        for handler in logger.handlers:
-            if handler.__class__.__name__ == "StreamHandler":
-                exists_ch = True
-                break
-        if not exists_ch:
-            logger.addHandler(ch)
-
-        return logger
-
-    def __establish_client(self):
-        """Initialize and return the elasticsearch client
-
-        :return: elasticsearch.Elasticsearch object
-        """
-        try:
-            client = Elasticsearch('https://gracc.opensciencegrid.org/q',
-                                   use_ssl=True,
-                                   verify_certs=False,
-                                   # ca_certs = 'gracc_cert/lets-encrypt-x3-cross-signed.pem',
-                                   #  client_cert = 'gracc_cert/gracc-reports-dev.crt',
-                                   #  client_key = 'gracc_cert/gracc-reports-dev.key',
-                                   timeout=60)
-        except Exception as e:
-            self.logger.exception("Couldn't initialize Elasticsearch instance."
-                                  " Error/traceback: {0}".format(e))
-            sys.exit(1)
-        else:
-            return client
-
-    def __get_email_info(self):
-        """
-        Parses config file to grab email-related information.
-
-        :return dict: Dict of sender, recipient(s), smtphost info
-        """
-        email_info = {}
-
-        # Get recipient(s) info
-        if self.is_test:
-            emails = re.split('[; ,]', self.config.get("email", "test_to_emails"))
-            names = re.split('[;,]', self.config.get("email", "test_to_names"))
-        else:
-            try:
-                vo = self.vo
-                emails = re.split('[; ,]', self.config.get(vo.lower(), "to_emails") +
-                              ',' + self.config.get("email", "test_to_emails"))
-                names = []
-            except AttributeError:      # No vo-specific info in config file
-                emails = re.split('[; ,]', self.config.get("email",
-                                                           "{0}_to_emails".format(
-                                                               self.report_type))
-                                  + ',' + self.config.get("email", "test_to_emails"))
-                names = re.split('[;,]', self.config.get("email",
-                                                           "{0}_to_names".format(
-                                                               self.report_type))
-                                  + ',' + self.config.get("email", "test_to_names"))
-
-        email_info["to_emails"] = emails
-        email_info["to_names"] = names
-
-        # Get other global info from config file
-        for key in ("from_email", "from_name", "smtphost"):
-            email_info[key] = self.config.get("email", key)
-
-        return email_info
-
+    # Report methods that must or should be implemented
     @abc.abstractmethod
     def query(self):
         """Method to define report's Elasticsearch query. Must be overridden"""
@@ -320,6 +153,70 @@ class Reporter(TimeUtils):
         in the Reporter and report-specific class.  Must be overridden."""
         pass
 
+    # Helper methods that can be used in subclasses
+    @staticmethod
+    def init_reporter_parser(specific_parser):
+        """
+        Decorator function that initializes all of our report-specific parser
+        functions
+
+        :param specific_parser: report-specific parser-function to parse
+        :return: Decorated report-specific wrapper function reference
+        """
+        def wrapper():
+            """
+            Wrapper function that calls the report-specific parser function
+            :return: argparse.ArgumentParser Namespace from specific_parser
+            """
+            parser = Reporter.parse_opts()
+            specific_parser(parser)
+            return parser.parse_args()
+        return wrapper
+
+    def indexpattern_generate(self, raw=True, allraw=False):
+        """Returns the Elasticsearch index pattern based on the class
+        variables of start time and end time, and the flags raw and allraw.
+        Note that this doesn't inherit raw and allraw from the instance
+        attributes in case we want to switch these flags without creating a
+        new instance of this class.
+
+        :param bool raw:  Query GRACC raw records (False = query Summary records)
+        :param bool allraw: Short-circuit indexpattern_generate and simply look
+            at all raw records
+        """
+        return indexpattern_generate(self.start_time, self.end_time, raw,
+                                     allraw)
+
+    @staticmethod
+    def parse_opts():
+        """Parses command line options
+
+        :return: argparse.ArgumentParser object with parsed arguments for report
+        """
+        parser = argparse.ArgumentParser()
+        parser.add_argument("-c", "--config", dest="config",
+                            default=None, help="report configuration file",
+                            required=True)
+        parser.add_argument("-v", "--verbose", dest="verbose",
+                            action="store_true", default=False,
+                            help="print debug messages to stdout")
+        parser.add_argument("-s", "--start", dest="start",
+                            help="report start date YYYY/MM/DD HH:mm:SS or "
+                                 "YYYY-MM-DD HH:mm:SS")
+        parser.add_argument("-e", "--end", dest="end",
+                            help="report end date YYYY/MM/DD HH:mm:SS or "
+                                 "YYYY-MM-DD HH:mm:SS")
+        parser.add_argument("-T", "--template",dest="template",
+                            help="template_file", default=None)
+        parser.add_argument("-d", "--dryrun", dest="is_test",
+                            action="store_true", default=False,
+                            help="send emails only to _testers")
+        parser.add_argument("-n", "--nomail", dest="no_email",
+                            action="store_true", default=False,
+                            help="Do not send email. ")
+
+        return parser
+
     @staticmethod
     def sorted_buckets(agg, key=operator.attrgetter('key')):
         """Sorts the Elasticsearch Aggregation buckets based on the key you
@@ -345,6 +242,112 @@ class Reporter(TimeUtils):
             return True
         else:
             return False
+
+    # Non-public methods
+    def __establish_client(self):
+        """Initialize and return the elasticsearch client
+
+        :return: elasticsearch.Elasticsearch object
+        """
+        try:
+            client = Elasticsearch('https://gracc.opensciencegrid.org/q',
+                                   use_ssl=True,
+                                   verify_certs=False,
+                                   # ca_certs = 'gracc_cert/lets-encrypt-x3-cross-signed.pem',
+                                   #  client_cert = 'gracc_cert/gracc-reports-dev.crt',
+                                   #  client_key = 'gracc_cert/gracc-reports-dev.key',
+                                   timeout=60)
+        except Exception as e:
+            self.logger.exception("Couldn't initialize Elasticsearch instance."
+                                  " Error/traceback: {0}".format(e))
+            sys.exit(1)
+        else:
+            return client
+
+    def __get_email_info(self):
+        """
+        Parses config file to grab email-related information.
+
+        :return dict: Dict of sender, recipient(s), smtphost info
+        """
+        email_info = {}
+
+        # Get recipient(s) info
+        if self.is_test:
+            emails = re.split('[; ,]', self.config.get("email", "test_to_emails"))
+            names = re.split('[;,]', self.config.get("email", "test_to_names"))
+        else:
+            try:
+                vo = self.vo
+                emails = re.split('[; ,]', self.config.get(vo.lower(), "to_emails") +
+                              ',' + self.config.get("email", "test_to_emails"))
+                names = []
+            except AttributeError:      # No vo-specific info in config file
+                emails = re.split('[; ,]', self.config.get("email",
+                                                           "{0}_to_emails".format(
+                                                               self.report_type))
+                                  + ',' + self.config.get("email", "test_to_emails"))
+                names = re.split('[;,]', self.config.get("email",
+                                                           "{0}_to_names".format(
+                                                               self.report_type))
+                                  + ',' + self.config.get("email", "test_to_names"))
+
+        email_info["to_emails"] = emails
+        email_info["to_names"] = names
+
+        # Get other global info from config file
+        for key in ("from_email", "from_name", "smtphost"):
+            email_info[key] = self.config.get("email", key)
+
+        return email_info
+
+    def __setupgenLogger(self):
+        """Creates logger for Reporter class.
+
+        For non-verbose use, use WARNING level (or above)
+        to have messages show up on screen, INFO or DEBUG otherwise.
+
+        For verbose use, use INFO level or above for messages to show on screen
+
+        :return: logging.getLogger object
+        """
+        logger = logging.getLogger(self.report_type)
+        logger.setLevel(logging.DEBUG)
+
+        # Console handler - info
+        ch = logging.StreamHandler()
+        if self.verbose:
+            ch.setLevel(logging.INFO)
+        else:
+            ch.setLevel(logging.WARNING)
+
+        # FileHandler
+        fh = logging.FileHandler(self.logfile)
+        fh.setLevel(logging.DEBUG)
+
+        try:
+            f = ContextFilter(self.vo)
+            fh.addFilter(f)
+            logfileformat = logging.Formatter(
+                "%(asctime)s - %(name)s - %(levelname)s - %(vo)s - %(message)s")
+        except (NameError, AttributeError):
+            logfileformat = logging.Formatter(
+                "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+
+        fh.setFormatter(logfileformat)
+
+        logger.addHandler(fh)
+
+        # We only want one Stream Handler
+        exists_ch = False
+        for handler in logger.handlers:
+            if handler.__class__.__name__ == "StreamHandler":
+                exists_ch = True
+                break
+        if not exists_ch:
+            logger.addHandler(ch)
+
+        return logger
 
 
 def runerror(config, error, traceback):
