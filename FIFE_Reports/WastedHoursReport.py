@@ -46,17 +46,6 @@ class User:
         self.success = [0, 0]
         self.failure = [0, 0]
 
-    def add_success(self, njobs, wall_duration):
-        """
-        Adds to the Success list for user
-
-        :param njobs: Number of jobs in summary record
-        :param wall_duration: Wall duration in summary record
-        :return:
-        """
-        self.success = [ex + new for ex, new in
-                        zip(self.success, [njobs, wall_duration])]
-
     def add_failure(self, njobs, wall_duration):
         """
         Adds to the Failure list for user
@@ -67,6 +56,17 @@ class User:
         """
         self.failure = [ex + new for ex, new in
                         zip(self.failure, [njobs, wall_duration])]
+
+    def add_success(self, njobs, wall_duration):
+        """
+        Adds to the Success list for user
+
+        :param njobs: Number of jobs in summary record
+        :param wall_duration: Wall duration in summary record
+        :return:
+        """
+        self.success = [ex + new for ex, new in
+                        zip(self.success, [njobs, wall_duration])]
 
     def get_failure_rate(self):
         """
@@ -137,6 +137,16 @@ class WastedHoursReport(Reporter):
             self.end_time.split(" ")[0].replace("/", "-"))
         self.title = "{0:s} Wasted Hours on GPGrid ({1:s} - {2:s})"\
                             .format("FIFE", self.start_time, self.end_time)
+
+    def run_report(self):
+        """Higher-level method to run all the other methods in report
+        generation"""
+        self.generate()
+        self.generate_report_file()
+        self.send_report()
+        if os.path.exists(self.fn):
+            os.unlink(self.fn)
+        return
 
     def query(self):
         """
@@ -264,15 +274,19 @@ class WastedHoursReport(Reporter):
                 if self.verbose:
                     total_hrs += (user.success[1] + user.failure[1])
                     total_jobs += (user.success[0] + user.failure[0])
+
+        headerlist = ['Experiment', 'User', 'Total #Jobs', '# Failures',
+                      'Failure Rate (%)', 'Wall Duration (Hours)',
+                      'Time Wasted (Hours)', '% Hours Wasted']
+
+        header = ''.join(('<th>{0}</th>'.format(elt) for elt in headerlist))
+
+        # Yes, the header and footer are the same on purpose
+        htmldict = dict(title=self.title, table=table,
+                        header=header, footer=header)
         self.text = "".join(open(self.template).readlines())
-        self.text = self.text.replace("$TITLE", self.title)
-        self.text = self.text.replace("$START", self.start_time)
-        self.text = self.text.replace("$END", self.end_time)
-        self.text = self.text.replace("$TABLE", table)
-        print "Writing file"
-        f = open(self.fn, "w")
-        f.write(self.text)
-        f.close()
+        self.text = self.text.format(**htmldict)
+
         if self.verbose:
             print total_jobs, total_hrs
         return
@@ -296,15 +310,6 @@ class WastedHoursReport(Reporter):
                             self.email_info["smtphost"])
         return
 
-    def run_report(self):
-        """Higher-level method to run all the other methods in report
-        generation"""
-        self.generate()
-        self.generate_report_file()
-        self.send_report()
-        if os.path.exists(self.fn):
-            os.unlink(self.fn)
-        return
 
 
 if __name__ == "__main__":

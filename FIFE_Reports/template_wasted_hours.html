@@ -11,28 +11,28 @@
         <script src="https://cdn.datatables.net/1.10.11/js/jquery.dataTables.min.js" type="text/javascript"></script>
 
 		<script type="text/javascript" charset="utf-8">
-		$(document).ready(function(){
-    			$('#example').DataTable({
+		$(document).ready(function(){{
+    			$('#example').DataTable({{
 			 "lengthMenu": [[ 25, 50, -1], [ 25, 50, "All"]],
 			 "order": [[ 1, "desc" ]]
-    			});
-		});
+    			}});
+		}});
 		</script>
  	<style>
-                 body {
+                 body {{
                    font-family: Helvetica, Arial, sans-serif;
                    font-size: 12px;
                    line-height: 17px;
                    margin:50px 0;
-                 }
-                 td {
+                 }}
+                 td {{
                    border-top: 2px solid #ccc;
-                 }
+                 }}
 
         /*  Define the background color for all the EVEN background rows  */
-        tr.even:nth-child(even){
+        tr.even:nth-child(even){{
                 background: #30cfbc;
-        }
+        }}
 
 	</style>
 	</head>
@@ -44,12 +44,12 @@
 <div style="float:left;">
        <img src="http://www.fnal.gov/faw/designstandards/filesfordownload/FNAL-Logo-NAL-Blue.png" width="100"/>
 </div>
-<div style="background:#99D6EA; width:100%; padding:15px; margin:10px 0; font-size:20px; line-height:25px;">$TITLE</div>
+<div style="background:#99D6EA; width:100%; padding:15px; margin:10px 0; font-size:20px; line-height:25px;">{title}</div>
        <table cellpadding="7" cellspacing="0" border="0" width="100%" style="clear:both; class="display" id="example" style="clear:both;">
-<thead><th>Experiment</th><th>User</th><th>Total #Jobs</th><th># Failures</th><th>Failure Rate (%)</th> <th>Wall Duration (Hours)</th> <th>Time Wasted(Hours)</th> <th>% Hours Wasted</th></thead>
-<tfoot><th>Experiment</th><th>Total #Jobs</th><th># Failures</th><th>Failure Rate (%)</th> <th>Wall Duration (Hours)</th> <th>Time Wasted(Hours)</th> <th>% Hours Wasted</th></tfoot>
+<thead>{header}</thead>
+<tfoot>{footer}</tfoot>
 <tbody>
-$TABLE
+{table}
 </tbody>
 </table>
 
