@@ -40,6 +40,7 @@ def coroutine(func):
         return cr
     return wrapper
 
+
 def monthrange(date):
     """
     Takes a start date and finds out the start and end of the month that that
@@ -151,13 +152,6 @@ class VO(object):
         self.totalcalc.send(corehours)
         return
 
-    @coroutine
-    def running_totalhours(self):
-        """Keeps running total of core hours for the VO"""
-        while True:
-            newhrs = yield
-            self.total[self.pos] += newhrs
-
     def get_cur_sitehours(self, sitename):
         """Get the current value of core hours for a particular sitename for
         the VO"""
@@ -178,6 +172,14 @@ class VO(object):
     def get_old_totalhours(self):
         """Get the previous month's value of total core hours for the VO"""
         return self.total[1]
+
+    @coroutine
+    def running_totalhours(self):
+        """Keeps running total of core hours for the VO"""
+        while True:
+            newhrs = yield
+            self.total[self.pos] += newhrs
+
 
 
 class OSGPerSiteReporter(Reporter):
@@ -208,6 +210,12 @@ class OSGPerSiteReporter(Reporter):
         self.current = True
         self.vodict = {}
         self.sitelist = []
+
+    def run_report(self):
+        """Method to run the OSG per site report"""
+        self.generate()
+        self.send_report(title=self.title)
+        return
 
     def query(self):
         """Method to query Elasticsearch cluster for Flocking Report
@@ -266,38 +274,23 @@ class OSGPerSiteReporter(Reporter):
             self.logger.exception(e)
             raise
 
-    @staticmethod
-    def parse_results(results, consumer):
-        """Method that parses the result and passes the values to the
-        consumer coroutine
-        :param Response.aggregations results: ES Response object from ES query
-        :param function consumer: Consumer function to pass data to
-        """
-        for vo_bucket in results.vo_bucket.buckets:
-            vo = vo_bucket['key'].lower()
-            for site_bucket in vo_bucket.site_bucket.buckets:
-                site = site_bucket['key']
-                wallhrs = site_bucket['sum_core_hours']['value']
-                consumer.send((vo, site, wallhrs))
-        return
-
     def generate(self):
         """Higher-level method to run other methods to
         generate the raw data for the report."""
-        consumer = self.create_vo_objects()
+        consumer = self._create_vo_objects()
 
         # Run our query twice - once for this month, once for last month
         for self.start_time, self.end_time in (
                 monthrange(self.start_time),
                 prev_month_shift(self.start_time)):
             results = self.run_query()
-            self.parse_results(results, consumer)
+            self._parse_results(results, consumer)
             self.current = False
 
         return
 
     @coroutine
-    def create_vo_objects(self):
+    def _create_vo_objects(self):
         """Coroutine to create the VO objects and store the information
         in them"""
         while True:
@@ -317,6 +310,21 @@ class OSGPerSiteReporter(Reporter):
                 V = self.vodict[vo]
                 V.current = self.current
                 V.add_site(site, wallhrs)
+
+    @staticmethod
+    def _parse_results(results, consumer):
+        """Method that parses the result and passes the values to the
+        consumer coroutine
+        :param Response.aggregations results: ES Response object from ES query
+        :param function consumer: Consumer function to pass data to
+        """
+        for vo_bucket in results.vo_bucket.buckets:
+            vo = vo_bucket['key'].lower()
+            for site_bucket in vo_bucket.site_bucket.buckets:
+                site = site_bucket['key']
+                wallhrs = site_bucket['sum_core_hours']['value']
+                consumer.send((vo, site, wallhrs))
+        return
 
     def format_report(self):
         """Report formatter.  Returns a dictionary called report containing the
@@ -426,11 +434,6 @@ class OSGPerSiteReporter(Reporter):
 
         return report
 
-    def run_report(self):
-        """Method to run the OSG per site report"""
-        self.generate()
-        self.send_report(title=self.title)
-        return
 
 
 def main():
