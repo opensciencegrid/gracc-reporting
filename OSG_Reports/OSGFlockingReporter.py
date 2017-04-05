@@ -61,6 +61,11 @@ class FlockingReport(Reporter):
         self.header = ["VOName", "SiteName", "ProbeName", "ProjectName",
                        "Wall Hours"]
 
+    def run_report(self):
+        """Higher level method to handle the process flow of the report
+        being run"""
+        self.send_report(title=self.title)
+
     def query(self):
         """Method to query Elasticsearch cluster for Flocking Report
         information
@@ -173,11 +178,6 @@ class FlockingReport(Reporter):
             print "The total Wall hours in this report are {0}".format(tot)
 
         return report
-
-    def run_report(self):
-        """Higher level method to handle the process flow of the report
-        being run"""
-        self.send_report(title=self.title)
 
 
 def main():
