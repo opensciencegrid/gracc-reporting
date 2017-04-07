@@ -8,6 +8,8 @@ import re
 import json
 import datetime
 import copy
+from dateutil.relativedelta import *
+
 from elasticsearch_dsl import Search
 
 parentdir = os.path.dirname(
@@ -22,10 +24,20 @@ parentdir = os.path.dirname(
 os.sys.path.insert(0, parentdir)
 
 import TextUtils
-import TimeUtils
+from TimeUtils import TimeUtils
 import Configuration
 import NiceNum
 from Reporter import Reporter, runerror
+
+
+""" To do:
+
+    - Implement name correction
+    - Implement ranker
+    - Implement HTML line creator
+
+"""
+
 
 logfile = 'topoppusage.log'
 MAXINT = 2**31-1
@@ -48,7 +60,31 @@ def coroutine(func):
 
 
 def get_time_range(start=None, end=None, months=None):
-    pass
+    """
+
+    :param start:
+    :param end:
+    :param months:
+    :return:
+    """
+    if months:
+        if start or end:
+            raise Exception("Cannot define both months and start/end times")
+        end_date = datetime.datetime.today()
+        diff = relativedelta(months=months)
+        start_date = end_date - diff
+    else:
+        T = TimeUtils()
+        start_date = datetime.datetime(*T.dateparse(start))
+        end_date = datetime.datetime(*T.dateparse(end))
+        diff = relativedelta(end_date, start_date)
+    pri_end = start_date - relativedelta(days=1)
+    pri_start = pri_end - diff
+    return (start_date, end_date), (pri_start, pri_end)
+
+
+
+
 
 @Reporter.init_reporter_parser
 def parse_opts(parser):
@@ -137,6 +173,7 @@ class TopOppUsageByFacility(Reporter):
         self.title = "Opportunistic Resources provided by the top {0} OSG " \
                      "Sites for the OSG Open Facility ({1} - {2})".format(
                         self.numrank, self.start_time, self.end_time)
+        self.daterange = get_time_range(self.start_time, self.end_time, months)
         self.probelist = self._get_probelist()
 
     def _get_probelist(self):
@@ -234,64 +271,69 @@ class TopOppUsageByFacility(Reporter):
         :return: None
         """
         self.current = True
-        results = self.run_query()
-        f_parser = self._parse_to_facilities()
-        # print results
-
-        unique_terms = self.unique_terms
-        metrics = ['CoreHours']
-
-        def recurseBucket(curData, curBucket, index, data):
-            """
-            Recursively process the buckets down the nested aggregations
-
-            :param curData: Current parsed data that describes curBucket and will be copied and appended to
-            :param bucket curBucket: A elasticsearch bucket object
-            :param int index: Index of the unique_terms that we are processing
-            :param data: list of dicts that holds results of processing
-
-            :return: None.  But this will operate on a list *data* that's passed in and modify it
-            """
-            curTerm = unique_terms[index]
-
-            # Check if we are at the end of the list
-            if not curBucket[curTerm]['buckets']:
-                # Make a copy of the data
-                nowData = copy.deepcopy(curData)
-                data.append(nowData)
-            else:
-                # Get the current key, and add it to the data
-                for bucket in curBucket[curTerm]['buckets']:
-                    nowData = copy.deepcopy(
-                        curData)  # Hold a copy of curData so we can pass that in to any future recursion
-                    nowData[curTerm] = bucket['key']
-                    if index == (len(unique_terms) - 1):
-                        # reached the end of the unique terms
-                        for metric in metrics:
-                            nowData[metric] = bucket[metric].value
-                            # Add the doc count
-                        nowData["Count"] = bucket['doc_count']
-                        data.append(nowData)
-                    else:
-                        recurseBucket(nowData, bucket, index + 1, data)
-
-        data = []
-        recurseBucket({}, results, 0, data)
-        allterms = copy.copy(unique_terms)
-        allterms.extend(metrics)
-
-        for elt in results['Missing']['Host_description']['buckets']:
-            print elt
-            # Do Name Correction, add an entry to data
 
 
-        for entry in data:
-            print entry
-            f_parser.send(entry)
-            # yield [entry[field] for field in allterms]
+        for self.start_time, self.end_time in self.daterange:
+            results = self.run_query()
+            f_parser = self._parse_to_facilities()
+            # print results
+
+            unique_terms = self.unique_terms
+            metrics = ['CoreHours']
+
+            def recurseBucket(curData, curBucket, index, data):
+                """
+                Recursively process the buckets down the nested aggregations
+
+                :param curData: Current parsed data that describes curBucket and will be copied and appended to
+                :param bucket curBucket: A elasticsearch bucket object
+                :param int index: Index of the unique_terms that we are processing
+                :param data: list of dicts that holds results of processing
+
+                :return: None.  But this will operate on a list *data* that's passed in and modify it
+                """
+                curTerm = unique_terms[index]
+
+                # Check if we are at the end of the list
+                if not curBucket[curTerm]['buckets']:
+                    # Make a copy of the data
+                    nowData = copy.deepcopy(curData)
+                    data.append(nowData)
+                else:
+                    # Get the current key, and add it to the data
+                    for bucket in curBucket[curTerm]['buckets']:
+                        nowData = copy.deepcopy(
+                            curData)  # Hold a copy of curData so we can pass that in to any future recursion
+                        nowData[curTerm] = bucket['key']
+                        if index == (len(unique_terms) - 1):
+                            # reached the end of the unique terms
+                            for metric in metrics:
+                                nowData[metric] = bucket[metric].value
+                                # Add the doc count
+                            nowData["Count"] = bucket['doc_count']
+                            data.append(nowData)
+                        else:
+                            recurseBucket(nowData, bucket, index + 1, data)
+
+            data = []
+            recurseBucket({}, results, 0, data)
+            allterms = copy.copy(unique_terms)
+            allterms.extend(metrics)
+
+            for elt in results['Missing']['Host_description']['buckets']:
+                print elt
+                # Do Name Correction, add an entry to data
+
+
+            for entry in data:
+                print entry
+                f_parser.send(entry)
+                # yield [entry[field] for field in allterms]
+
+            self.current = False
 
         for f in facilities.itervalues():
-            print f.name, f.totalhours, f.entry_list
+            print f.name, f.totalhours, f.oldtotalhours, f.entry_list, f.old_entry_list
 
         return
 
@@ -301,8 +343,6 @@ class TopOppUsageByFacility(Reporter):
 
         :return:
         """
-        # termsmap = [('OIM_ResourceGroup', 'rg'), ('OIM_Resource', 'res')]
-
         while True:
             entry = yield
             fname = entry['OIM_Facility']
