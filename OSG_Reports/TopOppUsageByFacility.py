@@ -7,6 +7,7 @@ import traceback
 import re
 import json
 import datetime
+import copy
 from elasticsearch_dsl import Search
 
 parentdir = os.path.dirname(
@@ -27,6 +28,8 @@ import NiceNum
 from Reporter import Reporter, runerror
 
 logfile = 'topoppusage.log'
+MAXINT = 2**31-1
+facilities = {}
 
 
 # Helper functions
@@ -58,27 +61,91 @@ def parse_opts(parser):
     :return: None
     """
     # Report-specific args
-    pass
+    parser.add_argument("-m", "--months", dest="months",
+                        help="Number of months to run report for",
+                        default=None, type=int)
+    parser.add_argument("-N", "--numrank", dest="numrank",
+                        help="Number of Facilities to rank",
+                        default=None, type=int)
 
+
+class Facility(object):
+    """
+
+    """
+    typedict = {'rg': basestring, 'res': basestring, 'entry': dict,
+                'old_entry': dict}
+
+    def __init__(self, name):
+        self.name = name
+        self.totalhours = 0
+        self.oldtotalhours = 0
+        for st in ('rg', 'res', 'entry', 'old_entry'):
+            setattr(self, '{0}_list'.format(st), [])
+
+    def add_hours(self, hours, old=False):
+        """
+
+        :param hours:
+        :param old:
+        :return:
+        """
+        if old:
+            self.oldtotalhours += hours
+        else:
+            self.totalhours += hours
+
+    def add_to_list(self, flag, item):
+        """
+
+        :param flag:
+        :param item:
+        :return:
+        """
+        if not isinstance(item, self.typedict[flag]):
+            raise TypeError("The item {0} must be of type {1} to add to {2}"\
+                    .format(item, self.typedict[flag], flag))
+        else:
+            tmplist = getattr(self, '{0}_list'.format(flag))
+            tmplist.append(item)
+            setattr(self, '{0}_list'.format(flag), tmplist)
+
+            if flag == 'entry':
+                termsmap = [('OIM_ResourceGroup', 'rg'),
+                            ('OIM_Resource', 'res')]
+                # Recursive call of the function to auto add RG and Resource
+                for key, fl in termsmap:
+                    if key in item:
+                        self.add_to_list(fl, item[key])
+
+        return
 
 class TopOppUsageByFacility(Reporter):
     """
     """
     def __init__(self, config, start=None, end=None, template=None,
                  is_test=False, no_email=False,
-                 verbose=False, rank=10, months=None):
+                 verbose=False, numrank=10, months=None):
         report = 'news'
-        self.vo = vo
         Reporter.__init__(self, report, config, start, end, verbose=verbose,
-                          logfile=logfile, no_email=no_email, is_test=is_test)
-        self.rank = rank
+                          logfile=logfile, no_email=no_email, is_test=is_test,
+                          raw=False)
+        self.numrank = numrank
         self.template = template
         self.text = ''
         self.table = ''
         self.title = "Opportunistic Resources provided by the top {0} OSG " \
                      "Sites for the OSG Open Facility ({1} - {2})".format(
-            self.rank, self.start_time, self.end_time
-        )
+                        self.numrank, self.start_time, self.end_time)
+        self.probelist = self._get_probelist()
+
+    def _get_probelist(self):
+        """
+
+        :return:
+        """
+        probes = self.config.get('query', 'OSG_flocking_probe_list')
+        return [elt.strip("'") for elt in re.split(',', probes)]
 
     def run_report(self):
         """Handles the data flow throughout the report generation.  Generates
@@ -87,8 +154,8 @@ class TopOppUsageByFacility(Reporter):
         :return None
         """
         self.generate()
-        self.generate_report_file()
-        self.send_report()
+        # self.generate_report_file()
+        # self.send_report()
         return
 
     def query(self):
@@ -100,30 +167,32 @@ class TopOppUsageByFacility(Reporter):
         # Gather parameters, format them for the query
         starttimeq = self.dateparse_to_iso(self.start_time)
         endtimeq = self.dateparse_to_iso(self.end_time)
-        wildcardVOq = '*' + self.vo.lower() + '*'
-        wildcardProbeNameq = 'condor:fifebatch?.fnal.gov'
 
         if self.verbose:
             self.logger.info(self.indexpattern)
 
         # Elasticsearch query and aggregations
         s = Search(using=self.client, index=self.indexpattern) \
-            .filter("wildcard", VOName=wildcardVOq) \
-            .filter("wildcard", ProbeName=wildcardProbeNameq) \
-            .filter("range", EndTime={"gte": starttimeq, "lt": endtimeq}) \
-            .filter("range", WallDuration={"gt": 0}) \
-            .filter("term", Host_description="GPGrid") \
-            .filter("term", ResourceType="Payload")[0:0]
+                .filter("range", EndTime={"gte": starttimeq, "lt": endtimeq}) \
+                .filter("term", ResourceType="Payload") \
+                .filter("terms", ProbeName=self.probelist)[0:0]
+
         # Size 0 to return only aggregations
 
-        # Bucket aggs
-        Bucket = s.aggs.bucket('group_VOName', 'terms', field='ReportableVOName') \
-            .bucket('group_HostDescription', 'terms', field='Host_description') \
-            .bucket('group_CommonName', 'terms', field='CommonName')
+        self.unique_terms = ['OIM_Facility', 'OIM_ResourceGroup',
+                             'OIM_Resource']
+        cur_bucket = s.aggs
 
-        # Metric aggs
-        Bucket.metric('WallHours', 'sum', field='CoreHours') \
-            .metric('CPUDuration_sec', 'sum', field='CpuDuration')
+        for term in self.unique_terms:
+            cur_bucket = cur_bucket.bucket(term, 'terms', field=term,
+                                           size=MAXINT, missing='Unknown')
+
+        cur_bucket.metric('CoreHours', 'sum', field='CoreHours')
+
+        s.aggs.bucket('Missing', 'missing', field='OIM_Facility')\
+            .bucket('Host_description', 'terms', field='Host_description',
+                    size=MAXINT)\
+            .metric('CoreHours', 'sum', field='CoreHours')
 
         return s
 
@@ -164,8 +233,91 @@ class TopOppUsageByFacility(Reporter):
 
         :return: None
         """
+        self.current = True
         results = self.run_query()
+        f_parser = self._parse_to_facilities()
+        # print results
+
+        unique_terms = self.unique_terms
+        metrics = ['CoreHours']
+
+        def recurseBucket(curData, curBucket, index, data):
+            """
+            Recursively process the buckets down the nested aggregations
+
+            :param curData: Current parsed data that describes curBucket and will be copied and appended to
+            :param bucket curBucket: A elasticsearch bucket object
+            :param int index: Index of the unique_terms that we are processing
+            :param data: list of dicts that holds results of processing
+
+            :return: None.  But this will operate on a list *data* that's passed in and modify it
+            """
+            curTerm = unique_terms[index]
+
+            # Check if we are at the end of the list
+            if not curBucket[curTerm]['buckets']:
+                # Make a copy of the data
+                nowData = copy.deepcopy(curData)
+                data.append(nowData)
+            else:
+                # Get the current key, and add it to the data
+                for bucket in curBucket[curTerm]['buckets']:
+                    nowData = copy.deepcopy(
+                        curData)  # Hold a copy of curData so we can pass that in to any future recursion
+                    nowData[curTerm] = bucket['key']
+                    if index == (len(unique_terms) - 1):
+                        # reached the end of the unique terms
+                        for metric in metrics:
+                            nowData[metric] = bucket[metric].value
+                            # Add the doc count
+                        nowData["Count"] = bucket['doc_count']
+                        data.append(nowData)
+                    else:
+                        recurseBucket(nowData, bucket, index + 1, data)
+
+        data = []
+        recurseBucket({}, results, 0, data)
+        allterms = copy.copy(unique_terms)
+        allterms.extend(metrics)
+
+        for elt in results['Missing']['Host_description']['buckets']:
+            print elt
+            # Do Name Correction, add an entry to data
+
+
+        for entry in data:
+            print entry
+            f_parser.send(entry)
+            # yield [entry[field] for field in allterms]
+
+        for f in facilities.itervalues():
+            print f.name, f.totalhours, f.entry_list
+
         return
+
+    @coroutine
+    def _parse_to_facilities(self):
+        """
+
+        :return:
+        """
+        # termsmap = [('OIM_ResourceGroup', 'rg'), ('OIM_Resource', 'res')]
+
+        while True:
+            entry = yield
+            fname = entry['OIM_Facility']
+
+            if fname not in facilities:
+                facilities[fname] = Facility(fname)
+            f_class = facilities[fname]
+            if self.current:
+                f_class.add_to_list('entry', entry)
+                f_class.add_hours(entry['CoreHours'])
+            else:
+                f_class.add_to_list('old_entry', entry)
+                f_class.add_hours(entry['CoreHours'], old=True)
+
+
 
     def generate_report_file(self):
         """
@@ -224,13 +376,13 @@ if __name__ == "__main__":
                                   is_test=args.is_test,
                                   no_email=args.no_email,
                                   verbose=args.verbose,
-                                  rank=rank)
+                                  numrank=args.numrank)
         r.run_report()
-        print "Efficiency Report execution successful"
+        print "Top Opportunistic Usage per Facility Report execution successful"
 
     except Exception as e:
-        errstring = '{0}: Error running Efficiency Report for {1}. ' \
-                    '{2}'.format(datetime.datetime.now(), args.vo, traceback.format_exc())
+        errstring = '{0}: Error running Top Opportunistic Usage Report. ' \
+                    '{1}'.format(datetime.datetime.now(), traceback.format_exc())
         with open(logfile, 'a') as f:
             f.write(errstring)
         print >> sys.stderr, errstring
