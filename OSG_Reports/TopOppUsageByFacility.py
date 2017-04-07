@@ -12,6 +12,8 @@ from dateutil.relativedelta import *
 
 from elasticsearch_dsl import Search
 
+from NameCorrection import NameCorrection
+
 parentdir = os.path.dirname(
     os.path.dirname(
         os.path.abspath(
@@ -321,9 +323,11 @@ class TopOppUsageByFacility(Reporter):
             allterms.extend(metrics)
 
             for elt in results['Missing']['Host_description']['buckets']:
-                print elt
-                # Do Name Correction, add an entry to data
-
+                n = NameCorrection(elt['key'])
+                info = n.get_info()
+                if info:
+                    info['CoreHours'] = elt['CoreHours']['value']
+                    data.append(info)
 
             for entry in data:
                 print entry

@@ -98,7 +98,10 @@ class NameCorrection(object):
 
         :return:
         """
-        return self.cl.get_info(*self.args)
+        try:
+            return self.cl.get_info(*self.args)
+        except AttributeError:
+            return
 
 
 if __name__ == '__main__':
