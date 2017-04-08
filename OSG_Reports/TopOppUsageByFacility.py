@@ -410,23 +410,66 @@ class TopOppUsageByFacility(Reporter):
 
         while True:
             rank, fclass = yield
-            nameattrs = ('rg_list', 'res_list')
-            numattrs = ('totalhours', 'oldrank', 'oldtotalhours')
-            line = ''
+            detailler = self._detail_line_gen()
+            # listattrs = ('rg_list', 'res_list')
+            # numattrs = ('totalhours', 'oldrank', 'oldtotalhours')
 
-            line1 = self.tdalign(fclass.name, 'left') + \
-            ''.join((self.tdalign(
-                '<br/>'.join(getattr(fclass, attr)), 'left')
-                    for attr in nameattrs))
-            line2 = self.tdalign(rank, 'right') + ''.join(
-                (self.tdalign(getattr(fclass, attr), 'right')
-                    for attr in numattrs))
-            line = '<tr>' + line1 + line2 + '</tr>\n'
+
+            line = '<tr>{0}{1}{2}{3}{4}{5}{6}</tr>\n'.format(
+                self.tdalign(fclass.name, 'left'),
+                self.tdalign('<br/>'.join(fclass.rg_list),'left'),
+                self.tdalign('<br/>'.join(fclass.res_list), 'left'),
+                self.tdalign(rank, 'right'),
+                self.tdalign(fclass.totalhours, 'right'),
+                self.tdalign(fclass.oldrank, 'right'),
+                self.tdalign(fclass.oldtotalhours, 'right')
+                )
+            # line1 = self.tdalign(fclass.name, 'left') + \
+            # ''.join((self.tdalign(
+            #     '<br/>'.join(getattr(fclass, attr)),
+            #     'left')
+            #          for attr in listattrs))
+            # line2 = self.tdalign(rank, 'right') + \
+            #         ''.join((self.tdalign(getattr(fclass, attr), 'right')
+            #         for attr in numattrs))
+            # line = '<tr>' + line + '</tr>\n'
 
             self.table += line
 
+            if len(fclass.res_list) > 1:
+                detailler.send(fclass)
+
     @coroutine
-    def _detail_line_gen(self): yield
+    def _detail_line_gen(self):
+        """
+
+        :return:
+        """
+        while True:
+            fclass = yield
+            oldres_dict = {old_entry['OIM_Resource']: old_entry['CoreHours']
+                           for old_entry in fclass.old_entry_list}
+
+            for entry in fclass.entry_list:
+                dline = '{0}{1}{2}{3}{4}{5}'.format(
+                    '<td></td>',
+                    self.tdalign(entry['OIM_ResourceGroup'], 'left'),
+                    self.tdalign(entry['OIM_Resource'], 'left'),
+                    '<td></td>',
+                    self.tdalign(entry['CoreHours'], 'right'),
+                    '<td></td>'
+                )
+
+                try:
+                    oldhrs = oldres_dict[entry['OIM_Resource']]
+                except KeyError:    # Resource not in old entry dict
+                    oldhrs = 'Unknown'
+                finally:
+                    dline += self.tdalign(oldhrs, 'right')
+
+                dline = '<tr>' + dline + '</tr>\n'
+
+                self.table += dline
 
     def send_report(self):
         """
