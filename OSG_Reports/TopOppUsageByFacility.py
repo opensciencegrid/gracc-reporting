@@ -34,9 +34,9 @@ from Reporter import Reporter, runerror
 
 """ To do:
 
-    - Implement name correction
-    - Implement ranker
-    - Implement HTML line creator
+   - Implement ranker
+    - Implement HTML line creator (Totaller finished, need detailer)
+    - Verify (I think some discrepancy might be because I tag unknown facilities as "unknown")
 
 """
 
@@ -118,6 +118,7 @@ class Facility(object):
         self.name = name
         self.totalhours = 0
         self.oldtotalhours = 0
+        self.oldrank = None
         for st in ('rg', 'res', 'entry', 'old_entry'):
             setattr(self, '{0}_list'.format(st), [])
 
@@ -193,7 +194,7 @@ class TopOppUsageByFacility(Reporter):
         :return None
         """
         self.generate()
-        # self.generate_report_file()
+        self.generate_report_file()
         # self.send_report()
         return
 
@@ -220,9 +221,10 @@ class TopOppUsageByFacility(Reporter):
 
         self.unique_terms = ['OIM_Facility', 'OIM_ResourceGroup',
                              'OIM_Resource']
-        cur_bucket = s.aggs
+        cur_bucket = s.aggs.bucket('OIM_Facility', 'terms', field='OIM_Facility',
+                                   size=MAXINT)
 
-        for term in self.unique_terms:
+        for term in self.unique_terms[1:]:
             cur_bucket = cur_bucket.bucket(term, 'terms', field=term,
                                            size=MAXINT, missing='Unknown')
 
@@ -330,14 +332,18 @@ class TopOppUsageByFacility(Reporter):
                     data.append(info)
 
             for entry in data:
-                print entry
                 f_parser.send(entry)
-                # yield [entry[field] for field in allterms]
 
             self.current = False
 
-        for f in facilities.itervalues():
-            print f.name, f.totalhours, f.oldtotalhours, f.entry_list, f.old_entry_list
+        # Get prior rank
+        for oldrank, f in enumerate(
+                sorted(facilities.itervalues(), key=lambda x: x.oldtotalhours,
+                    reverse=True), start=1):
+            f.oldrank = oldrank
+
+        # for f in facilities.itervalues():
+        #     print f.name, f.totalhours
 
         return
 
@@ -362,7 +368,6 @@ class TopOppUsageByFacility(Reporter):
                 f_class.add_hours(entry['CoreHours'], old=True)
 
 
-
     def generate_report_file(self):
         """
         Takes the HTML template and inserts the appropriate information to
@@ -370,6 +375,19 @@ class TopOppUsageByFacility(Reporter):
 
         :return: None
         """
+        header = ['Facility', 'Resource Groups', 'Resources', 'Current Rank',
+                  'Current Hrs', 'Prior Rank', 'Prior Hrs']
+
+        totaller = self._total_line_gen()
+        self.table = ''
+        for rank, f in enumerate(
+                sorted(facilities.itervalues(), key=lambda x: x.totalhours,
+                    reverse=True), start=1):
+            totaller.send((rank, f))
+            # print f.name, rank
+
+        print self.table
+
         # header = ['Experiment', 'Facility', 'User', 'Used Wall Hours',
         #           'Efficiency']
         # htmlheader = '<th>' + '</th><th>'.join(header) + '</th>'
@@ -377,6 +395,38 @@ class TopOppUsageByFacility(Reporter):
         # self.text = "".join(open(self.template).readlines())
         # self.text = self.text.format(**htmldict)
         return
+
+    @staticmethod
+    def tdalign(info, align):
+        """HTML generator to wrap a table cell with alignment"""
+        return '<td align="{0}">{1}</td>'.format(align, info)
+
+    @coroutine
+    def _total_line_gen(self):
+        """
+
+        :return:
+        """
+
+        while True:
+            rank, fclass = yield
+            nameattrs = ('rg_list', 'res_list')
+            numattrs = ('totalhours', 'oldrank', 'oldtotalhours')
+            line = ''
+
+            line1 = self.tdalign(fclass.name, 'left') + \
+            ''.join((self.tdalign(
+                '<br/>'.join(getattr(fclass, attr)), 'left')
+                    for attr in nameattrs))
+            line2 = self.tdalign(rank, 'right') + ''.join(
+                (self.tdalign(getattr(fclass, attr), 'right')
+                    for attr in numattrs))
+            line = '<tr>' + line1 + line2 + '</tr>\n'
+
+            self.table += line
+
+    @coroutine
+    def _detail_line_gen(self): yield
 
     def send_report(self):
         """
