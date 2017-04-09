@@ -439,8 +439,8 @@ class TopOppUsageByFacility(Reporter):
     @coroutine
     def _total_line_gen(self):
         """
-
-        :return:
+        Coroutine to generate the Facility-level lines from the Facility class
+        instances
         """
 
         while True:
@@ -459,17 +459,18 @@ class TopOppUsageByFacility(Reporter):
 
             self.table += line
 
-            if len(fclass.res_list) > 1:
+            if len(fclass.res_list) > 1:    # If there's more than one resource
                 detailler.send(fclass)
 
     @coroutine
     def _detail_line_gen(self):
         """
-
-        :return:
+        Coroutine to generate the Resource-level lines for the facilities
         """
         while True:
             fclass = yield
+
+            # Optimization to make sure we don't have to iterate later
             oldres_dict = {old_entry['OIM_Resource']: old_entry['CoreHours']
                            for old_entry in fclass.old_entry_list}
 
@@ -491,7 +492,6 @@ class TopOppUsageByFacility(Reporter):
                     dline += self.tdalign(oldhrs, 'right')
 
                 dline = '<tr>' + dline + '</tr>\n'
-
                 self.table += dline
 
     def send_report(self):
