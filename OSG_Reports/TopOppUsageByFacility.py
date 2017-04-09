@@ -195,7 +195,7 @@ class TopOppUsageByFacility(Reporter):
         """
         self.generate()
         self.generate_report_file()
-        # self.send_report()
+        self.send_report()
         return
 
     def query(self):
@@ -208,14 +208,16 @@ class TopOppUsageByFacility(Reporter):
         starttimeq = self.dateparse_to_iso(self.start_time)
         endtimeq = self.dateparse_to_iso(self.end_time)
 
+        print starttimeq, endtimeq
+
         if self.verbose:
             self.logger.info(self.indexpattern)
 
         # Elasticsearch query and aggregations
         s = Search(using=self.client, index=self.indexpattern) \
                 .filter("range", EndTime={"gte": starttimeq, "lt": endtimeq}) \
-                .filter("term", ResourceType="Payload") \
-                .filter("terms", ProbeName=self.probelist)[0:0]
+                .filter("terms", ProbeName=self.probelist) \
+                .filter("term", ResourceType="Payload")[0:0]
 
         # Size 0 to return only aggregations
 
@@ -383,17 +385,21 @@ class TopOppUsageByFacility(Reporter):
         for rank, f in enumerate(
                 sorted(facilities.itervalues(), key=lambda x: x.totalhours,
                     reverse=True), start=1):
+            if rank > self.numrank:
+                break
+
             totaller.send((rank, f))
             # print f.name, rank
 
-        print self.table
+        # print self.table
 
         # header = ['Experiment', 'Facility', 'User', 'Used Wall Hours',
         #           'Efficiency']
-        # htmlheader = '<th>' + '</th><th>'.join(header) + '</th>'
-        # htmldict = dict(title=self.title, header=htmlheader, table=self.table)
-        # self.text = "".join(open(self.template).readlines())
-        # self.text = self.text.format(**htmldict)
+        htmlheader = '<th>' + '</th><th>'.join(header) + '</th>'
+        htmldict = dict(title=self.title, header=htmlheader, table=self.table)
+        self.text = "".join(open(self.template).readlines())
+        self.text = self.text.format(**htmldict)
+
         return
 
     @staticmethod
@@ -420,9 +426,9 @@ class TopOppUsageByFacility(Reporter):
                 self.tdalign('<br/>'.join(fclass.rg_list),'left'),
                 self.tdalign('<br/>'.join(fclass.res_list), 'left'),
                 self.tdalign(rank, 'right'),
-                self.tdalign(fclass.totalhours, 'right'),
+                self.tdalign(NiceNum.niceNum(fclass.totalhours), 'right'),
                 self.tdalign(fclass.oldrank, 'right'),
-                self.tdalign(fclass.oldtotalhours, 'right')
+                self.tdalign(NiceNum.niceNum(fclass.oldtotalhours), 'right')
                 )
             # line1 = self.tdalign(fclass.name, 'left') + \
             # ''.join((self.tdalign(
@@ -456,12 +462,12 @@ class TopOppUsageByFacility(Reporter):
                     self.tdalign(entry['OIM_ResourceGroup'], 'left'),
                     self.tdalign(entry['OIM_Resource'], 'left'),
                     '<td></td>',
-                    self.tdalign(entry['CoreHours'], 'right'),
+                    self.tdalign(NiceNum.niceNum(entry['CoreHours']), 'right'),
                     '<td></td>'
                 )
 
                 try:
-                    oldhrs = oldres_dict[entry['OIM_Resource']]
+                    oldhrs = NiceNum.niceNum(oldres_dict[entry['OIM_Resource']])
                 except KeyError:    # Resource not in old entry dict
                     oldhrs = 'Unknown'
                 finally:
@@ -490,7 +496,7 @@ class TopOppUsageByFacility(Reporter):
                              self.email_info["from_email"]),
                             self.email_info["smtphost"])
 
-        self.logger.info("Report sent for {0}".format(self.vo))
+        self.logger.info("Report sent")
 
         return
 
