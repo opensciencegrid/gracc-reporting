@@ -103,8 +103,12 @@ def parse_opts(parser):
 
 class Facility(object):
     """
-
+    Class to hold facility information for this report
+    :param str name: Name of the facility
     """
+
+    # Mapping dict to check type of data before it's added to an instance of
+    # this class
     typedict = {'rg': basestring, 'res': basestring, 'entry': dict,
                 'old_entry': dict}
 
@@ -113,15 +117,22 @@ class Facility(object):
         self.totalhours = 0
         self.oldtotalhours = 0
         self.oldrank = None
+
+        """ Initialize all the data lists
+        rg_list = Resource Group List
+        res_list = Resource list
+        entry_list = Entries of current reporting period data
+        old_entry_list = Entries of prior reporting period data
+        """
         for st in ('rg', 'res', 'entry', 'old_entry'):
             setattr(self, '{0}_list'.format(st), [])
 
     def add_hours(self, hours, old=False):
         """
-
-        :param hours:
-        :param old:
-        :return:
+        Add an entry's hours to the appropriate runnig total
+        :param float hours: Number of hours from an entry to add
+        :param bool old: If true, add hours to prior reporting period total
+        :return: None
         """
         if old:
             self.oldtotalhours += hours
@@ -130,10 +141,11 @@ class Facility(object):
 
     def add_to_list(self, flag, item):
         """
+        Method to add information to one of the data lists for this class
 
-        :param flag:
-        :param item:
-        :return:
+        :param str flag: Which list to add to
+        :param str, dict item: What to add to the list
+        :return: None
         """
         if not isinstance(item, self.typedict[flag]):
             raise TypeError("The item {0} must be of type {1} to add to {2}"\
@@ -150,8 +162,8 @@ class Facility(object):
                 for key, fl in termsmap:
                     if key in item:
                         self.add_to_list(fl, item[key])
-
         return
+
 
 class TopOppUsageByFacility(Reporter):
     """
