@@ -208,8 +208,6 @@ class TopOppUsageByFacility(Reporter):
         starttimeq = self.dateparse_to_iso(self.start_time)
         endtimeq = self.dateparse_to_iso(self.end_time)
 
-        print starttimeq, endtimeq
-
         if self.verbose:
             self.logger.info(self.indexpattern)
 
@@ -369,7 +367,6 @@ class TopOppUsageByFacility(Reporter):
                 f_class.add_to_list('old_entry', entry)
                 f_class.add_hours(entry['CoreHours'], old=True)
 
-
     def generate_report_file(self):
         """
         Takes the HTML template and inserts the appropriate information to
@@ -382,21 +379,32 @@ class TopOppUsageByFacility(Reporter):
 
         totaller = self._total_line_gen()
         self.table = ''
+        rankhrs = 0
+        prihrs = 0
+        tothrs = 0
         for rank, f in enumerate(
                 sorted(facilities.itervalues(), key=lambda x: x.totalhours,
                     reverse=True), start=1):
-            if rank > self.numrank:
-                break
 
-            totaller.send((rank, f))
-            # print f.name, rank
+            tothrs += f.totalhours
+            prihrs += f.oldtotalhours
 
-        # print self.table
+            if rank <= self.numrank: # Only list the top <numrank> facilities
+                totaller.send((rank, f))
+                rankhrs += f.totalhours
 
-        # header = ['Experiment', 'Facility', 'User', 'Used Wall Hours',
-        #           'Efficiency']
+        summarytext = "TOTAL WALL HOURS FOR THE OSG OPEN FACILITY: {0}<br/>" \
+                      "PRIOR PERIOD HOURS: {1}<br/>" \
+                      "TOP {2} SITES WALL HOURS: {3}".format(
+            NiceNum.niceNum(tothrs),
+            NiceNum.niceNum(prihrs),
+            self.numrank,
+            NiceNum.niceNum(rankhrs)
+        )
+
         htmlheader = '<th>' + '</th><th>'.join(header) + '</th>'
-        htmldict = dict(title=self.title, header=htmlheader, table=self.table)
+        htmldict = dict(title=self.title, header=htmlheader, table=self.table,
+                        summary=summarytext)
         self.text = "".join(open(self.template).readlines())
         self.text = self.text.format(**htmldict)
 
@@ -417,9 +425,6 @@ class TopOppUsageByFacility(Reporter):
         while True:
             rank, fclass = yield
             detailler = self._detail_line_gen()
-            # listattrs = ('rg_list', 'res_list')
-            # numattrs = ('totalhours', 'oldrank', 'oldtotalhours')
-
 
             line = '<tr>{0}{1}{2}{3}{4}{5}{6}</tr>\n'.format(
                 self.tdalign(fclass.name, 'left'),
@@ -430,15 +435,6 @@ class TopOppUsageByFacility(Reporter):
                 self.tdalign(fclass.oldrank, 'right'),
                 self.tdalign(NiceNum.niceNum(fclass.oldtotalhours), 'right')
                 )
-            # line1 = self.tdalign(fclass.name, 'left') + \
-            # ''.join((self.tdalign(
-            #     '<br/>'.join(getattr(fclass, attr)),
-            #     'left')
-            #          for attr in listattrs))
-            # line2 = self.tdalign(rank, 'right') + \
-            #         ''.join((self.tdalign(getattr(fclass, attr), 'right')
-            #         for attr in numattrs))
-            # line = '<tr>' + line + '</tr>\n'
 
             self.table += line
 
