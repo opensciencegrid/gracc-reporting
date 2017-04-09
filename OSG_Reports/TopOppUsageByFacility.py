@@ -167,6 +167,18 @@ class Facility(object):
 
 class TopOppUsageByFacility(Reporter):
     """
+    Class to hold information and generate Top Opp Usage by Facility report
+
+    :param Configuration.Configuration config: Report Configuration object
+    :param str start: Start time of report range
+    :param str end: End time of report range
+    :param str template: Filename of HTML template to generate report
+    :param bool is_test: Whether or not this is a test run.
+    :param bool no_email: If true, don't actually send the email
+    :param bool verbose: Verbose flag
+    :param int numrank: Number of Facilities to rank.  Default 10.
+    :param int months: Number of months prior to today to set start of report
+    range
     """
     def __init__(self, config, start=None, end=None, template=None,
                  is_test=False, no_email=False,
@@ -187,8 +199,9 @@ class TopOppUsageByFacility(Reporter):
 
     def _get_probelist(self):
         """
+        Helper method to get the OSG Flocking probes from the config file
 
-        :return:
+        :return list: List of OSG Flocking probes
         """
         probes = self.config.get('query', 'OSG_flocking_probe_list')
         return [elt.strip("'") for elt in re.split(',', probes)]
@@ -280,8 +293,7 @@ class TopOppUsageByFacility(Reporter):
 
         :return: None
         """
-        self.current = True
-
+        self.current = True     # Current reporting period or prior
 
         for self.start_time, self.end_time in self.daterange:
             results = self.run_query()
@@ -348,16 +360,17 @@ class TopOppUsageByFacility(Reporter):
                     reverse=True), start=1):
             f.oldrank = oldrank
 
-        # for f in facilities.itervalues():
-        #     print f.name, f.totalhours
+        if self.verbose:
+            for f in facilities.itervalues():
+                print f.name, f.totalhours
 
         return
 
     @coroutine
     def _parse_to_facilities(self):
         """
-
-        :return:
+        Coroutine that parses raw data dicts, creates the Facility class
+        instances, and stores information in them
         """
         while True:
             entry = yield
@@ -385,12 +398,13 @@ class TopOppUsageByFacility(Reporter):
 
         totaller = self._total_line_gen()
         self.table = ''
-        rankhrs = 0
-        prihrs = 0
-        tothrs = 0
+        rankhrs = 0     # Total of ranked facilities hours, current period
+        prihrs = 0      # Total of all prior period hours
+        tothrs = 0      # Total of all current period hours
+
         for rank, f in enumerate(
                 sorted(facilities.itervalues(), key=lambda x: x.totalhours,
-                    reverse=True), start=1):
+                    reverse=True), start=1):    # Creates the ranking here
 
             tothrs += f.totalhours
             prihrs += f.oldtotalhours
@@ -399,6 +413,7 @@ class TopOppUsageByFacility(Reporter):
                 totaller.send((rank, f))
                 rankhrs += f.totalhours
 
+        # Prepare and generate the HTML file from the stored information
         summarytext = "TOTAL WALL HOURS FOR THE OSG OPEN FACILITY: {0}<br/>" \
                       "PRIOR PERIOD HOURS: {1}<br/>" \
                       "TOP {2} SITES WALL HOURS: {3}".format(
