@@ -54,11 +54,17 @@ def coroutine(func):
 
 def get_time_range(start=None, end=None, months=None):
     """
+    Returns time ranges for current and prior reporting periods  Can either
+    handle absolute range (start-end) or a certain number of months prior to
+    today's date (months)
 
-    :param start:
-    :param end:
-    :param months:
-    :return:
+    :param str start: Start of current reporting period.  Date/time in
+    yyyy/mm/dd HH:MM:SS or yyyy-mm-dd HH:MM:SS format
+    :param str end: Same as start, but end of current reporting period
+    :param int months: Number of months prior to current date, to define
+    reporting period.
+    :return tuple: Tuple of tuples of datetime.datetime objects representing
+    date ranges (cur_period, prior_period)
     """
     if months:
         if start or end:
@@ -74,9 +80,6 @@ def get_time_range(start=None, end=None, months=None):
     pri_end = start_date - relativedelta(days=1)
     pri_start = pri_end - diff
     return (start_date, end_date), (pri_start, pri_end)
-
-
-
 
 
 @Reporter.init_reporter_parser
