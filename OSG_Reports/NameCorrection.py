@@ -25,7 +25,7 @@ config.configure(configfile)
 
 class MWT2Correction(object):
     """
-
+    Class to get and return Resource Group MWT2 information
     """
     mwt2filename = '/tmp/mwt2.xml'
     mwt2url = config.config.get('namecorrection', 'mwt2url')
@@ -37,8 +37,7 @@ class MWT2Correction(object):
 
     def _get_info_from_oim(self):
         """
-
-        :return:
+        Get the XML file from OIM
         """
         r = requests.get(self.mwt2url)
         if not r.status_code == requests.codes.ok:
@@ -51,8 +50,7 @@ class MWT2Correction(object):
 
     def _parse_xml(self):
         """
-
-        :return:
+        Parse the XML file and store information into the mwt2info dict
         """
         tree = ET.parse(self.mwt2filename)
         root = tree.getroot()
@@ -63,9 +61,11 @@ class MWT2Correction(object):
     @staticmethod
     def get_info(fqdn):
         """
+        Generates and returns the dict for an MWT2 fqdn
 
-        :param fqdn:
-        :return:
+        :param str fqdn: FQDN from an ES query result
+        :return dict: Dict with MWT2 info in the form of raw data entry in
+        for use in TopOppUsageByFacility report
         """
         resource = mwt2info[fqdn]
         return {'OIM_Facility': 'University of Chicago',
@@ -76,17 +76,27 @@ class MWT2Correction(object):
 class GPGridCorrection(object):
     @staticmethod
     def get_info():
+        """Generates and returns the dict for GPGrid
+
+        :return dict: Dict with GPGrid info in the form of raw data entry in
+        for use in TopOppUsageByFacility report"""
         return {'OIM_Facility': 'Fermi National Accelerator Laboratory',
                 'OIM_ResourceGroup': 'FNAL_FERMIGRID',
                 'OIM_Resource': 'FNAL_GPGRID_4'}
 
 
 class NameCorrection(object):
+    """General Name Correction class to select correct info class (above)
+    and return the relevant info
+
+    :param str hd: Host Description from an ES query result
+    """
     mwt2matchstring = re.compile('.+\@(.+)\/condor')
     gpgridmatchstring = 'GPGrid'
 
     def __init__(self, hd):
         self.args = []
+        # Select the correct class to instantiate
         if hd == self.gpgridmatchstring:
             self.cl = GPGridCorrection()
         elif self.mwt2matchstring.match(hd):
@@ -95,8 +105,7 @@ class NameCorrection(object):
 
     def get_info(self):
         """
-
-        :return:
+        Either returns the correct class' get_info method return value or None
         """
         try:
             return self.cl.get_info(*self.args)
