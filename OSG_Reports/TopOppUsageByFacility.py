@@ -32,15 +32,6 @@ import NiceNum
 from Reporter import Reporter, runerror
 
 
-""" To do:
-
-   - Implement ranker
-    - Implement HTML line creator (Totaller finished, need detailer)
-    - Verify (I think some discrepancy might be because I tag unknown facilities as "unknown")
-
-"""
-
-
 logfile = 'topoppusage.log'
 MAXINT = 2**31-1
 facilities = {}
