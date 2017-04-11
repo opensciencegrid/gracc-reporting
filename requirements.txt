@@ -1,0 +1,4 @@
+dateutil
+elasticsearch
+elasticsearch_dsl
+psycopg2
