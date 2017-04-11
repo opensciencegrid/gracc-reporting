@@ -23,3 +23,17 @@ Then, to access this sandbox, go to the dir with gracc_venv in it, and:
 source gracc_venv/bin/activate
 
 and do whatever you need!
+
+
+# Automating virtual env to run reports on cron jobs
+
+If you want to automate this, you can do something like the following:
+
+#!/bin/sh
+
+cd ~/gracc-reporting/
+source gracc_venv/bin/activate
+
+PYTHON=`which python`
+cd <reports dir>
+$PYTHON <report> <params>
