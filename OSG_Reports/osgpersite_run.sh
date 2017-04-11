@@ -1,6 +1,7 @@
 #!/bin/sh
 
 LOGFILE=osgpersite_run.log
+TOPDIR=/home/sbhat/gracc-reporting
 endtime=`date +"%F %T"`
 
 function set_dates {
@@ -18,9 +19,15 @@ function set_dates {
 
 set_dates $1
 
+cd $TOPDIR
+source gracc_venv/bin/activate
+PYTHON=`which python`
+
+cd OSG_Reports
+
 echo "START" `date` >> $LOGFILE
 
-python OSGPerSiteReporter.py -s "$starttime" -c osg.config -T template_siteusage.html
+$PYTHON OSGPerSiteReporter.py -s "$starttime" -c osg.config -T template_siteusage.html
 
 
 if [ $? -ne 0 ]
