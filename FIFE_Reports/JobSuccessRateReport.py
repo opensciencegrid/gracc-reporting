@@ -585,7 +585,6 @@ class JobSuccessRateReporter(Reporter):
 if __name__ == "__main__":
     args = parse_opts()
 
-    print args
     config = Configuration.Configuration()
     config.configure(args.config)
 

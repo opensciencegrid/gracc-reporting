@@ -1,6 +1,9 @@
 #!/bin/sh
 
+
 LOGFILE=flocking_run.log
+TOPDIR=/home/sbhat/gracc-reporting
+
 endtime=`date +"%F %T"`
 
 function set_dates {
@@ -18,9 +21,15 @@ function set_dates {
 
 set_dates $1
 
+cd $TOPDIR
+source gracc_venv/bin/activate
+PYTHON=`which python`
+
+cd OSG_Reports
+
 echo "START" `date` >> $LOGFILE
 
-python OSGFlockingReporter.py -s "$starttime" -e "$endtime" -c osg.config -T template_flocking.html
+$PYTHON OSGFlockingReporter.py -s "$starttime" -e "$endtime" -c osg.config -T template_flocking.html
 
 
 if [ $? -ne 0 ]

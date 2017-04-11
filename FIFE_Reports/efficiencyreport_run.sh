@@ -2,6 +2,7 @@
 
 # VOS="NOvA SeaQuest MINERvA MINOS gm2 Mu2e UBooNe DarkSide DUNE CDMS MARS CDF" 
 endtime=`date +"%F %T"`
+TOPDIR=/home/sbhat/gracc-reporting
 
 function set_dates {
         case $1 in
@@ -18,10 +19,17 @@ function set_dates {
 
 vo=$2
 set_dates $1
-cd /home/gratia/gracc_email_reports/FIFE_Reports
+
+
+cd $TOPDIR
+source gracc_venv/bin/activate
+PYTHON=`which python`
+
+cd FIFE_Reports
+
 echo "START" `date` >> efficiencyreport_run.log
 
-./EfficiencyReporterPerVO.py -F GPGrid -c efficiency.config -E $vo -s "$starttime" -e "$endtime" -T template_efficiency.html
+$PYTHON EfficiencyReporterPerVO.py -F GPGrid -c efficiency.config -E $vo -s "$starttime" -e "$endtime" -T template_efficiency.html
 
 if [ $? -ne 0 ]
 then
