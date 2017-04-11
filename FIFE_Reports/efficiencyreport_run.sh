@@ -2,6 +2,7 @@
 
 # VOS="NOvA SeaQuest MINERvA MINOS gm2 Mu2e UBooNe DarkSide DUNE CDMS MARS CDF" 
 endtime=`date +"%F %T"`
+TOPDIR=/home/sbhat/gracc-reporting
 
 function set_dates {
         case $1 in
@@ -19,7 +20,6 @@ function set_dates {
 vo=$2
 set_dates $1
 
-TOPDIR=/home/sbhat/gracc-reporting
 
 cd $TOPDIR
 source gracc_venv/bin/activate
