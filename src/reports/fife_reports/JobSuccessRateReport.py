@@ -1,30 +1,17 @@
 #!/usr/bin/python
 
 import sys
-import os
 import re
 from time import sleep
 import traceback
-import inspect
 import datetime
 from ConfigParser import NoOptionError
 
-from elasticsearch_dsl import Search, Q
+from elasticsearch_dsl import Search
 
-parentdir = os.path.dirname(
-    os.path.dirname(
-        os.path.abspath(
-            inspect.getfile(
-                inspect.currentframe()
-            )
-        )
-    )
-)
-os.sys.path.insert(0, parentdir)
-
-import TextUtils
-import Configuration
-from Reporter import Reporter, runerror
+import reports.TextUtils as TextUtils
+import reports.Configuration as Configuration
+from reports.Reporter import Reporter, runerror
 
 # Various config values and their default values
 config_vals = {'num_clusters': 100, 'jobs_per_cluster': 1e6,
@@ -582,19 +569,19 @@ class JobSuccessRateReporter(Reporter):
         return self.config.has_option(self.vo.lower(), 'num_failed_sites')
 
 
-if __name__ == "__main__":
+def main():
     args = parse_opts()
 
     config = Configuration.Configuration()
     config.configure(args.config)
 
     try:
-        r = JobSuccessRateReporter(config, 
+        r = JobSuccessRateReporter(config,
                                    args.start,
-                                   args.end, 
-                                   args.vo, 
-                                   args.template, 
-                                   args.is_test, 
+                                   args.end,
+                                   args.vo,
+                                   args.template,
+                                   args.is_test,
                                    args.verbose,
                                    args.no_email)
         r.run_report()
@@ -610,3 +597,7 @@ if __name__ == "__main__":
         runerror(config, e, errstring)
         sys.exit(1)
     sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()

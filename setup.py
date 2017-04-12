@@ -13,7 +13,8 @@ setup(name='gracc-reporting',
       },
       entry_points= {
           'console_scripts': [
-              'efficiencyreport = reports.fife_reports.EfficiencyReporterPerVO:main'
+              'efficiencyreport = reports.fife_reports.EfficiencyReporterPerVO:main',
+              'jobsuccessratereport = reports.fife_reports.JobSuccessRateReport:main'
             ]
       }
       )
