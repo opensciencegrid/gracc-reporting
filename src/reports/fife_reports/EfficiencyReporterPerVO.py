@@ -1,29 +1,18 @@
 #!/usr/bin/python
 
 import sys
-import os
-import inspect
 import traceback
 import re
 import json
 import datetime
+
 from elasticsearch_dsl import Search
 
-parentdir = os.path.dirname(
-    os.path.dirname(
-        os.path.abspath(
-            inspect.getfile(
-                inspect.currentframe()
-            )
-        )
-    )
-)
-os.sys.path.insert(0, parentdir)
+import reports.TextUtils as TextUtils
+import reports.Configuration as Configuration
+import reports.NiceNum as NiceNum
+from reports.Reporter import Reporter, runerror
 
-import TextUtils
-import Configuration
-import NiceNum
-from Reporter import Reporter, runerror
 
 logfile = 'efficiencyreport.log'
 
@@ -329,7 +318,7 @@ class Efficiency(Reporter):
         return
 
 
-if __name__ == "__main__":
+def main():
     args = parse_opts()
 
     # Set up the configuration
@@ -360,10 +349,15 @@ if __name__ == "__main__":
 
     except Exception as e:
         errstring = '{0}: Error running Efficiency Report for {1}. ' \
-                    '{2}'.format(datetime.datetime.now(), args.vo, traceback.format_exc())
+                    '{2}'.format(datetime.datetime.now(), args.vo,
+                                 traceback.format_exc())
         with open(logfile, 'a') as f:
             f.write(errstring)
         print >> sys.stderr, errstring
         runerror(config, e, errstring)
         sys.exit(1)
     sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()
