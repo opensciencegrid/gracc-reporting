@@ -1,0 +1,2 @@
+include *.txt *.config *.html
+recursive-include docs *.txt
