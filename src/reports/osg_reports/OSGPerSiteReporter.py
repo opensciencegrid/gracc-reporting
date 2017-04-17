@@ -1,6 +1,6 @@
 #!/usr/bin/python
-import os
-import inspect
+# import os
+# import inspect
 import traceback
 import sys
 import datetime
@@ -8,19 +8,19 @@ import json
 
 from elasticsearch_dsl import Search
 
-parentdir = os.path.dirname(
-    os.path.dirname(
-        os.path.abspath(
-            inspect.getfile(
-                inspect.currentframe()
-            )
-        )
-    )
-)
-os.sys.path.insert(0, parentdir)
+# parentdir = os.path.dirname(
+#     os.path.dirname(
+#         os.path.abspath(
+#             inspect.getfile(
+#                 inspect.currentframe()
+#             )
+#         )
+#     )
+# )
+# os.sys.path.insert(0, parentdir)
 
-import Configuration
-from Reporter import Reporter, runerror
+import reports.Configuration as Configuration
+from reports.Reporter import Reporter, runerror
 
 logfile = 'osgpersitereport.log'
 opp_vos = ['glow', 'gluex', 'hcc', 'osg', 'sbgrid']
@@ -435,7 +435,6 @@ class OSGPerSiteReporter(Reporter):
         return report
 
 
-
 def main():
     args = parse_opts()
 
@@ -453,6 +452,7 @@ def main():
 
         osgreport.run_report()
         print 'OSG Per Site Report Execution finished'
+        sys.exit(0)
     except Exception as e:
         with open(logfile, 'a') as f:
             f.write(traceback.format_exc())
@@ -462,6 +462,7 @@ def main():
 
     return
 
+
 if __name__ == '__main__':
     main()
-    sys.exit(0)
+    # sys.exit(0)
