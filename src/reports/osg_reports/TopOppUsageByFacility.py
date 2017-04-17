@@ -1,8 +1,8 @@
 #!/usr/bin/python
 
 import sys
-import os
-import inspect
+# import os
+# import inspect
 import traceback
 import re
 import json
@@ -14,22 +14,22 @@ from elasticsearch_dsl import Search
 
 from NameCorrection import NameCorrection
 
-parentdir = os.path.dirname(
-    os.path.dirname(
-        os.path.abspath(
-            inspect.getfile(
-                inspect.currentframe()
-            )
-        )
-    )
-)
-os.sys.path.insert(0, parentdir)
+# parentdir = os.path.dirname(
+#     os.path.dirname(
+#         os.path.abspath(
+#             inspect.getfile(
+#                 inspect.currentframe()
+#             )
+#         )
+#     )
+# )
+# os.sys.path.insert(0, parentdir)
 
-import TextUtils
-from TimeUtils import TimeUtils
-import Configuration
-import NiceNum
-from Reporter import Reporter, runerror
+import reports.TextUtils as TextUtils
+from reports.TimeUtils import TimeUtils
+import reports.Configuration as Configuration
+import reports.NiceNum as NiceNum
+from reports.Reporter import Reporter, runerror
 
 
 logfile = 'topoppusage.log'
@@ -518,7 +518,7 @@ class TopOppUsageByFacility(Reporter):
         return
 
 
-if __name__ == "__main__":
+def main():
     args = parse_opts()
 
     # Set up the configuration
@@ -542,10 +542,15 @@ if __name__ == "__main__":
 
     except Exception as e:
         errstring = '{0}: Error running Top Opportunistic Usage Report. ' \
-                    '{1}'.format(datetime.datetime.now(), traceback.format_exc())
+                    '{1}'.format(datetime.datetime.now(),
+                                 traceback.format_exc())
         with open(logfile, 'a') as f:
             f.write(errstring)
         print >> sys.stderr, errstring
         runerror(config, e, errstring)
         sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
     sys.exit(0)
