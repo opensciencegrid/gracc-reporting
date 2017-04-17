@@ -1,27 +1,27 @@
 #!/usr/bin/python
 
 import sys
-import os
-import inspect
+# import os
+# import inspect
 import traceback
 import json
-from elasticsearch_dsl import A, Search
+from elasticsearch_dsl import Search
 
-parentdir = os.path.dirname(
-    os.path.dirname(
-        os.path.abspath(
-            inspect.getfile(
-                inspect.currentframe()
-            )
-        )
-    )
-)
-os.sys.path.insert(0, parentdir)
+# parentdir = os.path.dirname(
+#     os.path.dirname(
+#         os.path.abspath(
+#             inspect.getfile(
+#                 inspect.currentframe()
+#             )
+#         )
+#     )
+# )
+# os.sys.path.insert(0, parentdir)
 
-import NiceNum
-import Configuration
-from Reporter import Reporter, runerror
-import TextUtils
+import reports.NiceNum as NiceNum
+import reports.Configuration as Configuration
+from reports.Reporter import Reporter, runerror
+import reports.TextUtils as TextUtils
 
 logfile = 'wastedhours.log'
 
@@ -157,14 +157,14 @@ class WastedHoursReport(Reporter):
 
         s = Search(using=self.client, index=self.indexpattern) \
             .filter("wildcard", ProbeName=wildcardProbeNameq) \
-            .filter("range", EndTime={"gte": starttimeq, "lt": endtimeq})
+            .filter("range", EndTime={"gte": starttimeq, "lt": endtimeq})[0:0]
 
         # Aggregations
 
         Buckets = s.aggs.bucket('group_status', 'filters', filters={
             'Success': {'bool': {'must': {'term': {'Resource_ExitCode': 0}}}},
             'Failure': {
-                'bool': {'must_not': {'term': {'Resource_ExitCode': 0}}}}})\
+                'bool': {'must_not': {'term': {'Resource_ExitCode': 0}}}}}) \
             .bucket('group_VO', 'terms', field='VOName', size=2**31-1) \
             .bucket('group_CommonName','terms', field='CommonName',
                     size=2**31-1)
@@ -220,6 +220,7 @@ class WastedHoursReport(Reporter):
         data_parser.send(None)
         # table_results = []
         for status in results.group_status.buckets:
+            print status
             for VO in results.group_status.buckets[status].group_VO.buckets:
                 for CommonName in VO['group_CommonName'].buckets:
                     data_parser.send((CommonName.key, VO.key, status,
@@ -326,8 +327,7 @@ class WastedHoursReport(Reporter):
         return
 
 
-
-if __name__ == "__main__":
+def main():
     args = parse_opts()
 
     config = Configuration.Configuration()
@@ -348,3 +348,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()
