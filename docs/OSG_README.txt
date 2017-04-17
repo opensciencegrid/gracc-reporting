@@ -7,7 +7,7 @@ Missing Projects report (now run automatically from Project report):
 python MissingProject.py -c osg.config -s 2016-12-06 -e 2017-01-31 -r XD -d -n -v
 
 per site report
-python OSGPerSiteReporter.py -s 2016/10/01 -c osg.config -T template_siteusage.html -d -n -v
+python OSGPerSiteReporter.py -s 2016/10/01 -c osg.config -T template_persite.html -d -n -v
 
 Flocking report:
 python OSGFlockingReporter.py -s 2016-11-09 -e 2016-11-16 -c osg.config -T template_flocking.html -d -v -n

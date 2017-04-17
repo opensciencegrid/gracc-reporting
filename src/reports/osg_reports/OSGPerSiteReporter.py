@@ -1,23 +1,10 @@
 #!/usr/bin/python
-# import os
-# import inspect
 import traceback
 import sys
 import datetime
 import json
 
 from elasticsearch_dsl import Search
-
-# parentdir = os.path.dirname(
-#     os.path.dirname(
-#         os.path.abspath(
-#             inspect.getfile(
-#                 inspect.currentframe()
-#             )
-#         )
-#     )
-# )
-# os.sys.path.insert(0, parentdir)
 
 import reports.Configuration as Configuration
 from reports.Reporter import Reporter, runerror
@@ -460,9 +447,6 @@ def main():
         runerror(config, e, traceback.format_exc())
         sys.exit(1)
 
-    return
-
 
 if __name__ == '__main__':
     main()
-    # sys.exit(0)

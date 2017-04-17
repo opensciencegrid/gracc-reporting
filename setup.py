@@ -14,7 +14,8 @@ setup(name='gracc-reporting',
               'jobsuccessratereport = reports.fife_reports.JobSuccessRateReport:main',
               'wastedhoursreport = reports.fife_reports.WastedHoursReport:main',
               'osgflockingreport = reports.osg_reports.OSGFlockingReporter:main',
-              'osgreport = reports.osg_reports.OSGReporter:main'
+              'osgreport = reports.osg_reports.OSGReporter:main',
+              'osgpersitereport = reports.osg_reports.OSGPerSiteReporter:main'
             ]
       }
       )
