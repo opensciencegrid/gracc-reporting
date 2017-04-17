@@ -2,7 +2,6 @@ import xml.etree.ElementTree as ET
 import urllib2
 import ast
 import os
-import inspect
 import re
 import smtplib
 import email.utils
@@ -15,20 +14,8 @@ import sys
 
 from elasticsearch_dsl import Search, Q
 
-
-parentdir = os.path.dirname(
-    os.path.dirname(
-        os.path.abspath(
-            inspect.getfile(
-                inspect.currentframe()
-            )
-        )
-    )
-)
-os.sys.path.insert(0, parentdir)
-
-import Configuration
-from Reporter import Reporter, runerror
+import reports.Configuration as Configuration
+from reports.Reporter import Reporter, runerror
 
 logfile = 'probereport.log'
 now = datetime.datetime.now()

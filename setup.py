@@ -15,7 +15,8 @@ setup(name='gracc-reporting',
               'wastedhoursreport = reports.fife_reports.WastedHoursReport:main',
               'osgflockingreport = reports.osg_reports.OSGFlockingReporter:main',
               'osgreport = reports.osg_reports.OSGReporter:main',
-              'osgpersitereport = reports.osg_reports.OSGPerSiteReporter:main'
+              'osgpersitereport = reports.osg_reports.OSGPerSiteReporter:main',
+              'probereport = reports.osg_reports.ProbeReport:main'
             ]
       }
       )
