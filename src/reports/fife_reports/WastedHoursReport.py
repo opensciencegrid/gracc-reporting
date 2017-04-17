@@ -1,22 +1,10 @@
 #!/usr/bin/python
 
 import sys
-# import os
-# import inspect
 import traceback
 import json
-from elasticsearch_dsl import Search
 
-# parentdir = os.path.dirname(
-#     os.path.dirname(
-#         os.path.abspath(
-#             inspect.getfile(
-#                 inspect.currentframe()
-#             )
-#         )
-#     )
-# )
-# os.sys.path.insert(0, parentdir)
+from elasticsearch_dsl import Search
 
 import reports.NiceNum as NiceNum
 import reports.Configuration as Configuration
@@ -218,9 +206,7 @@ class WastedHoursReport(Reporter):
 
         data_parser = self._parse_data_to_experiments()
         data_parser.send(None)
-        # table_results = []
         for status in results.group_status.buckets:
-            print status
             for VO in results.group_status.buckets[status].group_VO.buckets:
                 for CommonName in VO['group_CommonName'].buckets:
                     data_parser.send((CommonName.key, VO.key, status,

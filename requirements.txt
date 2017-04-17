@@ -1,4 +1,4 @@
 python-dateutil
 elasticsearch
-elasticsearch_dsl
+elasticsearch_dsl == 5.0.0
 psycopg2
