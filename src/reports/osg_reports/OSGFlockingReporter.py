@@ -6,11 +6,15 @@ from re import split
 
 from elasticsearch_dsl import Search
 
-import reports.Configuration as Configuration
-from reports.Reporter import Reporter, runerror
+# import reports.Configuration as Configuration
+# from reports.Reporter import Reporter, runerror
+
+from . import Reporter, runerror
+from . import Configuration
 
 logfile = 'osgflockingreport.log'
 MAXINT = 2**31 - 1
+
 
 # Helper functions
 
