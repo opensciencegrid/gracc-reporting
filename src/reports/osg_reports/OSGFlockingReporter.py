@@ -1,5 +1,3 @@
-import os
-import inspect
 import datetime
 import json
 import traceback
@@ -8,20 +6,8 @@ from re import split
 
 from elasticsearch_dsl import Search
 
-
-parentdir = os.path.dirname(
-    os.path.dirname(
-        os.path.abspath(
-            inspect.getfile(
-                inspect.currentframe()
-            )
-        )
-    )
-)
-os.sys.path.insert(0, parentdir)
-
-import Configuration
-from Reporter import Reporter, runerror
+import reports.Configuration as Configuration
+from reports.Reporter import Reporter, runerror
 
 logfile = 'osgflockingreport.log'
 MAXINT = 2**31 - 1
