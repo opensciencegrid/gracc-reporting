@@ -1,7 +1,5 @@
 #!/usr/bin/python
 
-# import os
-# import inspect
 import re
 import json
 import traceback
@@ -9,17 +7,6 @@ import sys
 import copy
 
 from elasticsearch_dsl import Search
-#
-# parentdir = os.path.dirname(
-#     os.path.dirname(
-#         os.path.abspath(
-#             inspect.getfile(
-#                 inspect.currentframe()
-#             )
-#         )
-#     )
-# )
-# os.sys.path.insert(0, parentdir)
 
 import reports.Configuration as Configuration
 from reports.Reporter import Reporter, runerror

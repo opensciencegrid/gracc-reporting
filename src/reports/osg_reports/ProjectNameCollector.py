@@ -2,24 +2,9 @@
 
 import sys
 import optparse
-# import os
-# import inspect
-
-# parentdir = os.path.dirname(
-#     os.path.dirname(
-#         os.path.abspath(
-#             inspect.getfile(
-#                 inspect.currentframe()
-#             )
-#         )
-#     )
-# )
-# os.sys.path.insert(0, parentdir)
 
 import reports.Configuration as Configuration
 from XDProject import XDProject
-# from OSGProject import OSGProject
-# from ProjectName import ProjectName
 
 __author__ = "Tanya Levshina"
 __email__ = "tlevshin@fnal.gov"

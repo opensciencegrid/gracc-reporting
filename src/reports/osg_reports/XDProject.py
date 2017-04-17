@@ -2,21 +2,9 @@
 
 import traceback
 import sys
-# import os
-# import inspect
 import optparse
-import psycopg2
 
-# parentdir = os.path.dirname(
-#     os.path.dirname(
-#         os.path.abspath(
-#             inspect.getfile(
-#                 inspect.currentframe()
-#             )
-#         )
-#     )
-# )
-# os.sys.path.insert(0, parentdir)
+import psycopg2
 
 import reports.Configuration as Configuration
 from ProjectName import ProjectName
