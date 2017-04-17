@@ -1,4 +1,6 @@
 python-dateutil
 elasticsearch
-elasticsearch_dsl == 5.0.0
 psycopg2
+
+# Frozen here until https://github.com/elastic/elasticsearch-dsl-py/issues/648 is deployed to PyPi
+elasticsearch_dsl == 5.0.0
