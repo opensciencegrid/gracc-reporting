@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 import os
-import inspect
+# import inspect
 import re
 import json
 import traceback
@@ -14,19 +14,19 @@ import copy
 # from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Search
 
-parentdir = os.path.dirname(
-    os.path.dirname(
-        os.path.abspath(
-            inspect.getfile(
-                inspect.currentframe()
-            )
-        )
-    )
-)
-os.sys.path.insert(0, parentdir)
+# parentdir = os.path.dirname(
+#     os.path.dirname(
+#         os.path.abspath(
+#             inspect.getfile(
+#                 inspect.currentframe()
+#             )
+#         )
+#     )
+# )
+# os.sys.path.insert(0, parentdir)
 
-import Configuration
-from Reporter import Reporter, runerror
+import reports.Configuration as Configuration
+from reports.Reporter import Reporter, runerror
 from ProjectNameCollector import ProjectNameCollector
 
 
@@ -364,7 +364,7 @@ class MissingProjectReport(Reporter):
             )
 
 
-if __name__ == '__main__':
+def main():
     args = parse_opts()
 
     config = Configuration.Configuration()
@@ -388,3 +388,5 @@ if __name__ == '__main__':
     sys.exit(0)
 
 
+if __name__ == '__main__':
+    main()

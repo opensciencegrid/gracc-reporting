@@ -13,7 +13,8 @@ setup(name='gracc-reporting',
               'efficiencyreport = reports.fife_reports.EfficiencyReporterPerVO:main',
               'jobsuccessratereport = reports.fife_reports.JobSuccessRateReport:main',
               'wastedhoursreport = reports.fife_reports.WastedHoursReport:main',
-              'osgflockingreport = reports.osg_reports.OSGFlockingReporter:main'
+              'osgflockingreport = reports.osg_reports.OSGFlockingReporter:main',
+              'osgreport = reports.osg_reports.OSGReporter:main'
             ]
       }
       )

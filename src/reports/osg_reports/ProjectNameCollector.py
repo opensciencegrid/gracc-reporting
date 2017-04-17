@@ -2,21 +2,21 @@
 
 import sys
 import optparse
-import os
-import inspect
+# import os
+# import inspect
 
-parentdir = os.path.dirname(
-    os.path.dirname(
-        os.path.abspath(
-            inspect.getfile(
-                inspect.currentframe()
-            )
-        )
-    )
-)
-os.sys.path.insert(0, parentdir)
+# parentdir = os.path.dirname(
+#     os.path.dirname(
+#         os.path.abspath(
+#             inspect.getfile(
+#                 inspect.currentframe()
+#             )
+#         )
+#     )
+# )
+# os.sys.path.insert(0, parentdir)
 
-import Configuration
+import reports.Configuration as Configuration
 from XDProject import XDProject
 # from OSGProject import OSGProject
 # from ProjectName import ProjectName
