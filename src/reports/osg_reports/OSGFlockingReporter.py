@@ -175,9 +175,9 @@ def main():
 
     # Set up the configuration
     config = Configuration.Configuration()
-    config.configure(args.config)
-    try:
+    config.configure(config.get_configfile(fn=args.config))
 
+    try:
         # Create an FlockingReport object, and run the report
         f = FlockingReport(config,
                            args.start,

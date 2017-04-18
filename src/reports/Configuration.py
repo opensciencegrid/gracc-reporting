@@ -1,10 +1,38 @@
 import sys
 import re
 import ConfigParser
+import pkg_resources
+import os
+
+
 class Configuration:
     """Provides access to configuration"""
     def __init__(self):
         self.config=ConfigParser.ConfigParser()
+
+    @staticmethod
+    def get_configfile(flag='osg', fn=None):
+        if fn:
+            return fn
+
+        if flag == 'efficiency':
+            f = 'efficiency.config'
+        elif flag == 'jobrate':
+            f = 'jobrate.config'
+        else:
+            f = 'osg.config'
+
+        default_path = '/etc/gracc-reporting/config'
+
+        if os.path.exists(default_path):
+            print os.path.join(default_path, f)
+            return os.path.join(default_path, f)
+        else:
+            print pkg_resources.resource_filename('reports',
+                                                   'config/{0}'.format(f))
+            return pkg_resources.resource_filename('reports',
+                                                   'config/{0}'.format(f))
+
     def configure(self,fn):
         self.config.read([fn,])
 

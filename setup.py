@@ -18,8 +18,8 @@ setup(name='gracc-reporting',
               'osgflockingreport = reports.osg_reports.OSGFlockingReporter:main',
               'osgreport = reports.osg_reports.OSGReporter:main',
               'osgpersitereport = reports.osg_reports.OSGPerSiteReporter:main',
-              'probereport = reports.osg_reports.ProbeReport:main',
-              'topoppusagereport = reports.osg_reports.TopOppUsageByFacility:main',
+              'osgprobereport = reports.osg_reports.ProbeReport:main',
+              'osgtopoppusagereport = reports.osg_reports.TopOppUsageByFacility:main',
               'copyfiles = reports.copyfiles:main'
             ]
       }
