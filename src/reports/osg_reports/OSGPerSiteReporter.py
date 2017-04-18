@@ -6,10 +6,11 @@ import json
 
 from elasticsearch_dsl import Search
 
-import reports.Configuration as Configuration
-from reports.Reporter import Reporter, runerror
+from . import Reporter, runerror, get_configfile, get_template
+from . import Configuration
 
 logfile = 'osgpersitereport.log'
+default_templatefile = 'template_persite.html'
 opp_vos = ['glow', 'gluex', 'hcc', 'osg', 'sbgrid']
 
 
@@ -425,14 +426,17 @@ class OSGPerSiteReporter(Reporter):
 def main():
     args = parse_opts()
 
+    # Set up the configuration
     config = Configuration.Configuration()
-    config.configure(args.config)
+    config.configure(get_configfile(override=args.config))
+
+    templatefile = get_template(override=args.template, deffile=default_templatefile)
 
     try:
         osgreport = OSGPerSiteReporter(config,
                                        args.start,
                                        args.end,
-                                       template=args.template,
+                                       template=templatefile,
                                        verbose=args.verbose,
                                        is_test=args.is_test,
                                        no_email=args.no_email)
