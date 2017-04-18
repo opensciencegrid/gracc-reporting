@@ -178,10 +178,12 @@ class TopOppUsageByFacility(Reporter):
         self.template = template
         self.text = ''
         self.table = ''
+        self.daterange = get_time_range(self.start_time, self.end_time, months)
+
+        dates_formatted = (x.strftime("%Y-%m-%d %H:%M") for x in self.daterange[0])
         self.title = "Opportunistic Resources provided by the top {0} OSG " \
                      "Sites for the OSG Open Facility ({1} - {2})".format(
-                        self.numrank, self.start_time, self.end_time)
-        self.daterange = get_time_range(self.start_time, self.end_time, months)
+                        self.numrank, *dates_formatted)
         self.probelist = self._get_probelist()
 
     def _get_probelist(self):
