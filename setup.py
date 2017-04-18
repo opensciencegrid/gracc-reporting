@@ -19,7 +19,8 @@ setup(name='gracc-reporting',
               'osgreport = reports.osg_reports.OSGReporter:main',
               'osgpersitereport = reports.osg_reports.OSGPerSiteReporter:main',
               'probereport = reports.osg_reports.ProbeReport:main',
-              'topoppusagereport = reports.osg_reports.TopOppUsageByFacility:main'
+              'topoppusagereport = reports.osg_reports.TopOppUsageByFacility:main',
+              'copyfiles = reports.copyfiles:main'
             ]
       }
       )
