@@ -3,7 +3,7 @@
 import sys
 import optparse
 
-import reports.Configuration as Configuration
+from . import Configuration
 from XDProject import XDProject
 
 __author__ = "Tanya Levshina"

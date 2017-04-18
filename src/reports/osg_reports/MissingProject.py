@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 import os
 import re
 import json
@@ -12,8 +10,8 @@ import copy
 
 from elasticsearch_dsl import Search
 
-import reports.Configuration as Configuration
-from reports.Reporter import Reporter, runerror
+from . import Reporter, runerror, get_configfile
+from . import Configuration
 from ProjectNameCollector import ProjectNameCollector
 
 
@@ -354,8 +352,9 @@ class MissingProjectReport(Reporter):
 def main():
     args = parse_opts()
 
+    # Set up the configuration
     config = Configuration.Configuration()
-    config.configure(args.config)
+    config.configure(get_configfile(override=args.config))
 
     try:
         r = MissingProjectReport(args.report_type,

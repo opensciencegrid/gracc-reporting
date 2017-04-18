@@ -1,7 +1,7 @@
 Example runs:
 
 Project Report:
-./OSGReporter -c osg.config -s 2016-12-06 -e 2016-12-13 -r OSG-Connect -T template_project.html -d -v -n
+python OSGReporter.py -c osg.config -s 2016-12-06 -e 2016-12-13 -r OSG-Connect -T template_project.html -d -v -n
 
 Missing Projects report (now run automatically from Project report):
 python MissingProject.py -c osg.config -s 2016-12-06 -e 2017-01-31 -r XD -d -n -v

@@ -6,7 +6,7 @@ import optparse
 
 import psycopg2
 
-import reports.Configuration as Configuration
+from . import Configuration
 from ProjectName import ProjectName
 
 

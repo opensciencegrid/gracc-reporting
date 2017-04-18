@@ -393,11 +393,8 @@ def get_default_resource(type, filename):
     default_path = os.path.join('/etc/gracc-reporting', type)
 
     if os.path.exists(default_path):
-        print os.path.join(default_path, filename)
         return os.path.join(default_path, filename)
     else:
-        print pkg_resources.resource_filename('reports',
-                                              '{0}/{1}'.format(type, filename))
         return pkg_resources.resource_filename('reports',
                                                '{0}/{1}'.format(type, filename))
 
@@ -436,7 +433,6 @@ def get_template(override=None, deffile=None):
     :return str: Absolute path to template file
     """
     if override and os.path.exists(override):
-        print override
         return override
     else:
         return get_default_resource('html_templates', deffile)

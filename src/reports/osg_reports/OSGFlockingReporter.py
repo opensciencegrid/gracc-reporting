@@ -6,9 +6,6 @@ from re import split
 
 from elasticsearch_dsl import Search
 
-# import reports.Configuration as Configuration
-# from reports.Reporter import Reporter, runerror
-
 from . import Reporter, runerror, get_configfile, get_template
 from . import Configuration
 
