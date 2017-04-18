@@ -10,15 +10,16 @@ from dateutil.relativedelta import *
 
 from elasticsearch_dsl import Search
 
-from NameCorrection import NameCorrection
+from . import Reporter, runerror, get_configfile, get_template
+from . import Configuration
 import reports.TextUtils as TextUtils
 from reports.TimeUtils import TimeUtils
-import reports.Configuration as Configuration
 import reports.NiceNum as NiceNum
-from reports.Reporter import Reporter, runerror
+from NameCorrection import NameCorrection
 
 
 logfile = 'topoppusage.log'
+default_templatefile = 'template_topoppusage.html'
 MAXINT = 2**31-1
 facilities = {}
 
@@ -329,7 +330,7 @@ class TopOppUsageByFacility(Reporter):
             allterms.extend(metrics)
 
             for elt in results['Missing']['Host_description']['buckets']:
-                n = NameCorrection(elt['key'])
+                n = NameCorrection(elt['key'], self.config)
                 info = n.get_info()
                 if info:
                     info['CoreHours'] = elt['CoreHours']['value']
@@ -509,7 +510,9 @@ def main():
 
     # Set up the configuration
     config = Configuration.Configuration()
-    config.configure(args.config)
+    config.configure(get_configfile(override=args.config))
+
+    templatefile = get_template(override=args.template, deffile=default_templatefile)
 
     try:
 
@@ -517,7 +520,7 @@ def main():
         r = TopOppUsageByFacility(config,
                                   start=args.start,
                                   end=args.end,
-                                  template=args.template,
+                                  template=templatefile,
                                   months=args.months,
                                   is_test=args.is_test,
                                   no_email=args.no_email,

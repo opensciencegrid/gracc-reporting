@@ -19,6 +19,6 @@ osgprobereport -d -n -v
 
 News Report (Top Opportunistic Usage per Facility)
 Monthly:
-    python TopOppUsageByFacility.py -m 2 -T template_topoppusage.html -N 20 -c osg.config -d -v -n
+    osgtopoppusagereport -m 2 -N 20 -d -v -n
 Absolute dates:
-    python TopOppUsageByFacility.py -s "2016-12-01" -e "2017-02-01" -T template_topoppusage.html -N 20 -c osg.config -d -v -n
+    osgtopoppusagereport -s "2016-12-01" -e "2017-02-01" -N 20 -d -v -n

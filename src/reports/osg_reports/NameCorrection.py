@@ -1,20 +1,9 @@
 from xml.etree import ElementTree as ET
-from pkg_resources import resource_filename, resource_exists, resource_stream, resource_string
 import re
-import sys
 
 import requests
 
-import reports.Configuration as Configuration
-
 mwt2info = {}
-if resource_exists('reports', 'config/osg.config'):
-    configfile = resource_filename('reports', 'config/osg.config')
-    config = Configuration.Configuration()
-    config.configure(configfile)
-else:
-    print "The default config file osg.config doesn't exist.  Exiting"
-    sys.exit(1)
 
 
 class MWT2Correction(object):
@@ -22,10 +11,10 @@ class MWT2Correction(object):
     Class to get and return Resource Group MWT2 information
     """
     mwt2filename = '/tmp/mwt2.xml'
-    mwt2url = config.config.get('namecorrection', 'mwt2url')
 
-    def __init__(self):
+    def __init__(self, config):
         if not mwt2info:
+            self.mwt2url = config.get('namecorrection', 'mwt2url')
             self._get_info_from_oim()
             self._parse_xml()
 
@@ -88,13 +77,14 @@ class NameCorrection(object):
     mwt2matchstring = re.compile('.+\@(.+)\/condor')
     gpgridmatchstring = 'GPGrid'
 
-    def __init__(self, hd):
+    def __init__(self, hd, config):
         self.args = []
+        self.config = config
         # Select the correct class to instantiate
         if hd == self.gpgridmatchstring:
             self.cl = GPGridCorrection()
         elif self.mwt2matchstring.match(hd):
-            self.cl = MWT2Correction()
+            self.cl = MWT2Correction(config=self.config)
             self.args = self.mwt2matchstring.match(hd).groups()
 
     def get_info(self):
