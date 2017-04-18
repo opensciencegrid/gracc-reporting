@@ -8,6 +8,8 @@ setup(name='gracc-reporting',
       url='https://github.com/opensciencegrid/gracc-reporting',
       package_dir={'': 'src'},
       packages=['reports', 'reports.fife_reports', 'reports.osg_reports'],
+      include_package_data=True,
+      package_data={'reports': ['config/*.config', 'html_templates/*.html']},
       entry_points= {
           'console_scripts': [
               'efficiencyreport = reports.fife_reports.EfficiencyReporterPerVO:main',
