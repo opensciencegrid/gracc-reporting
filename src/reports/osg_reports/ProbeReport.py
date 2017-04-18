@@ -14,8 +14,8 @@ import sys
 
 from elasticsearch_dsl import Search, Q
 
-import reports.Configuration as Configuration
-from reports.Reporter import Reporter, runerror
+from . import Reporter, runerror, get_configfile
+from . import Configuration
 
 logfile = 'probereport.log'
 now = datetime.datetime.now()
@@ -577,8 +577,9 @@ class ProbeReport(Reporter):
 def main():
     args = parse_opts()
 
+    # Set up the configuration
     config = Configuration.Configuration()
-    config.configure(args.config)
+    config.configure(get_configfile(override=args.config))
 
     try:
         # Get OIM Information
