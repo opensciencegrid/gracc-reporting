@@ -1,26 +1,20 @@
 from xml.etree import ElementTree as ET
-import os
-import inspect
-import requests
+from pkg_resources import resource_filename, resource_exists, resource_stream, resource_string
 import re
+import sys
 
-parentdir = os.path.dirname(
-    os.path.dirname(
-        os.path.abspath(
-            inspect.getfile(
-                inspect.currentframe()
-            )
-        )
-    )
-)
-os.sys.path.insert(0, parentdir)
+import requests
 
-import Configuration
+import reports.Configuration as Configuration
 
 mwt2info = {}
-configfile = 'osg.config'
-config = Configuration.Configuration()
-config.configure(configfile)
+if resource_exists('reports', 'config/osg.config'):
+    configfile = resource_filename('reports', 'config/osg.config')
+    config = Configuration.Configuration()
+    config.configure(configfile)
+else:
+    print "The default config file osg.config doesn't exist.  Exiting"
+    sys.exit(1)
 
 
 class MWT2Correction(object):

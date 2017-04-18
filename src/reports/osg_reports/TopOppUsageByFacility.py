@@ -1,8 +1,6 @@
 #!/usr/bin/python
 
 import sys
-# import os
-# import inspect
 import traceback
 import re
 import json
@@ -13,18 +11,6 @@ from dateutil.relativedelta import *
 from elasticsearch_dsl import Search
 
 from NameCorrection import NameCorrection
-
-# parentdir = os.path.dirname(
-#     os.path.dirname(
-#         os.path.abspath(
-#             inspect.getfile(
-#                 inspect.currentframe()
-#             )
-#         )
-#     )
-# )
-# os.sys.path.insert(0, parentdir)
-
 import reports.TextUtils as TextUtils
 from reports.TimeUtils import TimeUtils
 import reports.Configuration as Configuration
