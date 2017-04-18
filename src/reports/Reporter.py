@@ -7,6 +7,8 @@ import smtplib
 from email.mime.text import MIMEText
 import logging
 import operator
+import os
+import pkg_resources
 
 from elasticsearch import Elasticsearch
 
@@ -378,3 +380,64 @@ def runerror(config, error, traceback):
         raise
 
     return None
+
+
+def get_default_resource(type, filename):
+    """
+    Returns the default config file or html template for a report
+
+    :param str type: Must be 'config', or 'html_templates', unless we expand
+    the input file types in the future
+    :return str: Path of the default resource
+    """
+    default_path = os.path.join('/etc/gracc-reporting', type)
+
+    if os.path.exists(default_path):
+        print os.path.join(default_path, filename)
+        return os.path.join(default_path, filename)
+    else:
+        print pkg_resources.resource_filename('reports',
+                                              '{0}/{1}'.format(type, filename))
+        return pkg_resources.resource_filename('reports',
+                                               '{0}/{1}'.format(type, filename))
+
+
+def get_configfile(flag='osg', override=None):
+    """
+    Returns the appropriate config file for the gracc reports
+
+    :param str flag:  In the future, I want this to be 'osg' or 'fife', or
+    whatever other subpackages we have.  Right now, the FIFE reports all use
+    different config files, so we have to use the separate flags for each
+    ('osg', 'efficiency', 'jobrate').
+    :param str override: Can be a config file in a non-standard location
+    :return str: Absolute path to the config file
+    """
+    if override:
+        return override
+
+    if flag == 'efficiency':
+        f = 'efficiency.config'
+    elif flag == 'jobrate':
+        f = 'jobrate.config'
+    else:
+        f = 'osg.config'
+
+    return get_default_resource('config', f)
+
+
+def get_template(override=None, deffile=None):
+    """
+    Returns the appropriate HTML template for the gracc reports
+
+    :param str override: Can be a template in a non-standard location
+    :param deffile: Default filename.  Should be passed in from calling
+    report (something like 'template_flocking.html')
+    :return str: Absolute path to template file
+    """
+    if override and os.path.exists(override):
+        print override
+        return override
+    else:
+        return get_default_resource('html_templates', deffile)
+

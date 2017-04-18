@@ -1,3 +1,4 @@
 from .. import Configuration
-from ..Reporter import Reporter, runerror
-# From the Reporter Module in the parent package, import Reporter and runerror objects
+
+# From the Reporter Module in the parent package, import various objects
+from ..Reporter import Reporter, runerror, get_configfile, get_template

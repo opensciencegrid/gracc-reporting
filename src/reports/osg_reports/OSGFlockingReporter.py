@@ -9,10 +9,11 @@ from elasticsearch_dsl import Search
 # import reports.Configuration as Configuration
 # from reports.Reporter import Reporter, runerror
 
-from . import Reporter, runerror
+from . import Reporter, runerror, get_configfile, get_template
 from . import Configuration
 
 logfile = 'osgflockingreport.log'
+default_templatefile = 'template_flocking.html'
 MAXINT = 2**31 - 1
 
 
@@ -175,7 +176,9 @@ def main():
 
     # Set up the configuration
     config = Configuration.Configuration()
-    config.configure(config.get_configfile(fn=args.config))
+    config.configure(get_configfile(override=args.config))
+
+    templatefile = get_template(override=args.template, deffile=default_templatefile)
 
     try:
         # Create an FlockingReport object, and run the report
@@ -185,7 +188,7 @@ def main():
                            verbose=args.verbose,
                            is_test=args.is_test,
                            no_email=args.no_email,
-                           template=args.template)
+                           template=templatefile)
         f.run_report()
         print "OSG Flocking Report execution successful"
     except Exception as e:
