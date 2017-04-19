@@ -9,6 +9,7 @@ import logging
 import operator
 import os
 import pkg_resources
+import json
 
 from elasticsearch import Elasticsearch
 
@@ -86,6 +87,43 @@ class Reporter(TimeUtils):
     def query(self):
         """Method to define report's Elasticsearch query. Must be overridden"""
         pass
+
+    def run_query(self):
+        """Execute the query and check the status code before returning the
+        relevant info
+
+        :return Response.aggregations OR ES Search object: If the results are
+        aggregated (response has aggregations property), returns aggregations
+        property of elasticsearch response (most reports).  If not, return the
+        search object itself, so it can be scanned using .scan() (JSR, for
+        example)
+        """
+        s = self.query()
+        t = s.to_dict()
+        if self.verbose:
+            print json.dumps(t, sort_keys=True, indent=4)
+            self.logger.debug(json.dumps(t, sort_keys=True))
+        else:
+            self.logger.debug(json.dumps(t, sort_keys=True))
+
+        try:
+            response = s.execute()
+            if not response.success():
+                raise Exception("Error accessing Elasticsearch")
+
+            if self.verbose:
+                print json.dumps(response.to_dict(), sort_keys=True, indent=4)
+
+            if hasattr(response, 'aggregations'):
+                results = response.aggregations
+            else:
+                results = s
+
+            self.logger.info('Ran elasticsearch query successfully')
+            return results
+        except Exception as e:
+            self.logger.exception(e)
+            raise
 
     def generate_report_file(self):
         """Method to generate the report file, if format_report below is not

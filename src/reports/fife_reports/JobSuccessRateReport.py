@@ -161,22 +161,6 @@ class JobSuccessRateReporter(Reporter):
 
         return s
 
-    def run_query(self):
-        """Execute the query and check the status code before returning
-
-        :return: Elasticsearch search object
-        """
-        resultset = self.query()  # Generate Search object for ES
-        response = resultset.execute()  # Execute that Search
-        return_code_success = response.success()  # True if the elasticsearch
-                                                  # query completed without errors
-
-        if not return_code_success:
-            self.logger.exception('Error accessing ElasticSearch')
-            raise Exception('Error accessing ElasticSearch')
-
-        return resultset
-
     def generate(self):
         """Main driver of activity in report.  Runs the ES query, checks for
         success, and then runs routines to generate the results lines, parse
