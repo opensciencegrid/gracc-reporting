@@ -239,7 +239,8 @@ class Reporter(TimeUtils):
         """
         parser = argparse.ArgumentParser()
         parser.add_argument("-c", "--config", dest="config",
-                            default=None, help="report configuration file")
+                            default=None, help="non-standard location of "
+                                               "report configuration file")
         parser.add_argument("-v", "--verbose", dest="verbose",
                             action="store_true", default=False,
                             help="print debug messages to stdout")
