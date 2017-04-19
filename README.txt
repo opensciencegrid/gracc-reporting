@@ -63,7 +63,7 @@ If you want to automate this, you can do something like the following:
 cd ~/gracc-reporting/
 source gracc_venv/bin/activate
 
-<report executtable> <params>
+<report executable> <params>
 
 Some examples of this are in the top level SampleScripts directory.
 
