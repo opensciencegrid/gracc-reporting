@@ -1,8 +1,5 @@
-#!/usr/bin/python
-
 import sys
 import traceback
-import json
 
 from elasticsearch_dsl import Search
 

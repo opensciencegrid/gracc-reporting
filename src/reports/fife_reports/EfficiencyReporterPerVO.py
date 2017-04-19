@@ -1,9 +1,6 @@
-#!/usr/bin/python
-
 import sys
 import traceback
 import re
-import json
 import datetime
 
 from elasticsearch_dsl import Search

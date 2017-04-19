@@ -1,7 +1,6 @@
 import traceback
 import sys
 import datetime
-import json
 
 from elasticsearch_dsl import Search
 
