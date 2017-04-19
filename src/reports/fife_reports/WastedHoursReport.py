@@ -6,11 +6,12 @@ import json
 
 from elasticsearch_dsl import Search
 
+from . import Reporter, runerror, get_configfile, get_template
+from . import Configuration
 import reports.NiceNum as NiceNum
-import reports.Configuration as Configuration
-from reports.Reporter import Reporter, runerror
 import reports.TextUtils as TextUtils
 
+default_templatefile = 'template_wasted_hours.html'
 logfile = 'wastedhours.log'
 
 
@@ -316,18 +317,21 @@ class WastedHoursReport(Reporter):
 def main():
     args = parse_opts()
 
+    # Set up the configuration
     config = Configuration.Configuration()
-    config.configure(args.config)
+    config.configure(get_configfile(override=args.config))
+
+    templatefile = get_template(override=args.template, deffile=default_templatefile)
 
     try:
-        report = WastedHoursReport(config,
+        r = WastedHoursReport(config,
                                    args.start,
                                    args.end,
-                                   args.template,
+                                   templatefile,
                                    is_test=args.is_test,
                                    verbose=args.verbose,
                                    no_email=args.no_email)
-        report.run_report()
+        r.run_report()
     except Exception as e:
         print >> sys.stderr, traceback.format_exc()
         runerror(config, e, traceback.format_exc())
