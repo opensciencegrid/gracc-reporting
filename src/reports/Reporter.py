@@ -257,16 +257,31 @@ class Reporter(TimeUtils):
         d = 'gracc-reports'
 
         for prefix in ('/var/log', '/var/tmp', '/tmp'):
-            filepath = os.path.join(d, prefix, fn)
+            dirpath = os.path.join(prefix, d)
+            filepath = os.path.join(prefix, d, fn)
+
+            errmsg = "Couldn't write logfile to {0}.  " \
+                      "Moving to next path".format(filepath)
+
+            successmsg = "Writing log to {0}".format(filepath)
+
+            # Does the dir exist?  If not, can we create it?
+            if not os.path.exists(dirpath):
+                # Try to make the logfile directory
+                try:
+                    os.mkdir(dirpath)
+                except OSError:     # Permission Denied
+                    print errmsg
+                    continue    # Don't try to write an empty file
+
+            # So dir exists.  Can we write to the logfiles there?
             try:
-                with open(filepath, 'w') as f:
+                with open(filepath, 'a') as f:
                     f.write('')
             except (IOError, OSError) as e:     # Permission Denied comes through as an IOError
-                print e
-                print "Couldn't write logfile to {0}.  " \
-                      "Moving to next path".format(filepath)
+                print e, '\n', errmsg
             else:
-                print "Writing log to {0}".format(filepath)
+                print successmsg
                 break
         else:
             # If none of the prefixes work for some reason, write to local dir
