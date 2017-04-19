@@ -91,31 +91,6 @@ class OSGReporter(Reporter):
 
         return s
 
-    def run_query(self):
-        """Execute the query and check the status code before returning the response
-
-        :return Response.aggregations: Returns aggregations property of
-        elasticsearch response
-        """
-        resultset = self.query()
-        t = resultset.to_dict()
-        if self.verbose:
-            print json.dumps(t, sort_keys=True, indent=4)
-            self.logger.debug(json.dumps(t, sort_keys=True))
-        else:
-            self.logger.debug(json.dumps(t, sort_keys=True))
-
-        try:
-            response = resultset.execute()
-            if not response.success():
-                raise
-            results = response.aggregations
-            self.logger.debug("Elasticsearch query executed successfully")
-            return results
-        except Exception as e:
-            self.logger.exception("{0}\nError accessing Elasticsearch".format(e))
-            raise
-
     def generate_report_file(self):
         """Takes data from query response and parses it to send to other
         functions for processing"""

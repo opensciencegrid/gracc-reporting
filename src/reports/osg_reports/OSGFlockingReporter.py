@@ -89,31 +89,6 @@ class FlockingReport(Reporter):
 
         return s
 
-    def run_query(self):
-        """Execute the query and check the status code before returning the
-        response
-
-        :return Response.aggregations: Returns aggregations property of
-        elasticsearch response
-        """
-        s = self.query()
-        t = s.to_dict()
-        if self.verbose:
-            print json.dumps(t, sort_keys=True, indent=4)
-            self.logger.debug(json.dumps(t, sort_keys=True))
-        else:
-            self.logger.debug(json.dumps(t, sort_keys=True))
-
-        try:
-            response = s.execute()
-            if not response.success():
-                raise
-            results = response.aggregations
-            return results
-        except Exception as e:
-            print e, "Error accessing Elasticsearch"
-            raise
-
     def generate(self):
         """Higher-level generator method that calls the lower-level functions
         to generate the raw data for this report.

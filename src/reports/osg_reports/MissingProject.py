@@ -91,31 +91,6 @@ class MissingProjectReport(Reporter):
 
         return s
 
-    def run_query(self):
-        """Execute the query and check the status code before returning the response
-
-        :return Response.aggregations: Returns aggregations property of
-        elasticsearch response
-        """
-        resultset = self.query()
-        t = resultset.to_dict()
-        if self.verbose:
-            print json.dumps(t, sort_keys=True, indent=4)
-            self.logger.debug(json.dumps(t, sort_keys=True))
-        else:
-            self.logger.debug(json.dumps(t, sort_keys=True))
-
-        try:
-            response = resultset.execute()
-            if not response.success():
-                raise
-            results = response.aggregations
-            self.logger.debug("Elasticsearch query executed successfully")
-            return results
-        except Exception as e:
-            print e, "Error accessing Elasticsearch"
-            sys.exit(1)
-            
     def generate(self):
         """Higher-level method that calls the lower-level functions
         to generate the raw data for this report and pass it to the correct

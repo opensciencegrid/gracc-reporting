@@ -243,36 +243,6 @@ class TopOppUsageByFacility(Reporter):
 
         return s
 
-    def run_query(self):
-        """Execute the query and check the status code before returning the
-        response
-
-        :return Response.aggregations: Returns aggregations property of
-        elasticsearch response
-        """
-        s = self.query()
-        t = s.to_dict()
-        if self.verbose:
-            print json.dumps(t, sort_keys=True, indent=4)
-            self.logger.debug(json.dumps(t, sort_keys=True))
-        else:
-            self.logger.debug(json.dumps(t, sort_keys=True))
-
-        try:
-            response = s.execute()
-            if not response.success():
-                raise Exception("Error accessing Elasticsearch")
-
-            if self.verbose:
-                print json.dumps(response.to_dict(), sort_keys=True, indent=4)
-
-            results = response.aggregations
-            self.logger.info('Ran elasticsearch query successfully')
-            return results
-        except Exception as e:
-            self.logger.exception(e)
-            raise
-
     def generate(self):
         """
         Runs the ES query, checks for success, and then

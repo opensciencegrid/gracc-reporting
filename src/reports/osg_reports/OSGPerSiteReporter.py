@@ -168,7 +168,6 @@ class VO(object):
             self.total[self.pos] += newhrs
 
 
-
 class OSGPerSiteReporter(Reporter):
     """Class to store information and perform actions for the OSG Per Site
     Report
@@ -229,37 +228,6 @@ class OSGPerSiteReporter(Reporter):
             .metric('sum_core_hours', 'sum', field='CoreHours')
 
         return s
-
-    def run_query(self):
-        """Execute the query and check the status code before returning the
-        response
-
-        :return Response.aggregations: Returns aggregations property of
-        elasticsearch response
-        """
-        qresults = self.query()
-        t = qresults.to_dict()
-
-        if self.verbose:
-            print json.dumps(t, sort_keys=True, indent=4)
-            self.logger.debug(json.dumps(t, sort_keys=True))
-        else:
-            self.logger.debug(json.dumps(t, sort_keys=True))
-
-        try:
-            response = qresults.execute()
-            if not response.success():
-                raise Exception("Error accessing Elasticsearch")
-
-            if self.verbose:
-                print json.dumps(response.to_dict(), sort_keys=True, indent=4)
-
-            results = response.aggregations
-            self.logger.info('Ran elasticsearch query successfully')
-            return results
-        except Exception as e:
-            self.logger.exception(e)
-            raise
 
     def generate(self):
         """Higher-level method to run other methods to
