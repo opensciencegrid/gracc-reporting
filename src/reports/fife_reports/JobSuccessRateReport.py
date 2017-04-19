@@ -9,15 +9,16 @@ from ConfigParser import NoOptionError
 
 from elasticsearch_dsl import Search
 
+from . import Reporter, runerror, get_configfile, get_template
+from . import Configuration
 import reports.TextUtils as TextUtils
-import reports.Configuration as Configuration
-from reports.Reporter import Reporter, runerror
 
 # Various config values and their default values
 config_vals = {'num_clusters': 100, 'jobs_per_cluster': 1e6,
                'num_hosts_per_site': 1000, 'errors_per_host': 1000,
                'num_failed_sites': 1000}
 logfile = 'jobsuccessratereport.log'
+default_templatefile = 'template_jobrate.html'
 
 
 @Reporter.init_reporter_parser
@@ -572,15 +573,18 @@ class JobSuccessRateReporter(Reporter):
 def main():
     args = parse_opts()
 
+    # Set up the configuration
     config = Configuration.Configuration()
-    config.configure(args.config)
+    config.configure(get_configfile(override=args.config, flag='jobrate'))
+
+    templatefile = get_template(override=args.template, deffile=default_templatefile)
 
     try:
         r = JobSuccessRateReporter(config,
                                    args.start,
                                    args.end,
                                    args.vo,
-                                   args.template,
+                                   templatefile,
                                    args.is_test,
                                    args.verbose,
                                    args.no_email)
