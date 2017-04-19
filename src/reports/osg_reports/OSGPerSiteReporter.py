@@ -1,4 +1,3 @@
-#!/usr/bin/python
 import traceback
 import sys
 import datetime
