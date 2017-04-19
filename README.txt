@@ -39,15 +39,12 @@ The first time you do this:
 virtualenv gracc_venv   # Or whatever other name you want to give your virtualenv instance
 source gracc_venv/bin/activate
 pip install -r requirements.txt
+python setup.py install
 
 
-Then, to access this sandbox, go to the dir with gracc_venv in it, and:
+Then, to access this sandbox later, go to the dir with gracc_venv in it, and:
 
 source gracc_venv/bin/activate
-
-Finally, to install the package, do:
-
-python setup.py install
 
 and do whatever you need!  If you can't run pip installs on your machine,
 then if you have virtualenv, activate it and then upgrade pip and install the
