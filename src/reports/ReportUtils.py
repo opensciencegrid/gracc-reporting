@@ -479,8 +479,10 @@ def get_default_resource(type, filename):
     """
     default_path = os.path.join('/etc/gracc-reporting', type)
 
+    # If the file is in /etc/gracc-reporting/$type, return that path
     if os.path.exists(default_path):
         return os.path.join(default_path, filename)
+    # Otherwise, find the file (resource) in the package
     else:
         return pkg_resources.resource_filename('reports',
                                                '{0}/{1}'.format(type, filename))
