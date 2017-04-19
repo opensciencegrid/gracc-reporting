@@ -13,8 +13,7 @@ import sys
 
 from elasticsearch_dsl import Search, Q
 
-from . import Reporter, runerror, get_configfile
-from . import Configuration
+from . import Reporter, runerror, get_configfile, Configuration
 
 logfile = 'probereport.log'
 now = datetime.datetime.now()

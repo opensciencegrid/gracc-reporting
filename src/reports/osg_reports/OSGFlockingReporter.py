@@ -5,8 +5,7 @@ from re import split
 
 from elasticsearch_dsl import Search
 
-from . import Reporter, runerror, get_configfile, get_template
-from . import Configuration
+from . import Reporter, runerror, get_configfile, get_template, Configuration
 
 logfile = 'osgflockingreport.log'
 default_templatefile = 'template_flocking.html'

@@ -4,8 +4,7 @@ import datetime
 
 from elasticsearch_dsl import Search
 
-from . import Reporter, runerror, get_configfile, get_template
-from . import Configuration
+from . import Reporter, runerror, get_configfile, get_template, Configuration
 
 logfile = 'osgpersitereport.log'
 default_templatefile = 'template_persite.html'

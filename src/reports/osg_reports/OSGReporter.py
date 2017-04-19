@@ -5,8 +5,7 @@ import copy
 
 from elasticsearch_dsl import Search
 
-from . import Reporter, runerror, get_configfile, get_template
-from . import Configuration
+from . import Reporter, runerror, get_configfile, get_template, Configuration
 from MissingProject import MissingProjectReport
 
 logfile = 'osgreporter.log'

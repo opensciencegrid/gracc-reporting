@@ -7,8 +7,7 @@ from ConfigParser import NoOptionError
 
 from elasticsearch_dsl import Search
 
-from . import Reporter, runerror, get_configfile, get_template
-from . import Configuration
+from . import Reporter, runerror, get_configfile, get_template, Configuration
 import reports.TextUtils as TextUtils
 
 # Various config values and their default values

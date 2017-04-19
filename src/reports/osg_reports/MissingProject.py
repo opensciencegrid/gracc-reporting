@@ -1,6 +1,5 @@
 import os
 import re
-import json
 import traceback
 import smtplib
 import email.utils
@@ -10,8 +9,8 @@ import copy
 
 from elasticsearch_dsl import Search
 
-from . import Reporter, runerror, get_configfile
-from . import Configuration
+from . import Reporter, runerror, get_configfile, Configuration
+
 from ProjectNameCollector import ProjectNameCollector
 
 

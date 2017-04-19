@@ -3,8 +3,7 @@ import traceback
 
 from elasticsearch_dsl import Search
 
-from . import Reporter, runerror, get_configfile, get_template
-from . import Configuration
+from . import Reporter, runerror, get_configfile, get_template, Configuration
 import reports.NiceNum as NiceNum
 import reports.TextUtils as TextUtils
 
