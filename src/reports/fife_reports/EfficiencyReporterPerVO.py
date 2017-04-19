@@ -8,12 +8,13 @@ import datetime
 
 from elasticsearch_dsl import Search
 
+
+from . import Reporter, runerror, get_configfile, get_template
+from . import Configuration
 import reports.TextUtils as TextUtils
-import reports.Configuration as Configuration
 import reports.NiceNum as NiceNum
-from reports.Reporter import Reporter, runerror
 
-
+default_templatefile = 'template_efficiency.html'
 logfile = 'efficiencyreport.log'
 
 
@@ -323,7 +324,10 @@ def main():
 
     # Set up the configuration
     config = Configuration.Configuration()
-    config.configure(args.config)
+    config.configure(get_configfile(override=args.config, flag='efficiency'))
+
+    templatefile = get_template(override=args.template,
+                                deffile=default_templatefile)
 
     try:
         # Grab VO
@@ -340,7 +344,7 @@ def main():
                        int(min_hours),
                        float(repeff),
                        args.facility,
-                       args.template,
+                       templatefile,
                        args.is_test,
                        args.no_email,
                        args.verbose)
