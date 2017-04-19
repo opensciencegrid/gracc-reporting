@@ -8,7 +8,6 @@ import email.utils
 from email.mime.text import MIMEText
 import datetime
 import logging
-import json
 import traceback
 import sys
 
@@ -37,7 +36,7 @@ class OIMInfo(object):
     """
     def __init__(self, verbose=False):
         self.verbose = verbose
-        self.logfile = logfile
+        self.logfile = Reporter.get_logfile_path(logfile)
         self.logger = self.setupgenLogger("ProbeReport-OIM")
         self.root = None
         self.resourcedict = {}
@@ -307,12 +306,12 @@ class ProbeReport(Reporter):
         self.estimeformat = re.compile("(.+)T(.+)\.\d+Z")
         self.emailfile = 'filetoemail.txt'
         self.probe, self.resource = None, None
-        self.historyfile = 'probereporthistory.log'
+        self.historyfile = Reporter.get_logfile_path('probereporthistory.log')
         self.newhistory = []
         self.reminder = False
 
     def query(self):
-        """Method to query Elasticsearch cluster for Flocking Report
+        """Method to query Elasticsearch cluster for Probe Report
         information
 
         :return elasticsearch_dsl.Search: Search object containing ES query
@@ -321,7 +320,7 @@ class ProbeReport(Reporter):
 
         s = Search(using=self.client, index=self.indexpattern)\
             .filter(Q({"range": {"@received": {"gte": "{0}".format(startdateq)}}}))\
-            .filter("term", ResourceType="Batch")
+            .filter("term", ResourceType="Batch")[0:0]
 
         s.aggs.bucket('group_probename', 'terms', field='ProbeName',
                                size=2**31-1)
@@ -342,25 +341,27 @@ class ProbeReport(Reporter):
         return
 
     def lastreportquery(self):
-        """Queries ES to find the last time that a probe reported in.
-        Returns a string with either that time or a string indicating that
-        it has been over a month.
+        """Method to query Elasticsearch cluster for Probe Report
+        information regarding when a probe last reported
 
-        :return str: String describing last report date of a probe
+        :return elasticsearch_dsl.Search: Search object containing ES query
         """
         ls = Search(using=self.client, index=self.indexpattern)\
             .filter(Q({"range":{"@received":{"gte":"now-1M"}}}))\
             .filter("term", ResourceType="Batch")\
-            .filter("wildcard", ProbeName="*:{0}".format(self.probe))
+            .filter("wildcard", ProbeName="*:{0}".format(self.probe))[0:0]
 
         ls.aggs.metric('datemax', 'max', field='@received')
 
-        try:
-            aggs = ls.execute().aggregations
-        except Exception as e:
-            self.logger.exception(e)
-            runerror(self.configuration, e, traceback.format_exc())
-            sys.exit(1)
+        return ls
+
+    def get_last_report_date(self):
+        """
+        Runs the last reported-date query and returns the result
+
+        :return str: String describing last report date of a probe
+        """
+        aggs = self.run_query(overridequery=self.lastreportquery)
 
         try:
             rawdate = aggs.datemax.value_as_string
@@ -394,28 +395,7 @@ class ProbeReport(Reporter):
         :return set: set of probes that are in OIM but not in the last two days of
         records.
         """
-        resultset = self.query()
-
-        t = resultset.to_dict()
-        if self.verbose:
-            print self.indexpattern
-            print json.dumps(t, sort_keys=True, indent=4)
-            self.logger.debug(json.dumps(t, sort_keys=True))
-        else:
-            self.logger.debug(json.dumps(t, sort_keys=True))
-
-        try:
-            response = resultset.execute()
-            if not response.success():
-                raise Exception("Error accessing Elasticsearch")
-
-            self.results = response.aggregations
-            self.logger.info("Successfully queried Elasticsearch")
-        except Exception as e:
-            self.logger.exception(e)
-            runerror(self.configuration, e, traceback.format_exc())
-            sys.exit(1)
-
+        self.results = self.run_query()
         probes = self.get_probenames()
 
         if self.verbose:
@@ -475,7 +455,7 @@ class ProbeReport(Reporter):
             # Only operate on probes that weren't reported in the last week
             self.probe = elt
             self.resource = oimdict[elt]
-            self.lastreport_date = self.lastreportquery()
+            self.lastreport_date = self.get_last_report_date()
 
             if self.probe in prev_reported_old:
                 self.reminder = True    # Reminder flag
@@ -504,6 +484,7 @@ class ProbeReport(Reporter):
 
     def emailtext(self):
         """Format the text for our emails"""
+        infostring = (self.probe, self.resource, self.lastreport_date)
         text = 'The probe installed on {0} at {1} has not reported'\
                ' GRACC records to OSG for the last two days. The last ' \
                'date we received a record from {0} was {2}.  If this '\
@@ -511,7 +492,8 @@ class ProbeReport(Reporter):
                'node, please let us know.  If not, please check to see '\
                'if your Gratia reporting is active.  The GRACC page at '\
                'https://gracc.opensciencegrid.org/dashboard/db/probe-status'\
-               ' shows the latest date a probe has reported records to OSG.'.format(self.probe, self.resource, self.lastreport_date)
+               ' shows the latest date a probe has reported records to OSG.'.format(*infostring)
+        self.logger.debug('Probe: {0}, Resource {1}, Last Report Date: {2}'.format(*infostring))
         return text
 
     def send_report(self):
@@ -569,7 +551,7 @@ class ProbeReport(Reporter):
         except Exception as e:
             self.logger.exception(e)
 
-        self.logger.info('All new reports sent')
+        self.logger.info('Any new reports sent')
         self.cleanup_history()
         return
 
