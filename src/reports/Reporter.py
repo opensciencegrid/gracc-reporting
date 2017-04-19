@@ -74,7 +74,7 @@ class Reporter(TimeUtils):
         self.indexpattern = self.indexpattern_generate(raw, allraw)
         self.report_type = report
         if logfile:
-            self.logfile = logfile
+            self.logfile = self.__get_logfile_path(logfile)
         else:
             self.logfile = 'reports.log'
         self.email_info = self.__get_email_info()
@@ -245,6 +245,35 @@ class Reporter(TimeUtils):
             return False
 
     # Non-public methods
+
+    @staticmethod
+    def __get_logfile_path(fn):
+        """
+        Gets log file location
+
+        :param str fn: Filename of logfile
+        :return str: Path to logfile where we have permission to write
+        """
+        d = 'gracc-reports'
+
+        for prefix in ('/var/log', '/var/tmp', '/tmp'):
+            filepath = os.path.join(d, prefix, fn)
+            try:
+                with open(filepath, 'w') as f:
+                    f.write('')
+            except (IOError, OSError) as e:     # Permission Denied comes through as an IOError
+                print e
+                print "Couldn't write logfile to {0}.  " \
+                      "Moving to next path".format(filepath)
+            else:
+                print "Writing log to {0}".format(filepath)
+                break
+        else:
+            # If none of the prefixes work for some reason, write to local dir
+            filepath = fn
+
+        return filepath
+
     def __establish_client(self):
         """Initialize and return the elasticsearch client
 
