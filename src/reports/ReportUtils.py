@@ -295,7 +295,7 @@ class Reporter(TimeUtils):
         :param str fn: Filename of logfile
         :return str: Path to logfile where we have permission to write
         """
-        d = 'gracc-reports'
+        d = 'gracc-reporting'
 
         for prefix in ('/var/log', '/var/tmp', '/tmp'):
             dirpath = os.path.join(prefix, d)
