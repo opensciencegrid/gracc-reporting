@@ -2,10 +2,10 @@ Example runs:
 For each report, you can specify a non-standard location for the config file with -c, or for a template file with -T.  The defaults are in src/reports/config and src/reports/html_templates.
 The -d, -n, and -v flags are, respectively, dryrun (test), no email, and verbose.
 
+
 Project Report:
 osgreport -s 2016-12-06 -e 2016-12-13 -r OSG-Connect -d -v -n   # No missing projects
 osgreport -s 2016-12-06 -e 2016-12-13 -r XD -d -v -n   # Missing projects
-
 
 Missing Projects report (now run automatically from Project report):
 python MissingProject.py -s 2016-12-06 -e 2017-01-31 -r XD -d -n -v
