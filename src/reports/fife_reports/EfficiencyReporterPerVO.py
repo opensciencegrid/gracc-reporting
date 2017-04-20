@@ -66,11 +66,20 @@ class Efficiency(Reporter):
     """
     def __init__(self, config, start, end, vo, hour_limit, eff_limit,
                  facility, template, is_test=False, no_email=False,
-                 verbose=False):
+                 verbose=False, ov_logfile=None):
         report = 'Efficiency'
         self.vo = vo
+
+        if ov_logfile:
+            rlogfile = ov_logfile
+            logfile_override = True
+        else:
+            rlogfile = logfile
+            logfile_override = False
+
         Reporter.__init__(self, report, config, start, end, verbose=verbose,
-                          logfile=logfile, no_email=no_email, is_test=is_test)
+                          logfile=rlogfile, no_email=no_email, is_test=is_test,
+                          logfile_override=logfile_override)
         self.hour_limit = hour_limit
         self.eff_limit = eff_limit
         self.facility = facility
@@ -313,7 +322,8 @@ def main():
                        templatefile,
                        args.is_test,
                        args.no_email,
-                       args.verbose)
+                       args.verbose,
+                       ov_logfile=args.logfile)
         e.run_report()
         print "Efficiency Report execution successful"
 

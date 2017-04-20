@@ -10,6 +10,7 @@ import operator
 import os
 import pkg_resources
 import json
+from ConfigParser import NoOptionError, NoSectionError
 
 from elasticsearch import Elasticsearch
 
@@ -59,7 +60,7 @@ class Reporter(TimeUtils):
 
     def __init__(self, report, config, start, end=None, verbose=False,
                  raw=True, allraw=False, template=None, is_test=False, no_email=False,
-                 title=None, logfile=None):
+                 title=None, logfile=None, logfile_override=False):
 
         TimeUtils.__init__(self)
         self.header = []
@@ -74,10 +75,12 @@ class Reporter(TimeUtils):
         self.epochrange = None
         self.indexpattern = self.indexpattern_generate(raw, allraw)
         self.report_type = report
+
         if logfile:
-            self.logfile = self.get_logfile_path(logfile)
+            self.logfile = self.get_logfile_path(logfile, override=logfile_override)
         else:
             self.logfile = 'reports.log'
+
         self.email_info = self.__get_email_info()
         self.logger = self.__setupgenLogger()
         self.client = self.__establish_client()
@@ -258,6 +261,9 @@ class Reporter(TimeUtils):
         parser.add_argument("-n", "--nomail", dest="no_email",
                             action="store_true", default=False,
                             help="Do not send email. ")
+        parser.add_argument("-L", "--logfile", dest="logfile",
+                            default=None, help="Specify non-standard location"
+                                               "for logfile")
 
         return parser
 
@@ -287,17 +293,31 @@ class Reporter(TimeUtils):
         else:
             return False
 
-    @staticmethod
-    def get_logfile_path(fn):
+    def get_logfile_path(self, fn, override=False):
         """
-        Gets log file location
+        Gets log file location.  First tries user override, then tries config 
+        file, then some standard locations
 
         :param str fn: Filename of logfile
         :return str: Path to logfile where we have permission to write
         """
+
+        if override:
+            return fn
+
+        try_locations = ['/var/log', '/var/tmp', '/tmp']
+
+        try:
+            configdir = self.config.get('defaults', 'default_logdir')
+            if configdir in try_locations:
+                try_locations.remove(configdir)
+                try_locations.insert(0, configdir)
+        except (NoOptionError, NoSectionError): # No entry in configfile
+            pass
+
         d = 'gracc-reporting'
 
-        for prefix in ('/var/log', '/var/tmp', '/tmp'):
+        for prefix in try_locations:
             dirpath = os.path.join(prefix, d)
             filepath = os.path.join(prefix, d, fn)
 
@@ -311,7 +331,8 @@ class Reporter(TimeUtils):
                 # Try to make the logfile directory
                 try:
                     os.mkdir(dirpath)
-                except OSError:  # Permission Denied
+                except OSError as e:  # Permission Denied or missing directory
+                    print e
                     print errmsg
                     continue  # Don't try to write an empty file
 
@@ -470,23 +491,23 @@ def runerror(config, error, traceback):
     return None
 
 
-def get_default_resource(type, filename):
+def get_default_resource(kind, filename):
     """
     Returns the default config file or html template for a report
 
-    :param str type: Must be 'config', or 'html_templates', unless we expand
-    the input file types in the future
+    :param str kind: Must be 'config', or 'html_templates', unless we expand
+    the input file kinds in the future
     :return str: Path of the default resource
     """
-    default_path = os.path.join('/etc/gracc-reporting', type)
+    default_path = os.path.join('/etc/gracc-reporting', kind)
 
-    # If the file is in /etc/gracc-reporting/$type, return that path
+    # If the file is in /etc/gracc-reporting/$kind, return that path
     if os.path.exists(default_path):
         return os.path.join(default_path, filename)
     # Otherwise, find the file (resource) in the package
     else:
         return pkg_resources.resource_filename('reports',
-                                               '{0}/{1}'.format(type, filename))
+                                               os.path.join(kind, filename))
 
 
 def get_configfile(flag='osg', override=None):
@@ -500,7 +521,7 @@ def get_configfile(flag='osg', override=None):
     :param str override: Can be a config file in a non-standard location
     :return str: Absolute path to the config file
     """
-    if override:
+    if override and os.path.exists(override):
         return override
 
     if flag == 'efficiency':
@@ -515,7 +536,8 @@ def get_configfile(flag='osg', override=None):
 
 def get_template(override=None, deffile=None):
     """
-    Returns the appropriate HTML template for the gracc reports
+    Returns the appropriate HTML template for the gracc reports.  Allows for
+    override of default template location, or search in default locations.
 
     :param str override: Can be a template in a non-standard location
     :param deffile: Default filename.  Should be passed in from calling
@@ -526,4 +548,3 @@ def get_template(override=None, deffile=None):
         return override
     else:
         return get_default_resource('html_templates', deffile)
-
