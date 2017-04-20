@@ -95,11 +95,20 @@ class JobSuccessRateReporter(Reporter):
     :param bool no_email: If true, don't actually send the email
     """
     def __init__(self, config, start, end, vo, template, is_test,
-                 verbose, no_email):
+                 verbose, no_email, ov_logfile=None):
         report = 'JobSuccessRate'
         self.vo = vo
+
+        if ov_logfile:
+            rlogfile = ov_logfile
+            logfile_override = True
+        else:
+            rlogfile = logfile
+            logfile_override = False
+
         Reporter.__init__(self, report, config, start, end, verbose,
-                          is_test=is_test, no_email=no_email, logfile=logfile)
+                          is_test=is_test, no_email=no_email, logfile=rlogfile,
+                          logfile_override=logfile_override)
         self.template = template
         self.title = "Production Jobs Success Rate {0} - {1}".format(
             self.start_time, self.end_time)
@@ -568,7 +577,8 @@ def main():
                                    templatefile,
                                    args.is_test,
                                    args.verbose,
-                                   args.no_email)
+                                   args.no_email,
+                                   ov_logfile=args.logfile)
         r.run_report()
         print "Job Success Report Execution finished"
     except Exception as e:

@@ -109,11 +109,20 @@ class WastedHoursReport(Reporter):
     :param bool no_email: If true, don't actually send the email
     """
     def __init__(self, config, start, end, template, is_test=True,
-                 verbose=False, no_email=False):
+                 verbose=False, no_email=False, ov_logfile=None):
         report = 'WastedHours'
+
+        if ov_logfile:
+            rlogfile = ov_logfile
+            logfile_override = True
+        else:
+            rlogfile = logfile
+            logfile_override = False
+
         Reporter.__init__(self, report, config, start, end=end,
                           verbose=verbose, raw=False, is_test=is_test,
-                          no_email=no_email, logfile=logfile)
+                          no_email=no_email, logfile=rlogfile,
+                          logfile_override=logfile_override)
         self.template = template
         self.experiments = {}
         self.connect_str = None
@@ -296,7 +305,8 @@ def main():
                                    templatefile,
                                    is_test=args.is_test,
                                    verbose=args.verbose,
-                                   no_email=args.no_email)
+                                   no_email=args.no_email,
+                                   ov_logfile=args.logfile)
         r.run_report()
     except Exception as e:
         print >> sys.stderr, traceback.format_exc()

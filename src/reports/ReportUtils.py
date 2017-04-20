@@ -303,6 +303,7 @@ class Reporter(TimeUtils):
         """
 
         if override:
+            print "Writing log to {0}".format(fn)
             return fn
 
         try_locations = ['/var/log', '/var/tmp', '/tmp']
