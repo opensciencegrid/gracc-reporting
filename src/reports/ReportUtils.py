@@ -299,6 +299,7 @@ class Reporter(TimeUtils):
         file, then some standard locations
 
         :param str fn: Filename of logfile
+        :param bool override: Override this method by feeding in a logfile path
         :return str: Path to logfile where we have permission to write
         """
 
@@ -312,7 +313,7 @@ class Reporter(TimeUtils):
             configdir = self.config.get('defaults', 'default_logdir')
             if configdir in try_locations:
                 try_locations.remove(configdir)
-                try_locations.insert(0, configdir)
+            try_locations.insert(0, configdir)
         except (NoOptionError, NoSectionError): # No entry in configfile
             pass
 
@@ -504,6 +505,7 @@ def get_default_resource(kind, filename):
 
     # If the file is in /etc/gracc-reporting/$kind, return that path
     if os.path.exists(default_path):
+        print "Reading Resource from {0}".format(default_path)
         return os.path.join(default_path, filename)
     # Otherwise, find the file (resource) in the package
     else:

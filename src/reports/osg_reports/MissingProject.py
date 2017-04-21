@@ -34,11 +34,18 @@ def parse_opts(parser):
 class MissingProjectReport(Reporter):
     logfile = 'missingproject.log'
 
-    def __init__(self, report_type, config, start, end=None,
-                 verbose=False, no_email=False, is_test=False):
+    def __init__(self, report_type, config, start, end=None, verbose=False,
+                 no_email=False, is_test=False, ov_logfile=None):
+
+        if ov_logfile:
+            self.logfile = ov_logfile
+            logfile_override = True
+        else:
+            logfile_override = False
+
         Reporter.__init__(self, report_type, config, start, end, verbose,
                           raw=False, no_email=no_email, is_test=is_test,
-                          logfile=self.logfile)
+                          logfile=self.logfile, logfile_override=logfile_override)
         self.report_type = self._validate_report_type(report_type)
         self.logger.info("Report Type: {0}".format(self.report_type))
         
@@ -337,7 +344,8 @@ def main():
                                  args.end,
                                  verbose=args.verbose,
                                  is_test=args.is_test,
-                                 no_email=args.no_email)
+                                 no_email=args.no_email,
+                                 ov_logfile=args.logfile)
         r.run_report()
     except Exception as e:
         with open(logfile, 'a') as f:

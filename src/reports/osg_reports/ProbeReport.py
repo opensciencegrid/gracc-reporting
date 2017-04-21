@@ -10,6 +10,7 @@ import datetime
 import logging
 import traceback
 import sys
+from ConfigParser import NoSectionError, NoOptionError
 
 from elasticsearch_dsl import Search, Q
 
@@ -33,9 +34,18 @@ class OIMInfo(object):
 
     :param bool verbose: Verbose flag
     """
-    def __init__(self, verbose=False):
+    def __init__(self, verbose=False, config=None, ov_logfile=None):
+        self.config = config
         self.verbose = verbose
-        self.logfile = Reporter.get_logfile_path(logfile)
+
+        if ov_logfile:
+            rlogfile = ov_logfile
+            logfile_override = True
+        else:
+            rlogfile = logfile
+            logfile_override = False
+
+        self.logfile = self.get_logfile_path(rlogfile, override=logfile_override)
         self.logger = self.setupgenLogger("ProbeReport-OIM")
         self.root = None
         self.resourcedict = {}
@@ -76,6 +86,67 @@ class OIMInfo(object):
         logger.addHandler(fh)
 
         return logger
+
+    def get_logfile_path(self, fn, override=False):
+        """
+        Gets log file location.  First tries user override, then tries config 
+        file, then some standard locations
+
+        :param str fn: Filename of logfile
+        :param bool override: Override this method by feeding in a logfile path
+        :return str: Path to logfile where we have permission to write
+        """
+
+        if override:
+            print "Writing log to {0}".format(fn)
+            return fn
+
+        try_locations = ['/var/log', '/var/tmp', '/tmp']
+
+        try:
+            configdir = self.config.config.get('defaults', 'default_logdir')
+            if configdir in try_locations:
+                try_locations.remove(configdir)
+            try_locations.insert(0, configdir)
+        except (NoOptionError, NoSectionError): # No entry in configfile
+            pass
+
+        d = 'gracc-reporting'
+
+        for prefix in try_locations:
+            dirpath = os.path.join(prefix, d)
+            filepath = os.path.join(prefix, d, fn)
+
+            errmsg = "Couldn't write logfile to {0}.  " \
+                     "Moving to next path".format(filepath)
+
+            successmsg = "Writing log to {0}".format(filepath)
+
+            # Does the dir exist?  If not, can we create it?
+            if not os.path.exists(dirpath):
+                # Try to make the logfile directory
+                try:
+                    os.mkdir(dirpath)
+                except OSError as e:  # Permission Denied or missing directory
+                    print e
+                    print errmsg
+                    continue  # Don't try to write an empty file
+
+            # So dir exists.  Can we write to the logfiles there?
+            try:
+                with open(filepath, 'a') as f:
+                    f.write('')
+            except (IOError,
+                    OSError) as e:  # Permission Denied comes through as an IOError
+                print e, '\n', errmsg
+            else:
+                print successmsg
+                break
+        else:
+            # If none of the prefixes work for some reason, write to local dir
+            filepath = fn
+
+        return filepath
 
     def dateslist_init(self):
         """Creates dates lists to get passed into OIM urls"""
@@ -295,19 +366,39 @@ class ProbeReport(Reporter):
     :param bool no_email: If true, don't actually send the email
     """
     def __init__(self, config, start, verbose=False, is_test=False,
-                 no_email=False):
+                 no_email=False, ov_logfile=None):
         report = "Probe"
+
+        if ov_logfile:
+            rlogfile = ov_logfile
+            logfile_override = True
+        else:
+            rlogfile = logfile
+            logfile_override = False
+
         Reporter.__init__(self, report, config, start, end=start,
-                          verbose=verbose, logfile=logfile, is_test=is_test,
+                          logfile=rlogfile, logfile_override=logfile_override,
+                          is_test=is_test, verbose=verbose,
                           no_email=no_email, allraw=True)
         self.configuration = config
         self.probematch = re.compile("(.+):(.+)")
         self.estimeformat = re.compile("(.+)T(.+)\.\d+Z")
-        self.emailfile = 'filetoemail.txt'
+        self.emailfile = '/tmp/filetoemail.txt'
         self.probe, self.resource = None, None
-        self.historyfile = Reporter.get_logfile_path('probereporthistory.log')
+        self.historyfile = self.statefile_path()
         self.newhistory = []
         self.reminder = False
+
+    def statefile_path(self):
+        """
+        Gets the logfile directory, makes sure that state file gets put in same
+        directory
+        
+        :return str: Path to statefile $logdir/probereporthistory.log 
+        """
+        fn = 'probereporthistory.log'
+        logdir = os.path.abspath(os.path.dirname(self.logfile))
+        return os.path.join(logdir, fn)
 
     def query(self):
         """Method to query Elasticsearch cluster for Probe Report
@@ -564,7 +655,7 @@ def main():
 
     try:
         # Get OIM Information
-        oiminfo = OIMInfo(args.verbose)
+        oiminfo = OIMInfo(args.verbose, config=config, ov_logfile=args.logfile)
         oim_probe_fqdn_dict = oiminfo.get_fqdns_for_probes()
 
         startdate = today - datetime.timedelta(days=2)
@@ -574,7 +665,8 @@ def main():
                               startdate,
                               verbose=args.verbose,
                               is_test=args.is_test,
-                              no_email=args.no_email)
+                              no_email=args.no_email,
+                              ov_logfile=args.logfile)
 
         preport.run_report(oim_probe_fqdn_dict)
         print 'Probe Report Execution finished'

@@ -33,13 +33,21 @@ class FlockingReport(Reporter):
     :param bool is_test: Whether or not this is a test run.
     :param bool no_email: If true, don't actually send the email
     """
-    def __init__(self, config, start, end, template=False,
-                 verbose=False, is_test=False, no_email=False):
+    def __init__(self, config, start, end, template=False, verbose=False,
+                 is_test=False, no_email=False, ov_logfile=None):
         report = 'Flocking'
+
+        if ov_logfile:
+            rlogfile = ov_logfile
+            logfile_override = True
+        else:
+            rlogfile = logfile
+            logfile_override = False
+
         Reporter.__init__(self, report, config, start, end=end,
                           template=template, verbose=verbose,
-                          no_email=no_email, is_test=is_test,
-                          raw=False, logfile=logfile)
+                          no_email=no_email, is_test=is_test, raw=False,
+                          logfile=rlogfile, logfile_override=logfile_override)
         self.verbose = verbose
         self.no_email = no_email
         self.is_test = is_test
@@ -158,7 +166,8 @@ def main():
                            verbose=args.verbose,
                            is_test=args.is_test,
                            no_email=args.no_email,
-                           template=templatefile)
+                           template=templatefile,
+                           ov_logfile=args.logfile)
         f.run_report()
         print "OSG Flocking Report execution successful"
     except Exception as e:

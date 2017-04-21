@@ -36,10 +36,20 @@ def parse_opts(parser):
 
 class OSGReporter(Reporter):
     def __init__(self, report_type, config, start, end=None, isSum=True,
-                 verbose=False, no_email=False, is_test=False, template=None):
+                 verbose=False, no_email=False, is_test=False, template=None,
+                 ov_logfile=None):
+
+        if ov_logfile:
+            rlogfile = ov_logfile
+            logfile_override = True
+        else:
+            rlogfile = logfile
+            logfile_override = False
+
         Reporter.__init__(self, report_type, config, start, end, verbose,
                           raw=False, no_email=no_email, is_test=is_test,
-                          template=template, logfile=logfile)
+                          template=template, logfile=rlogfile,
+                          logfile_override=logfile_override)
         self.isSum = isSum
         self.report_type = self._validate_report_type(report_type)
         self.header = ["Project Name", "PI", "Institution", "Field of Science",
@@ -212,7 +222,8 @@ def main():
                         isSum=args.isSum,
                         verbose=args.verbose,
                         is_test=args.is_test,
-                        no_email=args.no_email)
+                        no_email=args.no_email,
+                        ov_logfile=args.logfile)
         r.run_report()
         r.logger.info("OSG Project Report executed successfully")
 

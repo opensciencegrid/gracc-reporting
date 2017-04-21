@@ -178,12 +178,21 @@ class OSGPerSiteReporter(Reporter):
     :param bool is_test: Whether or not this is a test run.
     :param bool no_email: If true, don't actually send the email
     """
-    def __init__(self, config, start, end, template=False,
-                     verbose=False, is_test=False, no_email=False):
+    def __init__(self, config, start, end, template=False, verbose=False,
+                 is_test=False, no_email=False, ov_logfile=None):
         report = 'siteusage'
+
+        if ov_logfile:
+            rlogfile = ov_logfile
+            logfile_override = True
+        else:
+            rlogfile = logfile
+            logfile_override = False
+
         Reporter.__init__(self, report, config, start, end=end,
                           verbose=verbose, is_test=is_test, no_email=no_email,
-                          logfile=logfile, raw=False, template=template)
+                          raw=False, template=template, logfile=rlogfile,
+                          logfile_override=logfile_override)
         self.header = ["Site", "Total", "Opportunistic Total",
                        "Percent Opportunistic", "Prev. Month Opp. Total",
                        "Percentage Change Month-Month"]
@@ -404,7 +413,8 @@ def main():
                                        template=templatefile,
                                        verbose=args.verbose,
                                        is_test=args.is_test,
-                                       no_email=args.no_email)
+                                       no_email=args.no_email,
+                                       ov_logfile=args.logfile)
 
         osgreport.run_report()
         print 'OSG Per Site Report Execution finished'

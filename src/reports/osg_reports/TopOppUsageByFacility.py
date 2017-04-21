@@ -165,12 +165,20 @@ class TopOppUsageByFacility(Reporter):
     range
     """
     def __init__(self, config, start=None, end=None, template=None,
-                 is_test=False, no_email=False,
-                 verbose=False, numrank=10, months=None):
+                 is_test=False, no_email=False, verbose=False, numrank=10,
+                 months=None, ov_logfile=None):
         report = 'news'
+
+        if ov_logfile:
+            rlogfile = ov_logfile
+            logfile_override = True
+        else:
+            rlogfile = logfile
+            logfile_override = False
+
         Reporter.__init__(self, report, config, start, end, verbose=verbose,
-                          logfile=logfile, no_email=no_email, is_test=is_test,
-                          raw=False)
+                          no_email=no_email, is_test=is_test, raw=False,
+                          logfile=rlogfile, logfile_override=logfile_override)
         self.numrank = numrank
         self.template = template
         self.text = ''
@@ -494,7 +502,8 @@ def main():
                                   is_test=args.is_test,
                                   no_email=args.no_email,
                                   verbose=args.verbose,
-                                  numrank=args.numrank)
+                                  numrank=args.numrank,
+                                  ov_logfile=args.logfile)
         r.run_report()
         print "Top Opportunistic Usage per Facility Report execution successful"
 
