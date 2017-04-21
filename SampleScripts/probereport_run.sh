@@ -5,7 +5,7 @@
 
 # This assumes you're running the reports from a virtualenv
 
-LOGFILE=/var/tmp/gracc-reporting/probereport_run.log # Ideally should be in /var/log/gracc-reporting
+LOGFILE=/var/log/gracc-reporting/probereport_run.log # Ideally should be in /var/log/gracc-reporting
 VENVDIR=gracc_venv
 TOPDIR=/home/sbhat/gracc-reporting
 

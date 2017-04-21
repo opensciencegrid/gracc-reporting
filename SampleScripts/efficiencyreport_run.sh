@@ -8,7 +8,7 @@
 
 
 TOPDIR=/home/sbhat/gracc-reporting
-LOGFILE=/var/tmp/gracc-reporting/efficiencyreport_run.log     # Ideally should be in /var/log/gracc-reporting
+LOGFILE=/var/log/gracc-reporting/efficiencyreport_run.log     # Ideally should be in /var/log/gracc-reporting
 VENVDIR=gracc_venv
 
 function usage {
