@@ -336,7 +336,7 @@ class Reporter(TimeUtils):
                 except OSError as e:  # Permission Denied or missing directory
                     print e
                     print errmsg
-                    continue  # Don't try to write an empty file
+                    continue  # Don't try to write somewhere we can't
 
             # So dir exists.  Can we write to the logfiles there?
             try:
