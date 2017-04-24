@@ -1,0 +1,7 @@
+include *.txt *.config *.html
+recursive-include config *
+recursive-include html_templates *
+recursive-include src/reports/config/ *.config
+recursive-include src/reports/html_templates/ *.html
+recursive-include docs *.txt
+recursive-include SampleScripts *.sh
