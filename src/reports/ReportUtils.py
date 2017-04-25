@@ -391,18 +391,14 @@ class Reporter(TimeUtils):
         else:
             try:
                 vo = self.vo
-                emails = re.split('[; ,]', self.config.get(vo.lower(), "to_emails") +
-                              ',' + self.config.get("email", "test_to_emails"))
+                emails = re.split('[; ,]', self.config.get(vo.lower(), "{0}_to_emails".format(self.report_type.lower())) +
+                                  ',' + self.config.get("email", "test_to_emails"))
                 names = []
             except AttributeError:      # No vo-specific info in config file
-                emails = re.split('[; ,]', self.config.get("email",
-                                                           "{0}_to_emails".format(
-                                                               self.report_type))
-                                  + ',' + self.config.get("email", "test_to_emails"))
-                names = re.split('[;,]', self.config.get("email",
-                                                           "{0}_to_names".format(
-                                                               self.report_type))
-                                  + ',' + self.config.get("email", "test_to_names"))
+                emails = re.split('[; ,]', self.config.get("email", "{0}_to_emails".format(self.report_type)) +
+                                  ',' + self.config.get("email", "test_to_emails"))
+                names = re.split('[;,]', self.config.get("email", "{0}_to_names".format(self.report_type)) +
+                                 ',' + self.config.get("email", "test_to_names"))
 
         email_info["to_emails"] = emails
         email_info["to_names"] = names
