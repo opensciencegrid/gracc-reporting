@@ -523,10 +523,8 @@ def get_configfile(flag='osg', override=None):
     if override and os.path.exists(override):
         return override
 
-    if flag == 'efficiency':
-        f = 'efficiency.config'
-    elif flag == 'jobrate':
-        f = 'jobrate.config'
+    if flag == 'fife':
+        f = 'fife.config'
     else:
         f = 'osg.config'
 
