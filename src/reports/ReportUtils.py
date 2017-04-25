@@ -362,7 +362,12 @@ class Reporter(TimeUtils):
         :return: elasticsearch.Elasticsearch object
         """
         try:
-            client = Elasticsearch('https://gracc.opensciencegrid.org/q',
+            hostname = self.config.get('elasticsearch', 'hostname')
+        except (NoSectionError, NoOptionError):
+            hostname = 'https://gracc.opensciencegrid.org/q'
+
+        try:
+            client = Elasticsearch(hostname,
                                    use_ssl=True,
                                    verify_certs=False,
                                    # ca_certs = 'gracc_cert/lets-encrypt-x3-cross-signed.pem',
