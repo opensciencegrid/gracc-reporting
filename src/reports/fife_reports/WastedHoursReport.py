@@ -120,7 +120,7 @@ class WastedHoursReport(Reporter):
             logfile_override = False
 
         Reporter.__init__(self, report, config, start, end=end,
-                          verbose=verbose, raw=False, is_test=is_test,
+                          verbose=verbose, is_test=is_test,
                           no_email=no_email, logfile=rlogfile,
                           logfile_override=logfile_override)
         self.template = template
