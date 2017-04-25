@@ -565,7 +565,7 @@ def main():
 
     # Set up the configuration
     config = Configuration.Configuration()
-    config.configure(get_configfile(override=args.config, flag='jobrate'))
+    config.configure(get_configfile(override=args.config, flag='fife'))
 
     templatefile = get_template(override=args.template, deffile=default_templatefile)
 
