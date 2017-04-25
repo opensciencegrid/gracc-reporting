@@ -44,7 +44,7 @@ class MissingProjectReport(Reporter):
             logfile_override = False
 
         Reporter.__init__(self, report_type, config, start, end, verbose,
-                          raw=False, no_email=no_email, is_test=is_test,
+                          no_email=no_email, is_test=is_test,
                           logfile=self.logfile, logfile_override=logfile_override)
         self.report_type = self._validate_report_type(report_type)
         self.logger.info("Report Type: {0}".format(self.report_type))

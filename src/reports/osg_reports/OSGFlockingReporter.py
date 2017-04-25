@@ -46,7 +46,7 @@ class FlockingReport(Reporter):
 
         Reporter.__init__(self, report, config, start, end=end,
                           template=template, verbose=verbose,
-                          no_email=no_email, is_test=is_test, raw=False,
+                          no_email=no_email, is_test=is_test,
                           logfile=rlogfile, logfile_override=logfile_override)
         self.verbose = verbose
         self.no_email = no_email

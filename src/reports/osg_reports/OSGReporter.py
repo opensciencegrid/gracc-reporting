@@ -47,7 +47,7 @@ class OSGReporter(Reporter):
             logfile_override = False
 
         Reporter.__init__(self, report_type, config, start, end, verbose,
-                          raw=False, no_email=no_email, is_test=is_test,
+                          no_email=no_email, is_test=is_test,
                           template=template, logfile=rlogfile,
                           logfile_override=logfile_override)
         self.isSum = isSum

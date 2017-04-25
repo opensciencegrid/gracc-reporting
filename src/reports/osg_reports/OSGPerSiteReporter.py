@@ -191,7 +191,7 @@ class OSGPerSiteReporter(Reporter):
 
         Reporter.__init__(self, report, config, start, end=end,
                           verbose=verbose, is_test=is_test, no_email=no_email,
-                          raw=False, template=template, logfile=rlogfile,
+                          template=template, logfile=rlogfile,
                           logfile_override=logfile_override)
         self.header = ["Site", "Total", "Opportunistic Total",
                        "Percent Opportunistic", "Prev. Month Opp. Total",

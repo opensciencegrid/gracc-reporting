@@ -177,7 +177,7 @@ class TopOppUsageByFacility(Reporter):
             logfile_override = False
 
         Reporter.__init__(self, report, config, start, end, verbose=verbose,
-                          no_email=no_email, is_test=is_test, raw=False,
+                          no_email=no_email, is_test=is_test,
                           logfile=rlogfile, logfile_override=logfile_override)
         self.numrank = numrank
         self.template = template

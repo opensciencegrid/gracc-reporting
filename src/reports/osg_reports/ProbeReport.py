@@ -379,7 +379,7 @@ class ProbeReport(Reporter):
         Reporter.__init__(self, report, config, start, end=start,
                           logfile=rlogfile, logfile_override=logfile_override,
                           is_test=is_test, verbose=verbose,
-                          no_email=no_email, allraw=True)
+                          no_email=no_email, raw=True, allraw=True)
         self.configuration = config
         self.probematch = re.compile("(.+):(.+)")
         self.estimeformat = re.compile("(.+)T(.+)\.\d+Z")
@@ -423,7 +423,7 @@ class ProbeReport(Reporter):
         self.start_time = today.replace(
             day=1) - datetime.timedelta(days=1)
         self.end_time = today
-        self.indexpattern = self.indexpattern_generate(allraw=True)
+        self.indexpattern = self.indexpattern_generate(raw=True, allraw=True)
 
         if self.verbose:
             print "New index pattern is {0}".format(self.indexpattern)
