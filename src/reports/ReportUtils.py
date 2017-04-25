@@ -59,7 +59,7 @@ class Reporter(TimeUtils):
     __metaclass__ = abc.ABCMeta
 
     def __init__(self, report, config, start, end=None, verbose=False,
-                 raw=True, allraw=False, template=None, is_test=False, no_email=False,
+                 raw=False, allraw=False, template=None, is_test=False, no_email=False,
                  title=None, logfile=None, logfile_override=False):
 
         TimeUtils.__init__(self)
