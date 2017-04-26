@@ -50,7 +50,7 @@ echo "START" `date` >> $LOGFILE
 for TYPE in ${REPORT_TYPES}
 do
     echo $TYPE
-    osgflockingreport -s "$starttime" -e "$endtime"
+    osgreport -s "$starttime" -e "$endtime" -r $TYPE
 
     # Error handling
     if [ $? -ne 0 ]
