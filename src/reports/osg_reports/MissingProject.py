@@ -73,7 +73,7 @@ class MissingProjectReport(Reporter):
         endtimeq = self.dateparse_to_iso(self.end_time)
 
         probes = [_.strip("'") for _ in re.split(",", self.config.get(
-            "query", "{0}_probe_list".format(self.report_type)))]
+            "project", "{0}_probe_list".format(self.report_type)))]
 
         if self.verbose:
             print probes

@@ -73,7 +73,7 @@ class OSGReporter(Reporter):
 
         probes = [rawprobe.strip("'") for rawprobe in
                   re.split(",", self.config.get(
-                               "query",
+                               "project",
                                "{0}_probe_list".format(self.report_type)))]
 
         if self.verbose:
@@ -147,8 +147,9 @@ class OSGReporter(Reporter):
         allterms = copy.copy(unique_terms)
         allterms.extend(metrics)
 
+        print data
         for entry in data:
-            yield [entry[field] for field in allterms]
+            yield [entry[field].encode('ascii', 'replace') if isinstance(entry[field], unicode) else entry[field] for field in allterms]
 
     def format_report(self):
         """Report formatter.  Returns a dictionary called report containing the
