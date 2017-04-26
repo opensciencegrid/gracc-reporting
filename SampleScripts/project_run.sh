@@ -1,8 +1,7 @@
 #!/bin/sh
 
-# Wrapper script to run the OSG Flocking report
+# Wrapper script to run the OSG Project report (OSGReporter)
 # Example:  ./project_run.sh weekly
-
 # This assumes you're running the reports from a virtualenv
 
 TOPDIR=/home/sbhat/gracc-reporting
