@@ -197,7 +197,7 @@ class TopOppUsageByFacility(Reporter):
 
         :return list: List of OSG Flocking probes
         """
-        probes = self.config.get('query', 'OSG_flocking_probe_list')
+        probes = self.config.get(self.report_type.lower(), 'OSG_flocking_probe_list')
         return [elt.strip("'") for elt in re.split(',', probes)]
 
     def run_report(self):

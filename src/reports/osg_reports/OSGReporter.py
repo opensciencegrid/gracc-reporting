@@ -73,7 +73,7 @@ class OSGReporter(Reporter):
 
         probes = [rawprobe.strip("'") for rawprobe in
                   re.split(",", self.config.get(
-                               "query",
+                               "project",
                                "{0}_probe_list".format(self.report_type)))]
 
         if self.verbose:
