@@ -160,6 +160,8 @@ class Reporter(TimeUtils):
         else:
             use_title = "GRACC Report"
 
+        use_title = unicode(use_title, 'utf-8')
+
         if self.test_no_email(self.email_info["to_emails"]):
             return
 
@@ -169,21 +171,33 @@ class Reporter(TimeUtils):
         htmldata = emailReport.printAsTextTable("html", content,
                                                 template=self.template)
 
+        for key, value in text.iteritems():
+            print key, type(value)
+
+
         if self.header:
-            htmlheader = "\n".join(['<th>{0}</th>'.format(headerelt)
-                                    for headerelt in self.header])
+            htmlheader = unicode("\n".join(['<th>{0}</th>'.format(headerelt)
+                                    for headerelt in self.header]), 'utf-8')
 
         if self.template:
             with open(self.template, 'r') as t:
-                htmltext = "".join(t.readlines())
+                htmltext = unicode("".join(t.readlines()), 'utf-8')
 
             # Build the HTML file from the template
             htmldict = dict(title=use_title, header=htmlheader, table=htmldata)
+
+            # print type(htmldata)
+            # print type(htmldict['table'])
+            # print htmldata[525:527]
+            #
+            # for key, value in htmldict.iteritems():
+            #     print key, type(value)
+
             htmltext = htmltext.format(**htmldict)
             text["html"] = htmltext
 
         else:
-            text["html"] = "<html><body><h2>{0}</h2><table border=1>{1}</table></body></html>".format(use_title, htmldata)
+            text["html"] = u"<html><body><h2>{0}</h2><table border=1>{1}</table></body></html>".format(use_title, htmldata)
 
         TextUtils.sendEmail((self.email_info["to_names"],
                              self.email_info["to_emails"]),
