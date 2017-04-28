@@ -89,7 +89,12 @@ class Efficiency(Reporter):
         self.fn = "{0}-efficiency.{1}".format(self.vo.lower(),
                                          self.start_time.replace("/", "-"))
         self.cilogon_match = re.compile('.+CN=UID:(\w+)')
-        self.non_cilogon_match = re.compile('/CN=([\w\s]+)/?.+?')
+
+        # Patch until we get Gratia probe to report CN again
+        # self.non_cilogon_match = re.compile('/CN=([\w\s]+)/?.+?') # Original
+        self.non_cilogon_match = re.compile('.+/CN=([\w\s]+)/?.+?')
+        # End patch
+
         self.title = "{0} Users with Low Efficiency ({1}) on the OSG Sites " \
                       "({2} - {3})".format(
                                 self.vo,
@@ -142,7 +147,11 @@ class Efficiency(Reporter):
         # Bucket aggs
         Bucket = s.aggs.bucket('group_VOName', 'terms', field='ReportableVOName') \
             .bucket('group_HostDescription', 'terms', field='Host_description') \
-            .bucket('group_CommonName', 'terms', field='CommonName')
+            .bucket('group_DN', 'terms', field='DN')   # Patch while we fix gratia probes to include CommonName Field
+
+
+            # .bucket('group_CommonName', 'terms', field='CommonName')     # Original
+            # End patch
 
         # Metric aggs
         Bucket.metric('WallHours', 'sum', field='CoreHours') \
@@ -162,7 +171,14 @@ class Efficiency(Reporter):
 
         vos = (vo for vo in results.group_VOName.buckets)
         hostdesc = (hd for vo in vos for hd in vo.group_HostDescription.buckets)
-        cns = (cn for hd in hostdesc for cn in hd.group_CommonName.buckets)
+
+        # Patch while we fix gratia probes to include CommonName Field
+        # cns = (cn for hd in hostdesc for cn in hd.group_CommonName.buckets)   # Original
+
+        # Note that I'm keeping the variable cns to make the patch less involved.
+        # But it's really dns.
+        cns = (cn for hd in hostdesc for cn in hd.group_DN.buckets)
+        # End patch
 
         for cn in cns:
             if cn.WallHours.value > self.hour_limit:
