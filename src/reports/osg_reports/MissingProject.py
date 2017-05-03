@@ -157,7 +157,6 @@ class MissingProjectReport(Reporter):
                       (self.fxdadminname, True)):
             if os.path.exists(group[0]):
                 self.send_email(xd_admins=group[1])
-                self.logger.info("Sent email from file {0}".format(group[0]))
                 os.unlink(group[0])
 
     def _check_osg_or_osg_connect(self, data):
@@ -262,14 +261,15 @@ class MissingProjectReport(Reporter):
         COMMASPACE = ', '
 
         if xd_admins:
-            self.email_info["to_emails"] = \
-                self.config.get('email', 'xd_admins_to_emails').split(
-                    ',')
-            self.email_info["to_names"] = \
-                self.config.get('email', 'xd_admins_to_names').split(',')
+            if not self.is_test:
+                self.email_info["to_emails"] = \
+                    self.config.get('email', 'xd_admins_to_emails').split(
+                        ',')
+                self.email_info["to_names"] = \
+                    self.config.get('email', 'xd_admins_to_names').split(',')
+                self.logger.info("xd_admins flag is True.  Sending email to "
+                                 "xd_admins")
             fname = self.fxdadminname
-            self.logger.info("xd_admins flag is True.  Sending email to "
-                             "xd_admins")
         else:
             fname = self.fname
 
@@ -306,6 +306,8 @@ class MissingProjectReport(Reporter):
                 self.email_info['to_emails'],
                 msg.as_string())
             smtpObj.quit()
+            self.logger.info("Sent email from file {0} to recipients {1}"
+                             .format(fname, self.email_info['to_emails']))
         except Exception as e:
             self.logger.exception("Error:  unable to send email.\n{0}\n".format(e))
             raise
