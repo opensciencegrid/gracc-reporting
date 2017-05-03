@@ -116,7 +116,6 @@ class TextUtils:
                     if type(item) == type(0) or type(item) == type(0.0):
                         value = repr(item).rjust(col_paddings[index] + 1)
                     else:
-                        print item, type(item)
                         value = item.ljust(col_paddings[index] + 1)
                         if format_type == "html" and len(item.strip()) == 0:
                             value = space
