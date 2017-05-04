@@ -162,7 +162,7 @@ class JobSuccessRateReporter(Reporter):
             .filter("range", EndTime={"gte": starttimeq, "lt": endtimeq}) \
             .filter("term", ResourceType="Payload")
 
-        if self.vo in re.split(',', self.config.get('noproduction', 'list')):
+        if self.vo.lower() in re.split(',', self.config.get('noproduction', 'list')):
             s = s.filter("wildcard", VOName=voq)
         else:
             s = s.filter("wildcard", VOName=productioncheck)\
