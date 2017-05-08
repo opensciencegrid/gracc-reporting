@@ -521,11 +521,21 @@ def get_default_resource(kind, filename):
     # If the file is in /etc/gracc-reporting/$kind, return that path
     if os.path.exists(default_path):
         print "Reading Resource from {0}".format(default_path)
-        return os.path.join(default_path, filename)
+        resfile = os.path.join(default_path, filename)
+        if os.path.exists(resfile):
+            return resfile
     # Otherwise, find the file (resource) in the package
     else:
-        return pkg_resources.resource_filename('reports',
-                                               os.path.join(kind, filename))
+        try:
+            return pkg_resources.resource_filename('reports',
+                                           os.path.join(kind, filename))
+        except KeyError as e:    # No resource of that name
+            print "The resource you're looking for, {0}, does not exist.  Either" \
+                  " override the resource (use --help on your report to see the " \
+                  "applicable option) or check how you implemented the resource" \
+                  " call in your report.".format(filename)
+            print "The error and traceback returned was: \n{0}".format(e)
+            raise
 
 
 def get_configfile(flag='osg', override=None):
@@ -542,10 +552,12 @@ def get_configfile(flag='osg', override=None):
     if override and os.path.exists(override):
         return override
 
-    if flag == 'fife':
-        f = 'fife.config'
-    else:
-        f = 'osg.config'
+    f = '{0}.config'.format(flag)
+
+    # if flag == 'fife':
+    #     f = 'fife.config'
+    # else:
+    #     f = 'osg.config'
 
     return get_default_resource('config', f)
 
