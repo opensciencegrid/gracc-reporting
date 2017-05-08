@@ -554,11 +554,6 @@ def get_configfile(flag='osg', override=None):
 
     f = '{0}.config'.format(flag)
 
-    # if flag == 'fife':
-    #     f = 'fife.config'
-    # else:
-    #     f = 'osg.config'
-
     return get_default_resource('config', f)
 
 
