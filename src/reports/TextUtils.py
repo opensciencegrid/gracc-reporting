@@ -143,40 +143,9 @@ def sendEmail(toList, subject, content, fromEmail=None, smtpServerHost=None, htm
 
     Charset.add_charset('utf-8', Charset.QP, Charset.QP, 'utf-8')
 
-    if (toList[1] == None):
+    if toList[1] is None:
         print >> sys.stderr, "Cannot send mail (no To: specified)!"
         sys.exit(1)
-
-    # msg = MIMEMultipart('alternative')
-    # msg["Subject"] = Header(subject, 'utf-8')
-    # msg["From"] = Header(formataddr(fromEmail), 'utf-8')
-    # msg["To"] = Header(_toStr(toList), 'utf-8')
-    #
-    # if 'text' in content:
-    #     textpart = MIMEText(content["text"], 'plain', 'utf-8')
-    #     # textpart.set_charset('utf-8')
-    #     msg.attach(textpart)
-    #
-    #     htmlpart = MIMEBase('text', 'html')
-    #     htmlpart.set_charset('utf-8')
-    #     if html_template:
-    #         attachment_html = content['html']
-    #     else:
-    #         attachment_html = u"<html><head><title>%s</title></head><body>%s</body></html>" % (subject, content["html"])
-    #     htmlpart.set_payload(attachment_html, 'utf-8')
-    #     htmlpart.add_header(u'Content-Disposition', u'attachment; filename="report_%s.html"' % datetime.datetime.now().strftime('%Y_%m_%d'))
-    #
-    #     msg.attach(htmlpart)
-    #
-    # if 'csv' in content:
-    #     attachment_csv = content['csv']
-    #     csvpart = MIMEBase('text', 'csv')
-    #     csvpart.set_charset('utf-8')
-    #     csvpart.set_payload(attachment_csv, 'utf-8')
-    #     csvpart.add_header(u'Content-Disposition', u'attachment; filename="report_%s.csv"' % datetime.datetime.now().strftime('%Y_%m_%d'))
-    #     msg.attach(csvpart)
-
-
 
     msg = MIMEMultipart()
     msg["Subject"] = subject

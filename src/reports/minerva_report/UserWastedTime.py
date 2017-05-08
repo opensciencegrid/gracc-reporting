@@ -1,9 +1,7 @@
 import json
 import optparse
 import time
-# import Configuration
 import subprocess
-#import numpy as np
 
 from . import Configuration
 

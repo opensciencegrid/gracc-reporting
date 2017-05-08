@@ -1,6 +1,5 @@
 import json
 import optparse
-# import Configuration
 import subprocess
 
 from . import Configuration

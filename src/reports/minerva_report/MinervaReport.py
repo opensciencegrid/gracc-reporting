@@ -8,7 +8,6 @@ import optparse
 import time
 import sys
 import traceback
-# import Configuration
 
 from . import Configuration, TextUtils
 
@@ -17,8 +16,6 @@ from BlueArcQuota import BlueArcQuota
 from CPNLocks import CPNLocks
 from CurrentJobs import CurrentJobs
 from UserWastedTime import UserWastedTime
-# import TextUtils
-
 
 
 def parse_opts():
