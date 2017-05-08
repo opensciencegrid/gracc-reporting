@@ -6,7 +6,7 @@ import ConfigParser
 class Configuration:
     """Provides access to configuration"""
     def __init__(self):
-        self.config=ConfigParser.ConfigParser()
+        self.config = ConfigParser.ConfigParser()
 
     def configure(self,fn):
         self.config.read([fn,])
@@ -19,7 +19,7 @@ def checkRequiredArguments(opts, parser):
     """
     missing_options = []
     for option in parser.option_list:
-        if re.match(r'.*\(required\)$', option.help) and eval('opts.' + option.dest) == None:
+        if re.match(r'.*\(required\)$', option.help) and eval('opts.' + option.dest) is None:
             missing_options.extend(option._long_opts)
     if len(missing_options) > 0:
         parser.error('Missing option: ' + str(missing_options))

@@ -149,7 +149,8 @@ class OSGReporter(Reporter):
 
         print data
         for entry in data:
-            yield [entry[field].encode('ascii', 'replace') if isinstance(entry[field], unicode) else entry[field] for field in allterms]
+            yield [entry[field] for field in allterms]
+
 
     def format_report(self):
         """Report formatter.  Returns a dictionary called report containing the
@@ -164,7 +165,7 @@ class OSGReporter(Reporter):
 
         for result_list in self.generate_report_file():
             if self.verbose:
-                print "{0}\t{1}\t{2}\t{3}\t{4}".format(*result_list)
+                print u"{0}\t{1}\t{2}\t{3}\t{4}".format(*result_list)
             mapdict = dict(zip(self.header, result_list))
             for key, item in mapdict.iteritems():
                 report[key].append(item)

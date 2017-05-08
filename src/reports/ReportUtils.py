@@ -160,6 +160,8 @@ class Reporter(TimeUtils):
         else:
             use_title = "GRACC Report"
 
+        use_title = unicode(use_title, 'utf-8')
+
         if self.test_no_email(self.email_info["to_emails"]):
             return
 
@@ -169,21 +171,33 @@ class Reporter(TimeUtils):
         htmldata = emailReport.printAsTextTable("html", content,
                                                 template=self.template)
 
+        for key, value in text.iteritems():
+            print key, type(value)
+
+
         if self.header:
-            htmlheader = "\n".join(['<th>{0}</th>'.format(headerelt)
-                                    for headerelt in self.header])
+            htmlheader = unicode("\n".join(['<th>{0}</th>'.format(headerelt)
+                                    for headerelt in self.header]), 'utf-8')
 
         if self.template:
             with open(self.template, 'r') as t:
-                htmltext = "".join(t.readlines())
+                htmltext = unicode("".join(t.readlines()), 'utf-8')
 
             # Build the HTML file from the template
             htmldict = dict(title=use_title, header=htmlheader, table=htmldata)
+
+            # print type(htmldata)
+            # print type(htmldict['table'])
+            # print htmldata[525:527]
+            #
+            # for key, value in htmldict.iteritems():
+            #     print key, type(value)
+
             htmltext = htmltext.format(**htmldict)
             text["html"] = htmltext
 
         else:
-            text["html"] = "<html><body><h2>{0}</h2><table border=1>{1}</table></body></html>".format(use_title, htmldata)
+            text["html"] = u"<html><body><h2>{0}</h2><table border=1>{1}</table></body></html>".format(use_title, htmldata)
 
         TextUtils.sendEmail((self.email_info["to_names"],
                              self.email_info["to_emails"]),
@@ -507,11 +521,21 @@ def get_default_resource(kind, filename):
     # If the file is in /etc/gracc-reporting/$kind, return that path
     if os.path.exists(default_path):
         print "Reading Resource from {0}".format(default_path)
-        return os.path.join(default_path, filename)
+        resfile = os.path.join(default_path, filename)
+        if os.path.exists(resfile):
+            return resfile
     # Otherwise, find the file (resource) in the package
     else:
-        return pkg_resources.resource_filename('reports',
-                                               os.path.join(kind, filename))
+        try:
+            return pkg_resources.resource_filename('reports',
+                                           os.path.join(kind, filename))
+        except KeyError as e:    # No resource of that name
+            print "The resource you're looking for, {0}, does not exist.  Either" \
+                  " override the resource (use --help on your report to see the " \
+                  "applicable option) or check how you implemented the resource" \
+                  " call in your report.".format(filename)
+            print "The error and traceback returned was: \n{0}".format(e)
+            raise
 
 
 def get_configfile(flag='osg', override=None):
@@ -528,10 +552,7 @@ def get_configfile(flag='osg', override=None):
     if override and os.path.exists(override):
         return override
 
-    if flag == 'fife':
-        f = 'fife.config'
-    else:
-        f = 'osg.config'
+    f = '{0}.config'.format(flag)
 
     return get_default_resource('config', f)
 
