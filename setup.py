@@ -21,7 +21,7 @@ setup(name='gracc-reporting',
               'osgprobereport = reports.osg_reports.ProbeReport:main',
               'osgtopoppusagereport = reports.osg_reports.TopOppUsageByFacility:main',
               'copyfiles = reports.copyfiles:main',
-              'minervareport = reports.minerva_reports.MinervaReport.py:main'
+              'minervareport = reports.minerva_report.MinervaReport:main'
             ]
       }
       )
