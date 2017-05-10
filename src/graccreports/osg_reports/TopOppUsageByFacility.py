@@ -7,11 +7,9 @@ from dateutil.relativedelta import *
 
 from elasticsearch_dsl import Search
 
-from . import Reporter, runerror, get_configfile, get_template
-from . import Configuration
-import reports.TextUtils as TextUtils
-from reports.TimeUtils import TimeUtils
-import reports.NiceNum as NiceNum
+from . import Reporter, runerror, get_configfile, get_template, Configuration
+from . import TextUtils, NiceNum
+from graccreports.TimeUtils import TimeUtils
 from NameCorrection import NameCorrection
 
 

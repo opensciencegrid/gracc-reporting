@@ -6,7 +6,6 @@ displayed in red. The information is pulled from graphite.
 
 import json
 import optparse
-# import Configuration
 import subprocess
 
 from . import Configuration
