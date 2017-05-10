@@ -185,14 +185,6 @@ class Reporter(TimeUtils):
 
             # Build the HTML file from the template
             htmldict = dict(title=use_title, header=htmlheader, table=htmldata)
-
-            # print type(htmldata)
-            # print type(htmldict['table'])
-            # print htmldata[525:527]
-            #
-            # for key, value in htmldict.iteritems():
-            #     print key, type(value)
-
             htmltext = htmltext.format(**htmldict)
             text["html"] = htmltext
 
@@ -384,9 +376,6 @@ class Reporter(TimeUtils):
             client = Elasticsearch(hostname,
                                    use_ssl=True,
                                    verify_certs=False,
-                                   # ca_certs = 'gracc_cert/lets-encrypt-x3-cross-signed.pem',
-                                   #  client_cert = 'gracc_cert/gracc-reports-dev.crt',
-                                   #  client_key = 'gracc_cert/gracc-reports-dev.key',
                                    timeout=60)
         except Exception as e:
             self.logger.exception("Couldn't initialize Elasticsearch instance."
