@@ -527,7 +527,7 @@ def get_default_resource(kind, filename):
     # Otherwise, find the file (resource) in the package
     else:
         try:
-            return pkg_resources.resource_filename('reports',
+            return pkg_resources.resource_filename('graccreports',
                                            os.path.join(kind, filename))
         except KeyError as e:    # No resource of that name
             print "The resource you're looking for, {0}, does not exist.  Either" \
