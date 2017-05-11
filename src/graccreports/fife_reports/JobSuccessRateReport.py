@@ -108,7 +108,7 @@ class JobSuccessRateReporter(Reporter):
 
         Reporter.__init__(self, report, config, start, end, verbose,
                           is_test=is_test, no_email=no_email, logfile=rlogfile,
-                          logfile_override=logfile_override)
+                          logfile_override=logfile_override, check_vo=True)
         self.template = template
         self.title = "Production Jobs Success Rate {0} - {1}".format(
             self.start_time, self.end_time)
