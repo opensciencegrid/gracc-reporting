@@ -60,7 +60,7 @@ class Reporter(TimeUtils):
 
     def __init__(self, report, config, start, end=None, verbose=False,
                  raw=True, allraw=False, template=None, is_test=False, no_email=False,
-                 title=None, logfile=None, logfile_override=False):
+                 title=None, logfile=None, logfile_override=False, check_vo=False):
 
         TimeUtils.__init__(self)
         self.header = []
@@ -80,6 +80,9 @@ class Reporter(TimeUtils):
             self.logfile = self.get_logfile_path(logfile, override=logfile_override)
         else:
             self.logfile = 'reports.log'
+
+        if check_vo:
+            self.__check_vo()
 
         self.email_info = self.__get_email_info()
         self.logger = self.__setupgenLogger()
@@ -361,6 +364,18 @@ class Reporter(TimeUtils):
         return filepath
 
     # Non-public methods
+
+    def __check_vo(self):
+        """
+        Check to see if the vo is a section in config file (as of this writing,
+        only applies to fife_reports package).  If not, raise NoSectionError
+        :return None: 
+        """
+        if self.vo and not self.config.has_section(self.vo.lower()):
+            raise NoSectionError("The VO {0} was not found in the config file."
+                            " Please review the config file to see if changes"
+                            "need to be made and try again".format(self.vo.lower()))
+        return
 
     def __establish_client(self):
         """Initialize and return the elasticsearch client

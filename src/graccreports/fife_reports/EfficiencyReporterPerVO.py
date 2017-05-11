@@ -2,6 +2,7 @@ import sys
 import traceback
 import re
 import datetime
+from ConfigParser import NoSectionError
 
 from elasticsearch_dsl import Search
 
@@ -77,7 +78,7 @@ class Efficiency(Reporter):
 
         Reporter.__init__(self, report, config, start, end, verbose=verbose,
                           logfile=rlogfile, no_email=no_email, is_test=is_test,
-                          logfile_override=logfile_override)
+                          logfile_override=logfile_override, check_vo=True)
         self.hour_limit = hour_limit
         self.eff_limit = eff_limit
         self.facility = facility
@@ -319,17 +320,22 @@ def main():
                                 deffile=default_templatefile)
 
     try:
-        # Grab VO
-        vo = args.vo
         # Grab the limits
-        repeff = config.config.get(args.vo.lower(), "efficiency")
-        min_hours = config.config.get(args.vo.lower(), "min_hours")
+        try:
+            repeff = config.config.get(args.vo.lower(), "efficiency")
+            min_hours = config.config.get(args.vo.lower(), "min_hours")
+        except NoSectionError:
+            raise NoSectionError("The VO {0} was not found in the config file."
+                            " Please review the config file to see if changes"
+                            "need to be made and try again".format(args.vo.lower()))
+        except Exception:
+            raise
 
         # Create an Efficiency object, create a report for the VO, and send it
         e = Efficiency(config,
                        args.start,
                        args.end,
-                       vo,
+                       args.vo,
                        int(min_hours),
                        float(repeff),
                        args.facility,
