@@ -8,7 +8,7 @@ from ConfigParser import NoOptionError
 from elasticsearch_dsl import Search
 
 from . import Reporter, runerror, get_configfile, get_template, Configuration
-import reports.TextUtils as TextUtils
+from . import TextUtils
 
 # Various config values and their default values
 config_vals = {'num_clusters': 100, 'jobs_per_cluster': 1e6,

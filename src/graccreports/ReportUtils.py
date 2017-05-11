@@ -185,14 +185,6 @@ class Reporter(TimeUtils):
 
             # Build the HTML file from the template
             htmldict = dict(title=use_title, header=htmlheader, table=htmldata)
-
-            # print type(htmldata)
-            # print type(htmldict['table'])
-            # print htmldata[525:527]
-            #
-            # for key, value in htmldict.iteritems():
-            #     print key, type(value)
-
             htmltext = htmltext.format(**htmldict)
             text["html"] = htmltext
 
@@ -384,9 +376,6 @@ class Reporter(TimeUtils):
             client = Elasticsearch(hostname,
                                    use_ssl=True,
                                    verify_certs=False,
-                                   # ca_certs = 'gracc_cert/lets-encrypt-x3-cross-signed.pem',
-                                   #  client_cert = 'gracc_cert/gracc-reports-dev.crt',
-                                   #  client_key = 'gracc_cert/gracc-reports-dev.key',
                                    timeout=60)
         except Exception as e:
             self.logger.exception("Couldn't initialize Elasticsearch instance."
@@ -527,7 +516,7 @@ def get_default_resource(kind, filename):
     # Otherwise, find the file (resource) in the package
     else:
         try:
-            return pkg_resources.resource_filename('reports',
+            return pkg_resources.resource_filename('graccreports',
                                            os.path.join(kind, filename))
         except KeyError as e:    # No resource of that name
             print "The resource you're looking for, {0}, does not exist.  Either" \

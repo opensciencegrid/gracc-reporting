@@ -1,4 +1,12 @@
 from setuptools import setup
+import sys
+
+# Enforce python version
+version_tuple = (2, 7)
+if sys.version_info < version_tuple:
+    print "Sorry, installing gracc-reporting requires Python {0}.{1} " \
+          "or above".format(*version_tuple)
+    exit(1)
 
 setup(name='gracc-reporting',
       version='0.4',
@@ -7,21 +15,21 @@ setup(name='gracc-reporting',
       author='Shreyas Bhat',
       url='https://github.com/opensciencegrid/gracc-reporting',
       package_dir={'': 'src'},
-      packages=['reports', 'reports.fife_reports', 'reports.osg_reports', 'reports.minerva_report'],
+      packages=['graccreports', 'graccreports.fife_reports', 'graccreports.osg_reports', 'graccreports.minerva_report'],
       include_package_data=True,
-      package_data={'reports': ['config/*.config', 'html_templates/*.html']},
+      package_data={'graccreports': ['config/*.config', 'html_templates/*.html']},
       entry_points= {
           'console_scripts': [
-              'efficiencyreport = reports.fife_reports.EfficiencyReporterPerVO:main',
-              'jobsuccessratereport = reports.fife_reports.JobSuccessRateReport:main',
-              'wastedhoursreport = reports.fife_reports.WastedHoursReport:main',
-              'osgflockingreport = reports.osg_reports.OSGFlockingReporter:main',
-              'osgreport = reports.osg_reports.OSGReporter:main',
-              'osgpersitereport = reports.osg_reports.OSGPerSiteReporter:main',
-              'osgprobereport = reports.osg_reports.ProbeReport:main',
-              'osgtopoppusagereport = reports.osg_reports.TopOppUsageByFacility:main',
-              'copyfiles = reports.copyfiles:main',
-              'minervareport = reports.minerva_report.MinervaReport:main'
+              'efficiencyreport = graccreports.fife_reports.EfficiencyReporterPerVO:main',
+              'jobsuccessratereport = graccreports.fife_reports.JobSuccessRateReport:main',
+              'wastedhoursreport = graccreports.fife_reports.WastedHoursReport:main',
+              'osgflockingreport = graccreports.osg_reports.OSGFlockingReporter:main',
+              'osgreport = graccreports.osg_reports.OSGReporter:main',
+              'osgpersitereport = graccreports.osg_reports.OSGPerSiteReporter:main',
+              'osgprobereport = graccreports.osg_reports.ProbeReport:main',
+              'osgtopoppusagereport = graccreports.osg_reports.TopOppUsageByFacility:main',
+              'copyfiles = graccreports.copyfiles:main',
+              'minervareport = graccreports.minerva_report.MinervaReport:main'
             ]
       }
       )

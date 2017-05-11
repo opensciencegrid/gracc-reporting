@@ -4,8 +4,7 @@ import traceback
 from elasticsearch_dsl import Search
 
 from . import Reporter, runerror, get_configfile, get_template, Configuration
-import reports.NiceNum as NiceNum
-import reports.TextUtils as TextUtils
+from . import TextUtils, NiceNum
 
 default_templatefile = 'template_wasted_hours.html'
 logfile = 'wastedhours.log'

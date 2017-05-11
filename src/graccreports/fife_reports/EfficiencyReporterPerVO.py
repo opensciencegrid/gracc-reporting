@@ -5,10 +5,8 @@ import datetime
 
 from elasticsearch_dsl import Search
 
-
 from . import Reporter, runerror, get_configfile, get_template, Configuration
-import reports.TextUtils as TextUtils
-import reports.NiceNum as NiceNum
+from . import TextUtils, NiceNum
 
 default_templatefile = 'template_efficiency.html'
 logfile = 'efficiencyreport.log'
