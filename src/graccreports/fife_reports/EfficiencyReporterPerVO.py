@@ -324,11 +324,10 @@ def main():
         try:
             repeff = config.config.get(args.vo.lower(), "efficiency")
             min_hours = config.config.get(args.vo.lower(), "min_hours")
-        except NoSectionError:
-            raise NoSectionError("The VO {0} was not found in the config file."
-                            " Please review the config file to see if changes"
-                            "need to be made and try again".format(args.vo.lower()))
-        except Exception:
+        except NoSectionError as err:
+            err.message += "\n The VO {0} was not found in the config file."  \
+                           " Please review the config file to see if changes" \
+                           " need to be made and try again\n".format(args.vo.lower())
             raise
 
         # Create an Efficiency object, create a report for the VO, and send it
