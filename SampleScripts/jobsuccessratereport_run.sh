@@ -24,7 +24,7 @@ fi
 
 # Set script variables
 
-VOS="UBooNE NOvA DUNE Mu2e SeaQuest"
+VOS="UBooNE NOvA DUNE Mu2e SeaQuest DarkSide"
 YESTERDAY=`date --date yesterday +"%F %T"`
 TODAY=`date +"%F %T"`
 
