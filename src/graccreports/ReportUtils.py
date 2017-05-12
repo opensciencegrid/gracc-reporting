@@ -316,7 +316,7 @@ class Reporter(TimeUtils):
             print "Writing log to {0}".format(fn)
             return fn
 
-        try_locations = ['/var/log', '/var/tmp', '/tmp']
+        try_locations = ['/var/log', os.path.expanduser('~'), '/tmp']
 
         try:
             configdir = self.config.get('defaults', 'default_logdir')
