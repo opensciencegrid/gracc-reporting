@@ -101,7 +101,7 @@ class OIMInfo(object):
             print "Writing log to {0}".format(fn)
             return fn
 
-        try_locations = ['/var/log', '/var/tmp', '/tmp']
+        try_locations = ['/var/log', os.path.expanduser('~'), '/tmp']
 
         try:
             configdir = self.config.config.get('defaults', 'default_logdir')
@@ -532,6 +532,9 @@ class ProbeReport(Reporter):
         prev_reported_recent = set()
         if os.path.exists(self.historyfile):
             for curprobe, is_recent_probe in self.getprev_reported_probes():
+                if curprobe not in missingprobes:
+                    self.newhistory.pop()   # The probe is no longer missing.  Remove it
+                    continue
                 prev_reported.add(curprobe)
                 if is_recent_probe:
                     prev_reported_recent.add(curprobe)
