@@ -6,7 +6,6 @@ import copy
 from elasticsearch_dsl import Search
 
 from . import Reporter, runerror, get_configfile, get_template, Configuration
-from MissingProject import MissingProjectReport
 
 logfile = 'osgreporter.log'
 default_templatefile = 'template_project.html'
@@ -229,14 +228,6 @@ def main():
         r.run_report()
         r.logger.info("OSG Project Report executed successfully")
 
-        m = MissingProjectReport(args.report_type,
-                                 config,
-                                 args.start,
-                                 args.end,
-                                 verbose=args.verbose,
-                                 is_test=args.is_test,
-                                 no_email=args.no_email)
-        m.run_report()
     except Exception as e:
         with open(logfile, 'a') as f:
             f.write(traceback.format_exc())

@@ -1,6 +1,6 @@
 %define name gracc-reporting
-%define version 0.4
-%define unmangled_version 0.4
+%define version 0.6
+%define unmangled_version 0.6
 %define release 1
 
 Summary: 	GRACC Email Reports
