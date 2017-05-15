@@ -349,6 +349,7 @@ def main():
                                  no_email=args.no_email,
                                  ov_logfile=args.logfile)
         r.run_report()
+        r.logger.info("OSG Missing Project Report executed successfully")
     except Exception as e:
         with open(logfile, 'a') as f:
             f.write(traceback.format_exc())
