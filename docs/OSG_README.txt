@@ -13,7 +13,7 @@ Missing Projects report:
 Note: this is now run automatically from Project report.  If you really want to
 run this stand-alone, do the following:
 
-    python build/lib/reports/osg_reports/MissingProject.py -s 2016-12-06 -e 2017-01-31 -r XD -d -n -v
+    osgmissingprojects -s 2016-12-06 -e 2017-01-31 -r XD -d -n -v
 
 OSG Usage Per Site Report:
     osgpersitereport -s 2016/10/01 -d -v -n
