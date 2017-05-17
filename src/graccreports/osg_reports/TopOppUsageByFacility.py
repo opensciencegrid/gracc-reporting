@@ -509,10 +509,7 @@ def main():
         errstring = '{0}: Error running Top Opportunistic Usage Report. ' \
                     '{1}'.format(datetime.datetime.now(),
                                  traceback.format_exc())
-        with open(logfile, 'a') as f:
-            f.write(errstring)
-        print >> sys.stderr, errstring
-        runerror(config, e, errstring)
+        runerror(config, e, errstring, logfile)
         sys.exit(1)
 
 

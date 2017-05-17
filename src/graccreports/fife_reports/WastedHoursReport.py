@@ -308,8 +308,7 @@ def main():
                                    ov_logfile=args.logfile)
         r.run_report()
     except Exception as e:
-        print >> sys.stderr, traceback.format_exc()
-        runerror(config, e, traceback.format_exc())
+        runerror(config, e, traceback.format_exc(), logfile)
         sys.exit(1)
 
     sys.exit(0)

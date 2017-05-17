@@ -2,6 +2,7 @@ import sys
 import traceback
 import re
 import datetime
+import os
 from ConfigParser import NoSectionError
 
 from elasticsearch_dsl import Search
@@ -349,11 +350,8 @@ def main():
     except Exception as e:
         errstring = '{0}: Error running Efficiency Report for {1}. ' \
                     '{2}'.format(datetime.datetime.now(), args.vo,
-                                 traceback.format_exc())
-        with open(logfile, 'a') as f:
-            f.write(errstring)
-        print >> sys.stderr, errstring
-        runerror(config, e, errstring)
+                                 e)
+        runerror(config, e, errstring, logfile)
         sys.exit(1)
     sys.exit(0)
 

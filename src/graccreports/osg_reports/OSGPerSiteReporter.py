@@ -420,10 +420,7 @@ def main():
         print 'OSG Per Site Report Execution finished'
         sys.exit(0)
     except Exception as e:
-        with open(logfile, 'a') as f:
-            f.write(traceback.format_exc())
-        print >> sys.stderr, traceback.format_exc()
-        runerror(config, e, traceback.format_exc())
+        runerror(config, e, traceback.format_exc(), logfile)
         sys.exit(1)
 
 

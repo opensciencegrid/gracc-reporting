@@ -674,10 +674,7 @@ def main():
         preport.run_report(oim_probe_fqdn_dict)
         print 'Probe Report Execution finished'
     except Exception as e:
-        with open(logfile, 'a') as f:
-            f.write(traceback.format_exc())
-        print >> sys.stderr, traceback.format_exc()
-        runerror(config, e, traceback.format_exc())
+        runerror(config, e, traceback.format_exc(), logfile)
         sys.exit(1)
 
     return

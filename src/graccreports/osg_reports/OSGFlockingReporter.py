@@ -173,10 +173,7 @@ def main():
     except Exception as e:
         errstring = '{0}: Error running OSG Flocking Report. ' \
                     '{1}'.format(datetime.datetime.now(), traceback.format_exc())
-        with open(logfile, 'a') as f:
-            f.write(errstring)
-        print >> sys.stderr, errstring
-        runerror(config, e, errstring)
+        runerror(config, e, errstring, logfile)
         sys.exit(1)
     sys.exit(0)
 

@@ -229,10 +229,7 @@ def main():
         r.logger.info("OSG Project Report executed successfully")
 
     except Exception as e:
-        with open(logfile, 'a') as f:
-            f.write(traceback.format_exc())
-        print >> sys.stderr, traceback.format_exc()
-        runerror(config, e, traceback.format_exc())
+        runerror(config, e, traceback.format_exc(), logfile)
         sys.exit(1)
     sys.exit(0)
 

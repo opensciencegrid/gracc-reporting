@@ -610,10 +610,7 @@ def main():
                     '{2}'.format(datetime.datetime.now(),
                                  args.vo,
                                  traceback.format_exc())
-        with open(logfile, 'a') as f:
-            f.write(errstring)
-        print >> sys.stderr, errstring
-        runerror(config, e, errstring)
+        runerror(config, e, errstring, logfile)
         sys.exit(1)
     sys.exit(0)
 
