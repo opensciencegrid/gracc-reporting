@@ -1,8 +1,6 @@
 import sys
-import traceback
 import re
 import datetime
-import os
 from ConfigParser import NoSectionError
 
 from elasticsearch_dsl import Search
