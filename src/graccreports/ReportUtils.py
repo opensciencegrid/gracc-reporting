@@ -481,15 +481,25 @@ class Reporter(TimeUtils):
         return logger
 
 
-def runerror(config, error, traceback):
+def runerror(config, error, traceback, logfile):
     """
-    Global method to email admins if report run errors out
+    Global function to print, log, and email errors to admins
 
     :param Configuration.Configuration config: Report config
     :param str error: Error raised
     :param str traceback: Traceback from error
+    :param str logfile: Filename of logfile
     :return None
     """
+    try:
+        with open(logfile, 'a') as f:
+            f.write(str(error))
+    except IOError: # Permission denied
+        reallogfile = os.path.join(os.path.expanduser('~'), logfile)
+        with open(reallogfile, 'a') as f:
+            f.write(str(error))
+    print >> sys.stderr, error
+
     admin_emails = re.split('[; ,]', config.config.get("email", "test_to_emails"))
     fromemail = config.config.get("email", "from_email")
 
