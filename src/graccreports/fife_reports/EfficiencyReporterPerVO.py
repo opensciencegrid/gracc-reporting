@@ -1,14 +1,12 @@
 import sys
-import traceback
 import re
 import datetime
+from ConfigParser import NoSectionError
 
 from elasticsearch_dsl import Search
 
-
 from . import Reporter, runerror, get_configfile, get_template, Configuration
-import reports.TextUtils as TextUtils
-import reports.NiceNum as NiceNum
+from . import TextUtils, NiceNum
 
 default_templatefile = 'template_efficiency.html'
 logfile = 'efficiencyreport.log'
@@ -79,7 +77,7 @@ class Efficiency(Reporter):
 
         Reporter.__init__(self, report, config, start, end, verbose=verbose,
                           logfile=rlogfile, no_email=no_email, is_test=is_test,
-                          logfile_override=logfile_override, raw=True)
+                          logfile_override=logfile_override, raw=True, check_vo=True)
         self.hour_limit = hour_limit
         self.eff_limit = eff_limit
         self.facility = facility
@@ -89,7 +87,12 @@ class Efficiency(Reporter):
         self.fn = "{0}-efficiency.{1}".format(self.vo.lower(),
                                          self.start_time.replace("/", "-"))
         self.cilogon_match = re.compile('.+CN=UID:(\w+)')
-        self.non_cilogon_match = re.compile('/CN=([\w\s]+)/?.+?')
+
+        # Patch until we get Gratia probe to report CN again
+        # self.non_cilogon_match = re.compile('/CN=([\w\s]+)/?.+?') # Original
+        self.non_cilogon_match = re.compile('.+/CN=([\w\s]+)/?.+?')
+        # End patch
+
         self.title = "{0} Users with Low Efficiency ({1}) on the OSG Sites " \
                       "({2} - {3})".format(
                                 self.vo,
@@ -142,7 +145,11 @@ class Efficiency(Reporter):
         # Bucket aggs
         Bucket = s.aggs.bucket('group_VOName', 'terms', field='ReportableVOName') \
             .bucket('group_HostDescription', 'terms', field='Host_description') \
-            .bucket('group_CommonName', 'terms', field='CommonName')
+            .bucket('group_DN', 'terms', field='DN')   # Patch while we fix gratia probes to include CommonName Field
+
+
+            # .bucket('group_CommonName', 'terms', field='CommonName')     # Original
+            # End patch
 
         # Metric aggs
         Bucket.metric('WallHours', 'sum', field='CoreHours') \
@@ -162,7 +169,14 @@ class Efficiency(Reporter):
 
         vos = (vo for vo in results.group_VOName.buckets)
         hostdesc = (hd for vo in vos for hd in vo.group_HostDescription.buckets)
-        cns = (cn for hd in hostdesc for cn in hd.group_CommonName.buckets)
+
+        # Patch while we fix gratia probes to include CommonName Field
+        # cns = (cn for hd in hostdesc for cn in hd.group_CommonName.buckets)   # Original
+
+        # Note that I'm keeping the variable cns to make the patch less involved.
+        # But it's really dns.
+        cns = (cn for hd in hostdesc for cn in hd.group_DN.buckets)
+        # End patch
 
         for cn in cns:
             if cn.WallHours.value > self.hour_limit:
@@ -305,17 +319,21 @@ def main():
                                 deffile=default_templatefile)
 
     try:
-        # Grab VO
-        vo = args.vo
         # Grab the limits
-        repeff = config.config.get(args.vo.lower(), "efficiency")
-        min_hours = config.config.get(args.vo.lower(), "min_hours")
+        try:
+            repeff = config.config.get(args.vo.lower(), "efficiency")
+            min_hours = config.config.get(args.vo.lower(), "min_hours")
+        except NoSectionError as err:
+            err.message += "\n The VO {0} was not found in the config file."  \
+                           " Please review the config file to see if changes" \
+                           " need to be made and try again\n".format(args.vo.lower())
+            raise
 
         # Create an Efficiency object, create a report for the VO, and send it
         e = Efficiency(config,
                        args.start,
                        args.end,
-                       vo,
+                       args.vo,
                        int(min_hours),
                        float(repeff),
                        args.facility,
@@ -330,11 +348,8 @@ def main():
     except Exception as e:
         errstring = '{0}: Error running Efficiency Report for {1}. ' \
                     '{2}'.format(datetime.datetime.now(), args.vo,
-                                 traceback.format_exc())
-        with open(logfile, 'a') as f:
-            f.write(errstring)
-        print >> sys.stderr, errstring
-        runerror(config, e, errstring)
+                                 e)
+        runerror(config, e, errstring, logfile)
         sys.exit(1)
     sys.exit(0)
 

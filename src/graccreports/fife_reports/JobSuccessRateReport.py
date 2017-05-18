@@ -8,7 +8,7 @@ from ConfigParser import NoOptionError
 from elasticsearch_dsl import Search
 
 from . import Reporter, runerror, get_configfile, get_template, Configuration
-import reports.TextUtils as TextUtils
+from . import TextUtils
 
 # Various config values and their default values
 config_vals = {'num_clusters': 100, 'jobs_per_cluster': 1e6,
@@ -107,14 +107,21 @@ class JobSuccessRateReporter(Reporter):
             logfile_override = False
 
         Reporter.__init__(self, report, config, start, end, verbose,
-                          raw=True, is_test=is_test, no_email=no_email, logfile=rlogfile,
-                          logfile_override=logfile_override)
+                          is_test=is_test, no_email=no_email, logfile=rlogfile,
+                          logfile_override=logfile_override, raw=True,
+                          check_vo=True)
         self.template = template
         self.title = "Production Jobs Success Rate {0} - {1}".format(
             self.start_time, self.end_time)
         self.run = Jobs()
         self.clusters = {}
         self.connectStr = None
+
+        # Patch while we fix gratia probes to include CommonName Field
+        self.dnusermatch_CILogon = re.compile('.+CN=UID:(\w+)')
+        self.dnusermatch_FNAL = None
+        # End patch
+
         self.usermatch_CILogon = re.compile('.+CN=UID:(\w+)')
         self.usermatch_FNAL = re.compile('.+/(\w+\.fnal\.gov)')
         self.globaljobparts = re.compile('\w+\.(fifebatch\d\.fnal\.gov)#(\d+\.\d+)#.+')
@@ -156,7 +163,7 @@ class JobSuccessRateReporter(Reporter):
             .filter("range", EndTime={"gte": starttimeq, "lt": endtimeq}) \
             .filter("term", ResourceType="Payload")
 
-        if self.vo in re.split(',', self.config.get('noproduction', 'list')):
+        if self.vo.lower() in re.split(',', self.config.get('noproduction', 'list')):
             s = s.filter("wildcard", VOName=voq)
         else:
             s = s.filter("wildcard", VOName=productioncheck)\
@@ -222,16 +229,34 @@ class JobSuccessRateReporter(Reporter):
                     # Grabs the first parenthesized subgroup in the
                     # hit['CommonName'] string, where that subgroup comes
                     # after "CN=UID:"
-                    userid = self.usermatch_CILogon.match(hit['CommonName']).\
+
+                    # Patch while we fix gratia probes to include CommonName Field
+                    userid = self.usermatch_CILogon.match(hit['DN']).\
                         group(1)
+                    # userid = self.usermatch_CILogon.match(hit['CommonName']).\
+                    #     group(1)    # Original
+                    # End patch
+
                 except AttributeError:
                     # If this doesn't match CILogon standard, see if it
                     # matches *.fnal.gov string at the end.  If so,
                     # it's a managed proxy most likely, so give the localuserid
-                    if self.usermatch_FNAL.match(hit['CommonName']) and 'LocalUserId' in hit:
+
+                    # Patch while we fix gratia probes to include CommonName Field
+                    if self.usermatch_FNAL.match(hit['DN']) and 'LocalUserId' in hit:
                             userid = hit['LocalUserId']
                     else:
-                        userid = hit['CommonName']  # Just print the CN string, move on
+                        userid = hit['DN']  # Just print the CN string, move on
+
+                    # # Original
+                    # if self.usermatch_FNAL.match(
+                    #         hit['CommonName']) and 'LocalUserId' in hit:
+                    #     userid = hit['LocalUserId']
+                    # else:
+                    #     userid = hit[
+                    #         'CommonName']  # Just print the CN string, move on
+                    # End patch
+
                 # Parse jobid
                 try:
                     # Parse the GlobalJobId string to grab the cluster number and schedd
@@ -586,10 +611,7 @@ def main():
                     '{2}'.format(datetime.datetime.now(),
                                  args.vo,
                                  traceback.format_exc())
-        with open(logfile, 'a') as f:
-            f.write(errstring)
-        print >> sys.stderr, errstring
-        runerror(config, e, errstring)
+        runerror(config, e, errstring, logfile)
         sys.exit(1)
     sys.exit(0)
 

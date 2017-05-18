@@ -60,7 +60,7 @@ class Reporter(TimeUtils):
 
     def __init__(self, report, config, start, end=None, verbose=False,
                  raw=False, allraw=False, template=None, is_test=False, no_email=False,
-                 title=None, logfile=None, logfile_override=False):
+                 title=None, logfile=None, logfile_override=False, check_vo=False):
 
         TimeUtils.__init__(self)
         self.header = []
@@ -80,6 +80,9 @@ class Reporter(TimeUtils):
             self.logfile = self.get_logfile_path(logfile, override=logfile_override)
         else:
             self.logfile = 'reports.log'
+
+        if check_vo:
+            self.__check_vo()
 
         self.email_info = self.__get_email_info()
         self.logger = self.__setupgenLogger()
@@ -160,6 +163,8 @@ class Reporter(TimeUtils):
         else:
             use_title = "GRACC Report"
 
+        use_title = unicode(use_title, 'utf-8')
+
         if self.test_no_email(self.email_info["to_emails"]):
             return
 
@@ -170,12 +175,12 @@ class Reporter(TimeUtils):
                                                 template=self.template)
 
         if self.header:
-            htmlheader = "\n".join(['<th>{0}</th>'.format(headerelt)
-                                    for headerelt in self.header])
+            htmlheader = unicode("\n".join(['<th>{0}</th>'.format(headerelt)
+                                    for headerelt in self.header]), 'utf-8')
 
         if self.template:
             with open(self.template, 'r') as t:
-                htmltext = "".join(t.readlines())
+                htmltext = unicode("".join(t.readlines()), 'utf-8')
 
             # Build the HTML file from the template
             htmldict = dict(title=use_title, header=htmlheader, table=htmldata)
@@ -183,7 +188,7 @@ class Reporter(TimeUtils):
             text["html"] = htmltext
 
         else:
-            text["html"] = "<html><body><h2>{0}</h2><table border=1>{1}</table></body></html>".format(use_title, htmldata)
+            text["html"] = u"<html><body><h2>{0}</h2><table border=1>{1}</table></body></html>".format(use_title, htmldata)
 
         TextUtils.sendEmail((self.email_info["to_names"],
                              self.email_info["to_emails"]),
@@ -307,7 +312,7 @@ class Reporter(TimeUtils):
             print "Writing log to {0}".format(fn)
             return fn
 
-        try_locations = ['/var/log', '/var/tmp', '/tmp']
+        try_locations = ['/var/log', os.path.expanduser('~'), '/tmp']
 
         try:
             configdir = self.config.get('defaults', 'default_logdir')
@@ -356,6 +361,18 @@ class Reporter(TimeUtils):
 
     # Non-public methods
 
+    def __check_vo(self):
+        """
+        Check to see if the vo is a section in config file (as of this writing,
+        only applies to fife_reports package).  If not, raise NoSectionError
+        :return None: 
+        """
+        if self.vo and not self.config.has_section(self.vo.lower()):
+            raise NoSectionError("The VO {0} was not found in the config file."
+                            " Please review the config file to see if changes"
+                            "need to be made and try again".format(self.vo.lower()))
+        return
+
     def __establish_client(self):
         """Initialize and return the elasticsearch client
 
@@ -370,9 +387,6 @@ class Reporter(TimeUtils):
             client = Elasticsearch(hostname,
                                    use_ssl=True,
                                    verify_certs=False,
-                                   # ca_certs = 'gracc_cert/lets-encrypt-x3-cross-signed.pem',
-                                   #  client_cert = 'gracc_cert/gracc-reports-dev.crt',
-                                   #  client_key = 'gracc_cert/gracc-reports-dev.key',
                                    timeout=60)
         except Exception as e:
             self.logger.exception("Couldn't initialize Elasticsearch instance."
@@ -463,15 +477,25 @@ class Reporter(TimeUtils):
         return logger
 
 
-def runerror(config, error, traceback):
+def runerror(config, error, traceback, logfile):
     """
-    Global method to email admins if report run errors out
+    Global function to print, log, and email errors to admins
 
     :param Configuration.Configuration config: Report config
     :param str error: Error raised
     :param str traceback: Traceback from error
+    :param str logfile: Filename of logfile
     :return None
     """
+    try:
+        with open(logfile, 'a') as f:
+            f.write(str(error))
+    except IOError: # Permission denied
+        reallogfile = os.path.join(os.path.expanduser('~'), logfile)
+        with open(reallogfile, 'a') as f:
+            f.write(str(error))
+    print >> sys.stderr, error
+
     admin_emails = re.split('[; ,]', config.config.get("email", "test_to_emails"))
     fromemail = config.config.get("email", "from_email")
 
@@ -507,11 +531,21 @@ def get_default_resource(kind, filename):
     # If the file is in /etc/gracc-reporting/$kind, return that path
     if os.path.exists(default_path):
         print "Reading Resource from {0}".format(default_path)
-        return os.path.join(default_path, filename)
+        resfile = os.path.join(default_path, filename)
+        if os.path.exists(resfile):
+            return resfile
     # Otherwise, find the file (resource) in the package
     else:
-        return pkg_resources.resource_filename('reports',
-                                               os.path.join(kind, filename))
+        try:
+            return pkg_resources.resource_filename('graccreports',
+                                           os.path.join(kind, filename))
+        except KeyError as e:    # No resource of that name
+            print "The resource you're looking for, {0}, does not exist.  Either" \
+                  " override the resource (use --help on your report to see the " \
+                  "applicable option) or check how you implemented the resource" \
+                  " call in your report.".format(filename)
+            print "The error and traceback returned was: \n{0}".format(e)
+            raise
 
 
 def get_configfile(flag='osg', override=None):
@@ -528,10 +562,7 @@ def get_configfile(flag='osg', override=None):
     if override and os.path.exists(override):
         return override
 
-    if flag == 'fife':
-        f = 'fife.config'
-    else:
-        f = 'osg.config'
+    f = '{0}.config'.format(flag)
 
     return get_default_resource('config', f)
 

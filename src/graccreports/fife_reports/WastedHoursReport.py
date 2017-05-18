@@ -4,8 +4,7 @@ import traceback
 from elasticsearch_dsl import Search
 
 from . import Reporter, runerror, get_configfile, get_template, Configuration
-import reports.NiceNum as NiceNum
-import reports.TextUtils as TextUtils
+from . import TextUtils, NiceNum
 
 default_templatefile = 'template_wasted_hours.html'
 logfile = 'wastedhours.log'
@@ -309,8 +308,7 @@ def main():
                                    ov_logfile=args.logfile)
         r.run_report()
     except Exception as e:
-        print >> sys.stderr, traceback.format_exc()
-        runerror(config, e, traceback.format_exc())
+        runerror(config, e, traceback.format_exc(), logfile)
         sys.exit(1)
 
     sys.exit(0)

@@ -6,7 +6,6 @@ import copy
 from elasticsearch_dsl import Search
 
 from . import Reporter, runerror, get_configfile, get_template, Configuration
-from MissingProject import MissingProjectReport
 
 logfile = 'osgreporter.log'
 default_templatefile = 'template_project.html'
@@ -73,7 +72,7 @@ class OSGReporter(Reporter):
 
         probes = [rawprobe.strip("'") for rawprobe in
                   re.split(",", self.config.get(
-                               "query",
+                               "project",
                                "{0}_probe_list".format(self.report_type)))]
 
         if self.verbose:
@@ -147,8 +146,10 @@ class OSGReporter(Reporter):
         allterms = copy.copy(unique_terms)
         allterms.extend(metrics)
 
+        print data
         for entry in data:
             yield [entry[field] for field in allterms]
+
 
     def format_report(self):
         """Report formatter.  Returns a dictionary called report containing the
@@ -163,7 +164,7 @@ class OSGReporter(Reporter):
 
         for result_list in self.generate_report_file():
             if self.verbose:
-                print "{0}\t{1}\t{2}\t{3}\t{4}".format(*result_list)
+                print u"{0}\t{1}\t{2}\t{3}\t{4}".format(*result_list)
             mapdict = dict(zip(self.header, result_list))
             for key, item in mapdict.iteritems():
                 report[key].append(item)
@@ -227,19 +228,8 @@ def main():
         r.run_report()
         r.logger.info("OSG Project Report executed successfully")
 
-        m = MissingProjectReport(args.report_type,
-                                 config,
-                                 args.start,
-                                 args.end,
-                                 verbose=args.verbose,
-                                 is_test=args.is_test,
-                                 no_email=args.no_email)
-        m.run_report()
     except Exception as e:
-        with open(logfile, 'a') as f:
-            f.write(traceback.format_exc())
-        print >> sys.stderr, traceback.format_exc()
-        runerror(config, e, traceback.format_exc())
+        runerror(config, e, traceback.format_exc(), logfile)
         sys.exit(1)
     sys.exit(0)
 

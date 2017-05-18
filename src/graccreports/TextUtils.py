@@ -8,7 +8,11 @@ from email.MIMEImage import MIMEImage
 from email.MIMEMultipart import MIMEMultipart
 from email.MIMEBase import MIMEBase
 from email.Utils import formataddr
+from email.header import Header
 from email.quopriMIME import encode
+from email import Charset
+from cStringIO import StringIO
+from email.generator import Generator
 import smtplib
 
 import NiceNum
@@ -136,7 +140,9 @@ def sendEmail(toList, subject, content, fromEmail=None, smtpServerHost=None, htm
     smtpServerHost(str) - smtpHost
     """
 
-    if (toList[1] == None):
+    Charset.add_charset('utf-8', Charset.QP, Charset.QP, 'utf-8')
+
+    if toList[1] is None:
         print >> sys.stderr, "Cannot send mail (no To: specified)!"
         sys.exit(1)
 
@@ -148,9 +154,9 @@ def sendEmail(toList, subject, content, fromEmail=None, smtpServerHost=None, htm
     # new code
     msgText1 = msgText2 = None
     if content.has_key("text"):
-        msgText1 = MIMEText("<pre>" + content["text"] + "</pre>", "html")
-        msgText2 = MIMEText(content["text"])
-    msgHtml = MIMEText(content["html"], "html")
+        msgText1 = MIMEText(u"<pre>" + content["text"] + u"</pre>", "html", 'utf-8')
+        msgText2 = MIMEText(content["text"], 'plain', 'utf-8')
+    msgHtml = MIMEText(content["html"], "html", 'utf-8')
     msg1.attach(msgHtml)
     if content.has_key("text"):
         msg1.attach(msgText2)
@@ -159,23 +165,25 @@ def sendEmail(toList, subject, content, fromEmail=None, smtpServerHost=None, htm
     if html_template:
         attachment_html = content["html"]
     else:
-        attachment_html = "<html><head><title>%s</title></head><body>%s</body>" \
-                      "</html>" % (subject, content["html"])
-    part = MIMEBase('text', "html")
-    part.set_payload(attachment_html)
+        attachment_html = u"<html><head><title>%s</title></head><body>%s</body>" \
+                      u"</html>" % (subject, content["html"])
+    part = MIMEBase('text', "html", charset='utf-8')
+    part.set_payload(attachment_html, 'utf-8')
     part.add_header('Content-Disposition', \
                     'attachment; filename="report_%s.html"' % datetime.datetime.now(). \
-                    strftime('%Y_%m_%d'))
+                    strftime('%Y_%m_%d'), charset='utf-8')
     msg.attach(part)
     if content.has_key("csv"):
         attachment_csv = content["csv"]
-        part = MIMEBase('text', "csv")
-        part.set_payload(attachment_csv)
+        part = MIMEBase('text', "csv", charset='utf-8')
+        part.set_payload(attachment_csv, 'utf-8')
         part.add_header('Content-Disposition', \
                         'attachment; filename="report_%s.csv"' % datetime.datetime.now(). \
-                        strftime('%Y_%m_%d'))
+                        strftime('%Y_%m_%d'), charset='utf-8')
         msg.attach(part)
+
     msg = msg.as_string()
+
     if len(toList[1]) != 0:
         server = smtplib.SMTP(smtpServerHost)
         server.sendmail(fromEmail[1], toList[1], msg)

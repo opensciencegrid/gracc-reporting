@@ -7,11 +7,9 @@ from dateutil.relativedelta import *
 
 from elasticsearch_dsl import Search
 
-from . import Reporter, runerror, get_configfile, get_template
-from . import Configuration
-import reports.TextUtils as TextUtils
-from reports.TimeUtils import TimeUtils
-import reports.NiceNum as NiceNum
+from . import Reporter, runerror, get_configfile, get_template, Configuration
+from . import TextUtils, NiceNum
+from graccreports.TimeUtils import TimeUtils
 from NameCorrection import NameCorrection
 
 
@@ -197,7 +195,7 @@ class TopOppUsageByFacility(Reporter):
 
         :return list: List of OSG Flocking probes
         """
-        probes = self.config.get('query', 'OSG_flocking_probe_list')
+        probes = self.config.get(self.report_type.lower(), 'OSG_flocking_probe_list')
         return [elt.strip("'") for elt in re.split(',', probes)]
 
     def run_report(self):
@@ -511,10 +509,7 @@ def main():
         errstring = '{0}: Error running Top Opportunistic Usage Report. ' \
                     '{1}'.format(datetime.datetime.now(),
                                  traceback.format_exc())
-        with open(logfile, 'a') as f:
-            f.write(errstring)
-        print >> sys.stderr, errstring
-        runerror(config, e, errstring)
+        runerror(config, e, errstring, logfile)
         sys.exit(1)
 
 

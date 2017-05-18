@@ -73,7 +73,7 @@ class MissingProjectReport(Reporter):
         endtimeq = self.dateparse_to_iso(self.end_time)
 
         probes = [_.strip("'") for _ in re.split(",", self.config.get(
-            "query", "{0}_probe_list".format(self.report_type)))]
+            "project", "{0}_probe_list".format(self.report_type)))]
 
         if self.verbose:
             print probes
@@ -157,7 +157,6 @@ class MissingProjectReport(Reporter):
                       (self.fxdadminname, True)):
             if os.path.exists(group[0]):
                 self.send_email(xd_admins=group[1])
-                self.logger.info("Sent email from file {0}".format(group[0]))
                 os.unlink(group[0])
 
     def _check_osg_or_osg_connect(self, data):
@@ -262,14 +261,15 @@ class MissingProjectReport(Reporter):
         COMMASPACE = ', '
 
         if xd_admins:
-            self.email_info["to_emails"] = \
-                self.config.get('email', 'xd_admins_to_emails').split(
-                    ',')
-            self.email_info["to_names"] = \
-                self.config.get('email', 'xd_admins_to_names').split(',')
+            if not self.is_test:
+                self.email_info["to_emails"] = \
+                    self.config.get('email', 'xd_admins_to_emails').split(
+                        ',')
+                self.email_info["to_names"] = \
+                    self.config.get('email', 'xd_admins_to_names').split(',')
+                self.logger.info("xd_admins flag is True.  Sending email to "
+                                 "xd_admins")
             fname = self.fxdadminname
-            self.logger.info("xd_admins flag is True.  Sending email to "
-                             "xd_admins")
         else:
             fname = self.fname
 
@@ -306,6 +306,8 @@ class MissingProjectReport(Reporter):
                 self.email_info['to_emails'],
                 msg.as_string())
             smtpObj.quit()
+            self.logger.info("Sent email from file {0} to recipients {1}"
+                             .format(fname, self.email_info['to_emails']))
         except Exception as e:
             self.logger.exception("Error:  unable to send email.\n{0}\n".format(e))
             raise
@@ -347,11 +349,9 @@ def main():
                                  no_email=args.no_email,
                                  ov_logfile=args.logfile)
         r.run_report()
+        r.logger.info("OSG Missing Project Report executed successfully")
     except Exception as e:
-        with open(logfile, 'a') as f:
-            f.write(traceback.format_exc())
-        print >> sys.stderr, traceback.format_exc()
-        runerror(config, e, traceback.format_exc())
+        runerror(config, e, traceback.format_exc(), logfile)
         sys.exit(1)
     sys.exit(0)
 
