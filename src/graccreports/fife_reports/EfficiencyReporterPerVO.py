@@ -303,7 +303,8 @@ class Efficiency(Reporter):
                              self.email_info["from_email"]),
                             self.email_info["smtphost"])
 
-        self.logger.info("Report sent for {0}".format(self.vo))
+        self.logger.info("Report sent for {0} to {1}".format(self.vo,
+                                                             ", ".join(self.email_info["to_emails"])))
 
         return
 

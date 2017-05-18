@@ -615,7 +615,7 @@ class ProbeReport(Reporter):
             smtpObj = smtplib.SMTP(self.email_info["smtphost"])
             smtpObj.sendmail(emailfrom, emailsto, msg.as_string())
             smtpObj.quit()
-            self.logger.info("Sent Email for {0}".format(self.resource))
+            self.logger.info("Sent Email for {0} to {1}".format(self.resource, ', '.join(emailsto)))
             os.unlink(self.emailfile)
         except Exception as e:
             self.logger.exception("Error:  unable to send email.\n{0}\n".format(e))

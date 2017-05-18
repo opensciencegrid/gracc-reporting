@@ -475,7 +475,7 @@ class TopOppUsageByFacility(Reporter):
                              self.email_info["from_email"]),
                             self.email_info["smtphost"])
 
-        self.logger.info("Report sent")
+        self.logger.info("Sent reports to {0}".format(", ".join(self.email_info["to_emails"])))
 
         return
 
