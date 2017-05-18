@@ -225,7 +225,7 @@ class Reporter(TimeUtils):
             return parser.parse_args()
         return wrapper
 
-    def indexpattern_generate(self, raw=True, allraw=False):
+    def indexpattern_generate(self, raw=False, allraw=False):
         """Returns the Elasticsearch index pattern based on the class
         variables of start time and end time, and the flags raw and allraw.
         Note that this doesn't inherit raw and allraw from the instance

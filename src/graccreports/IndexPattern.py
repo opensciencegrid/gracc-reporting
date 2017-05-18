@@ -2,7 +2,7 @@
 
 from TimeUtils import TimeUtils
 
-def indexpattern_generate(start, end, raw=True, allraw=False):
+def indexpattern_generate(start, end, raw=False, allraw=False):
     """Function to return the proper index pattern for queries to elasticsearch on gracc.opensciencegrid.org.  This improves performance by not just using a general index pattern unless absolutely necessary.
     This will especially help with reports, for example.
 
