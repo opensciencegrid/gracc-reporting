@@ -28,11 +28,11 @@ Gratia Probes that haven't reported in the past two days:
     osgprobereport -d -n -v
 ```
 Top [N] Providers of Opportunistic Hours on the OSG (News Report):
-    Monthly:
-    ```
+Monthly:
+```
         osgtopoppusagereport -m 2 -N 20 -d -v -n
-        ```
-    Absolute dates:
     ```
+Absolute dates:
+```
         osgtopoppusagereport -s "2016-12-01" -e "2017-02-01" -N 20 -d -v -n
     ```
