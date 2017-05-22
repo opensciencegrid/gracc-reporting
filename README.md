@@ -29,22 +29,22 @@ To set up gracc-reporting within a virtual environment:
 Make sure you have the latest version of [pip](https://pip.pypa.io/en/stable/installing/#do-i-need-to-install-pip)
 
 Then:
-Make sure pip is up to date::
+Make sure pip is up to date:
 ```
    pip install -U pip
 ```
-Install virtualenv if you haven't already::
+Install virtualenv if you haven't already:
 ```
    pip install virtualenv
 ```
-The first time you do this::
+The first time you do this:
 ```
    virtualenv gracc_venv                # Or whatever other name you want to give your virtualenv instance
    source gracc_venv/bin/activate       # Activate the virtualenv
    pip install -r requirements.txt      # Install the package requirements
    python setup.py install              # Install gracc-reports
 ```
-Then, to access this sandbox later, go to the dir with gracc_venv in it, and::
+Then, to access this sandbox later, go to the dir with gracc_venv in it, and:
 ```
    source gracc_venv/bin/activate
 ```
@@ -53,21 +53,8 @@ then if you have virtualenv, activate it and then upgrade pip and install the
 requirements.
 
 
-
-# Automating virtual env to run reports on cron jobs
-
-If you want to automate this, you can do something like the following:
-
-#!/bin/sh
-
-cd ~/gracc-reporting/
-source gracc_venv/bin/activate
-
-<report executable> <params>
-
-Some examples of this are in the top level [SampleScripts](https://github.com/shreyb/gracc-reporting/tree/master/SampleScripts) directory.
-
-# Configuration files
+Configuration Files
+===================
 
 The configuration files are located within this package by default, keeping
 in line with the python setuptools convention.  The reports will automatically
@@ -81,11 +68,14 @@ reports will try to look there and in the package.
 You can also specify non-standard (not in /etc/gracc-reporting or within the
 package) locations for the config and template files by passing those in with the
 -c and -T flags respectively.  For example, you could run:
+```
+   osgtopoppusagereport -m 2 -N 20 -c /path/to/config/file.config -T /path/to/html/template.html
+```
 
-osgtopoppusagereport -m 2 -N 20 -c /path/to/config/file.config -T /path/to/html/template.html
+Running Specific Reports
+========================
 
-# Running specific reports
 For examples of how to run specific reports, see the FIFE_README.txt or OSG_README.txt
 files in the docs directory.
 
-
+Some examples of scripts that run reports automatically within virtualenvs are in the [SampleScripts](https://github.com/shreyb/gracc-reporting/tree/master/SampleScripts) directory.
