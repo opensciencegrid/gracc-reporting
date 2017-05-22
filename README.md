@@ -1,8 +1,6 @@
 What is this package?
 =====================
 
-Testing link to (/gracc-reporting/tree/master/SampleScripts)
-
 *gracc-reports* is a set of reports that collect and present data from
 the Open Science Grid accounting system GRACC.  It is meant to replace the old 
 GRATIA reports.
@@ -67,7 +65,7 @@ source gracc_venv/bin/activate
 
 <report executable> <params>
 
-Some examples of this are in the top level SampleScripts directory.
+Some examples of this are in the top level [SampleScripts](https://github.com/shreyb/gracc-reporting/tree/master/SampleScripts) directory.
 
 # Configuration files
 
