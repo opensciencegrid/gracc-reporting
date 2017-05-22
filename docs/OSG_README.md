@@ -1,4 +1,5 @@
 OSG Reports
+============
 
 For each report, you can specify a non-standard location for the config file with -c, or for a template file with -T.  The defaults are in src/reports/config and src/reports/html_templates.
 The -d, -n, and -v flags are, respectively, dryrun (test), no email, and verbose.
