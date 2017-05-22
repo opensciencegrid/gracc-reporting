@@ -1,54 +1,57 @@
-# Will update this to use reST or something like that
+What is this package?
+=====================
 
-# What is this package?
-gracc-reports is a set of reports that collect and present data from
-the Open Science Grid accounting system GRACC.  It is meant to replace the old
+*gracc-reports* is a set of reports that collect and present data from
+the Open Science Grid accounting system GRACC.  It is meant to replace the old 
 GRATIA reports.
 
 The reports are as follows (with the corresponding executables following them):
 
 FIFE Reports (Fermilab, in the fife_reports subpackage):
-    Job Success Rate Report (jobsuccessratereport)
-    User Efficiency Report (efficiencyreport)
-    Wasted Hours by User Report (wastedhoursreport)
+   - Job Success Rate Report (jobsuccessratereport)
+   - User Efficiency Report (efficiencyreport)
+   - Wasted Hours by User Report (wastedhoursreport)
 
 General OSG Reports (osg_reports subpackage):
-    OSG Flocking Report (osgflockingreport)
-    OSG Project Usage Report (osgreport)
-    OSG Usage Per Site Report (osgpersitereport)
-    Top [N] Providers of Opportunistic Hours on the OSG (News Report) (osgtopoppusagereport)
-    Gratia Probes that haven't reported in the past two days (osgprobereport)
+   - OSG Flocking Report (osgflockingreport)
+   - OSG Project Usage Report (osgreport)
+   - OSG Missing Projects from Records report (osgmissingprojects)
+   - OSG Usage Per Site Report (osgpersitereport)
+   - Top [N] Providers of Opportunistic Hours on the OSG (News Report) (osgtopoppusagereport)
+   - Gratia Probes that haven't reported in the past two days (osgprobereport)
 
 
-# Installation
+Installation
+============
+
 To set up gracc-reporting within a virtual environment:
 
-Make sure you have the latest version of pip
-
-https://pip.pypa.io/en/stable/installing/#do-i-need-to-install-pip
+Make sure you have the latest version of [pip](https://pip.pypa.io/en/stable/installing/#do-i-need-to-install-pip)
 
 Then:
-Upgrade Pip:
-pip install -U pip
-
-Install virtualenv:
-pip install virtualenv
-
-The first time you do this:
-
-virtualenv gracc_venv   # Or whatever other name you want to give your virtualenv instance
-source gracc_venv/bin/activate
-pip install -r requirements.txt
-python setup.py install
-
-
-Then, to access this sandbox later, go to the dir with gracc_venv in it, and:
-
-source gracc_venv/bin/activate
-
+Make sure pip is up to date::
+```
+   pip install -U pip
+```
+Install virtualenv if you haven't already::
+```
+   pip install virtualenv
+```
+The first time you do this::
+```
+   virtualenv gracc_venv                # Or whatever other name you want to give your virtualenv instance
+   source gracc_venv/bin/activate       # Activate the virtualenv
+   pip install -r requirements.txt      # Install the package requirements
+   python setup.py install              # Install gracc-reports
+```
+Then, to access this sandbox later, go to the dir with gracc_venv in it, and::
+```
+   source gracc_venv/bin/activate
+```
 and do whatever you need!  If you can't run pip installs on your machine,
-then if you have virtualenv, activate it and then upgrade pip and install the
+then if you have virtualenv, activate it and then upgrade pip and install the 
 requirements.
+
 
 
 # Automating virtual env to run reports on cron jobs
