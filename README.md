@@ -76,6 +76,6 @@ Running Specific Reports
 ========================
 
 For examples of how to run specific reports, see the FIFE_README.txt or OSG_README.txt
-files in the docs directory.
+files in the [docs]((https://github.com/shreyb/gracc-reporting/tree/master/docs) directory.
 
 Some examples of scripts that run reports automatically within virtualenvs are in the [SampleScripts](https://github.com/shreyb/gracc-reporting/tree/master/SampleScripts) directory.
