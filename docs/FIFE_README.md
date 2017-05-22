@@ -1,7 +1,7 @@
 FIFE Reports
 =====================================
 
-For each report, you can specify a non-standard location for the config file with -c, or for a template file with -T.  The defaults are in src/reports/config and src/reports/html_templates.
+For each report, you can specify a non-standard location for the config file with -c, or for a template file with -T.  The defaults are in [src/graccreports/config](https://github.com/shreyb/gracc-reporting/tree/master/src/graccreports/config) and [src/graccreports/html_templates](https://github.com/shreyb/gracc-reporting/tree/master/src/graccreports/html_templates).
 The -d, -n, and -v flags are, respectively, dryrun (test), no email, and verbose.
 
 Examples:
