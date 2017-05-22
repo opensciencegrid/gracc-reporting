@@ -47,7 +47,7 @@ install -m 0744 $RPM_BUILD_ROOT/%{python2_sitelib}/graccreports/html_templates/*
 
 # Install doc files to /usr/share/doc/graccreports
 install -d -m 0755 $RPM_BUILD_ROOT/%{_defaultdocdir}/graccreports/
-install -m 0744 docs/*.txt $RPM_BUILD_ROOT/%{_defaultdocdir}/graccreports/
+install -m 0744 docs/*.md $RPM_BUILD_ROOT/%{_defaultdocdir}/graccreports/
 
 
 %files
