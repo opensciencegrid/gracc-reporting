@@ -26,7 +26,7 @@ Installation
 
 To set up gracc-reporting within a virtual environment:
 
-Make sure you have the latest version of [pip](https://pip.pypa.io/en/stable/installing/#do-i-need-to-install-pip)
+Make sure you have the latest version of [pip.](https://pip.pypa.io/en/stable/installing/#do-i-need-to-install-pip)
 
 Then:
 Make sure pip is up to date:
