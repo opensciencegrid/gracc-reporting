@@ -28,6 +28,7 @@ Examples:
     osgprobereport -d -n -v
 ```
 **Top [N] Providers of Opportunistic Hours on the OSG (News Report):**
+
 Monthly:
 ```
     osgtopoppusagereport -m 2 -N 20 -d -v -n
