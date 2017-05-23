@@ -75,6 +75,13 @@ class Efficiency(Reporter):
             rlogfile = logfile
             logfile_override = False
 
+        self.title = "{0} Users with Low Efficiency ({1}) on the OSG Sites " \
+                      "({2} - {3})".format(
+                                self.vo,
+                                eff_limit,
+                                start,
+                                end)
+
         Reporter.__init__(self, report, config, start, end, verbose=verbose,
                           logfile=rlogfile, no_email=no_email, is_test=is_test,
                           logfile_override=logfile_override, raw=True, check_vo=True)
@@ -84,21 +91,12 @@ class Efficiency(Reporter):
         self.template = template
         self.text = ''
         self.table = ''
-        self.fn = "{0}-efficiency.{1}".format(self.vo.lower(),
-                                         self.start_time.replace("/", "-"))
         self.cilogon_match = re.compile('.+CN=UID:(\w+)')
 
         # Patch until we get Gratia probe to report CN again
         # self.non_cilogon_match = re.compile('/CN=([\w\s]+)/?.+?') # Original
         self.non_cilogon_match = re.compile('.+/CN=([\w\s]+)/?.+?')
         # End patch
-
-        self.title = "{0} Users with Low Efficiency ({1}) on the OSG Sites " \
-                      "({2} - {3})".format(
-                                self.vo,
-                                self.eff_limit,
-                                self.start_time,
-                                self.end_time)
 
     def run_report(self):
         """Handles the data flow throughout the report generation.  Generates
@@ -124,8 +122,8 @@ class Efficiency(Reporter):
         :return elasticsearch_dsl.Search: Search object containing ES query
         """
         # Gather parameters, format them for the query
-        starttimeq = self.dateparse_to_iso(self.start_time)
-        endtimeq = self.dateparse_to_iso(self.end_time)
+        starttimeq = self.start_time.isoformat()
+        endtimeq = self.end_time.isoformat()
         wildcardVOq = '*' + self.vo.lower() + '*'
         wildcardProbeNameq = 'condor:fifebatch?.fnal.gov'
 
