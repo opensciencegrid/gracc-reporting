@@ -118,6 +118,9 @@ class WastedHoursReport(Reporter):
             rlogfile = logfile
             logfile_override = False
 
+        self.title = "{0:s} Wasted Hours on GPGrid ({1:s} - {2:s})"\
+                            .format("FIFE", start, end)
+
         Reporter.__init__(self, report, config, start, end=end,
                           verbose=verbose, is_test=is_test,
                           no_email=no_email, logfile=rlogfile,
@@ -126,8 +129,6 @@ class WastedHoursReport(Reporter):
         self.experiments = {}
         self.connect_str = None
         self.text = ''
-        self.title = "{0:s} Wasted Hours on GPGrid ({1:s} - {2:s})"\
-                            .format("FIFE", self.start_time, self.end_time)
 
     def run_report(self):
         """Higher-level method to run all the other methods in report
@@ -145,8 +146,8 @@ class WastedHoursReport(Reporter):
         """
         wildcardProbeNameq = 'condor:fifebatch?.fnal.gov'
 
-        starttimeq = self.dateparse_to_iso(self.start_time)
-        endtimeq = self.dateparse_to_iso(self.end_time)
+        starttimeq = self.start_time.isoformat()
+        endtimeq = self.end_time.isoformat()
 
         s = Search(using=self.client, index=self.indexpattern) \
             .filter("wildcard", ProbeName=wildcardProbeNameq) \
