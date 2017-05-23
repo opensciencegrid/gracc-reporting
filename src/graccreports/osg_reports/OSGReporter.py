@@ -67,8 +67,8 @@ class OSGReporter(Reporter):
         :return elasticsearch_dsl.Search: Search object containing ES query
         """
         # Gather parameters, format them for the query
-        starttimeq = self.dateparse_to_iso(self.start_time)
-        endtimeq = self.dateparse_to_iso(self.end_time)
+        starttimeq = self.start_time.isoformat()
+        endtimeq = self.end_time.isoformat()
 
         probes = [rawprobe.strip("'") for rawprobe in
                   re.split(",", self.config.get(
@@ -150,7 +150,6 @@ class OSGReporter(Reporter):
         for entry in data:
             yield [entry[field] for field in allterms]
 
-
     def format_report(self):
         """Report formatter.  Returns a dictionary called report containing the
         columns of the report.
@@ -195,9 +194,11 @@ class OSGReporter(Reporter):
         """
         validtypes = {"OSG": "OSG-Direct", "XD": "OSG-XD",
                       "OSG-Connect": "OSG-Connect"}
+        fmt = "%Y-%m-%d %H:%M"
         if report_type in validtypes:
             self.title = "{0} Project Report for {1} - {2}".format(
-                validtypes[report_type], self.start_time, self.end_time)
+                validtypes[report_type], self.start_time.strftime(fmt),
+                self.end_time.strftime(fmt))
             return report_type
         else:
             raise Exception("Must use report type {0}".format(
