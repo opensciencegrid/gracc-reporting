@@ -66,8 +66,8 @@ class Reporter(TimeUtils):
         self.header = []
         if config:
             self.config = config.config
-        self.start_time = start
-        self.end_time = end
+        self.start_time = self.parse_datetime(start)
+        self.end_time = self.parse_datetime(end)
         self.verbose = verbose
         self.no_email = no_email
         self.is_test = is_test
