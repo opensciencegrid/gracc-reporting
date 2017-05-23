@@ -30,18 +30,22 @@ class TimeUtils(object):
     #     return {tup[0]:tup[1] for tup in tuples}
 
     @staticmethod
-    def parse_datetime(timestamp):
+    def parse_datetime(timestamp, utc=False):
         """
         Parse datetime, return as UTC time datetime
         
         :param timestamp: 
+        :param utc:
         :return: 
         """
         if timestamp is None:
             return None
 
         x = parser.parse(timestamp)
-        x = x.replace(tzinfo=tz.tzlocal())  # Assume time is local TZ
+        if not utc:
+            x = x.replace(tzinfo=tz.tzlocal())  # Assume time is local TZ
+        else:
+            x = x.replace(tzinfo=tz.tzutc())
         return x.astimezone(tz.tzutc())
 
 
@@ -144,8 +148,9 @@ class TimeUtils(object):
         """
         d = {"start_time": start_time, "end_time": end_time}
         for key in d:
-            if d[key] is not None and not self.check_date_datetime(d[key]):
-                d[key] = self.parse_datetime(d[key])  # Convert to datetime
+            if d[key] is not None:
+                if not self.check_date_datetime(d[key]):
+                    d[key] = self.parse_datetime(d[key])  # Convert to datetime
             else:
                 try:
                     val = getattr(self, key)

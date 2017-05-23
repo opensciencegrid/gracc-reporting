@@ -343,9 +343,10 @@ class JobSuccessRateReporter(Reporter):
                                 [elt for elt in
                                  self._get_job_parts_from_jobid(job.jobid)]
 
-                            timestamps_exact = self.get_epoch_stamps_for_grafana(
-                                start_time=job.start_time,
-                                end_time=job.end_time)
+                            jobtimes = (self.parse_datetime(dt, utc=True)
+                                        for dt in (job.start_time, job.end_time))
+
+                            timestamps_exact = self.get_epoch_stamps_for_grafana(*jobtimes)
                             padding = 300000  # milliseconds
                             timestamps_padded = (timestamps_exact[0] - padding,
                                                  timestamps_exact[1] + padding)
