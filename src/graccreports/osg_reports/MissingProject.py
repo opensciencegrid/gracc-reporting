@@ -69,8 +69,8 @@ class MissingProjectReport(Reporter):
         """
 
         # Gather parameters, format them for the query
-        starttimeq = self.dateparse_to_iso(self.start_time)
-        endtimeq = self.dateparse_to_iso(self.end_time)
+        starttimeq = self.start_time.isoformat()
+        endtimeq = self.end_time.isoformat()
 
         probes = [_.strip("'") for _ in re.split(",", self.config.get(
             "project", "{0}_probe_list".format(self.report_type)))]
@@ -229,6 +229,7 @@ class MissingProjectReport(Reporter):
             if not data.get(field):
                 data[field] = "{0} not reported".format(field)
 
+        fmt = "%Y-%m-%d %H:%M"
 
         msg = "{count} Payload records dated between {start} and {end} with:\n" \
               "\t CommonName: {cn}\n" \
@@ -237,8 +238,8 @@ class MissingProjectReport(Reporter):
               "\t Wall Hours: {ch}\n " \
               "were reported with no ProjectName (\"{pn}\") to GRACC.  Please " \
               "investigate.\n\n".format(count=data['Count'],
-                                        start=self.start_time,
-                                        end=self.end_time,
+                                        start=self.start_time.strftime(fmt),
+                                        end=self.end_time.strftime(fmt),
                                         cn=data['CommonName'],
                                         vo=data['VOName'],
                                         probe=data['ProbeName'],
