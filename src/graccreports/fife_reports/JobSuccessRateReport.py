@@ -106,13 +106,14 @@ class JobSuccessRateReporter(Reporter):
             rlogfile = logfile
             logfile_override = False
 
+        self.title = "{0} Production Jobs Success Rate on the OSG Sites " \
+                     "({1} - {2})".format(self.vo, start, end)
+
         Reporter.__init__(self, report, config, start, end, verbose,
                           is_test=is_test, no_email=no_email, logfile=rlogfile,
                           logfile_override=logfile_override, raw=True,
                           check_vo=True)
         self.template = template
-        self.title = "Production Jobs Success Rate {0} - {1}".format(
-            self.start_time, self.end_time)
         self.run = Jobs()
         self.clusters = {}
         self.connectStr = None
@@ -129,11 +130,7 @@ class JobSuccessRateReporter(Reporter):
         self.jobpattern = re.compile('(\d+).\d+@(fifebatch\d\.fnal\.gov)')
         self.text = ''
         self.limit_sites = self._limit_site_check()
-        self.title = "{0} Production Jobs Success Rate on the OSG Sites " \
-                     "({1} - {2})".format(
-                                self.vo,
-                                self.start_time,
-                                self.end_time)
+
 
     def run_report(self):
         """Method that runs all of the applicable actions in this class."""
@@ -151,8 +148,8 @@ class JobSuccessRateReporter(Reporter):
         voq = self.config.get(self.vo.lower(), "voname".format(self.vo.lower()))
         productioncheck = '*Role=Production*'
 
-        starttimeq = self.dateparse_to_iso(self.start_time)
-        endtimeq = self.dateparse_to_iso(self.end_time)
+        starttimeq = self.start_time.isoformat()
+        endtimeq = self.end_time.isoformat()
 
         self.logger.info(self.indexpattern)
         if self.verbose:
