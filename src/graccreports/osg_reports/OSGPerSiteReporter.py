@@ -36,14 +36,13 @@ def monthrange(date):
     :return tuple:datetime.datetime objects that span the month
     (2016-12-05 --> 2016-12-01, 2016-12-31)
     """
-    if isinstance(date, list):
-        startdate = datetime.datetime(*date)
-    elif isinstance(date, datetime.datetime) or \
+    # if isinstance(date, list):
+    #     startdate = datetime.datetime(*date)
+    if isinstance(date, datetime.datetime) or \
             isinstance(date, datetime.date):
         startdate = date
     else:
-        print "monthrange will only work with a datelist or a " \
-              "datetime.datetime object"
+        print "monthrange will only work with a datetime.datetime object"
         sys.exit(1)
     start = startdate.replace(day=1)
     nextmonth_first = (startdate.replace(day=28) +
@@ -197,9 +196,10 @@ class OSGPerSiteReporter(Reporter):
                        "Percent Opportunistic", "Prev. Month Opp. Total",
                        "Percentage Change Month-Month"]
         self.start_time, self.end_time = \
-            monthrange(self.dateparse(self.start_time))
+            monthrange(self.start_time)
+        fmt = "%Y-%m-%d %H:%M"
         self.title = 'VOs Usage of OSG Sites: {0} - {1}'.format(
-            self.start_time, self.end_time)
+            self.start_time.strftime(fmt), self.end_time.strftime(fmt))
         self.current = True
         self.vodict = {}
         self.sitelist = []
@@ -216,14 +216,14 @@ class OSGPerSiteReporter(Reporter):
 
         :return elasticsearch_dsl.Search: Search object containing ES query
         """
-        startdate = self.dateparse_to_iso(self.start_time)
-        enddate = self.dateparse_to_iso(self.end_time)
+        starttimeq = self.start_time.isoformat()
+        endtimeq = self.end_time.isoformat()
 
         if self.verbose:
             self.logger.info(self.indexpattern)
 
         s = Search(using=self.client, index=self.indexpattern) \
-            .filter("range", EndTime={"gte": startdate, "lt": enddate})\
+            .filter("range", EndTime={"gte": starttimeq, "lt": endtimeq})\
             .filter('term', ResourceType="Batch")
 
         # Note:  Using ?: operator in painless language to coalesce the
