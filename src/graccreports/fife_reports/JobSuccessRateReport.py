@@ -106,12 +106,14 @@ class JobSuccessRateReporter(Reporter):
             rlogfile = logfile
             logfile_override = False
 
+        self.title = "{0} Production Jobs Success Rate on the OSG Sites " \
+                     "({1} - {2})".format(self.vo, start, end)
+
         Reporter.__init__(self, report, config, start, end, verbose,
                           is_test=is_test, no_email=no_email, logfile=rlogfile,
-                          logfile_override=logfile_override, check_vo=True)
+                          logfile_override=logfile_override, raw=True,
+                          check_vo=True)
         self.template = template
-        self.title = "Production Jobs Success Rate {0} - {1}".format(
-            self.start_time, self.end_time)
         self.run = Jobs()
         self.clusters = {}
         self.connectStr = None
@@ -128,11 +130,7 @@ class JobSuccessRateReporter(Reporter):
         self.jobpattern = re.compile('(\d+).\d+@(fifebatch\d\.fnal\.gov)')
         self.text = ''
         self.limit_sites = self._limit_site_check()
-        self.title = "{0} Production Jobs Success Rate on the OSG Sites " \
-                     "({1} - {2})".format(
-                                self.vo,
-                                self.start_time,
-                                self.end_time)
+
 
     def run_report(self):
         """Method that runs all of the applicable actions in this class."""
@@ -150,8 +148,8 @@ class JobSuccessRateReporter(Reporter):
         voq = self.config.get(self.vo.lower(), "voname".format(self.vo.lower()))
         productioncheck = '*Role=Production*'
 
-        starttimeq = self.dateparse_to_iso(self.start_time)
-        endtimeq = self.dateparse_to_iso(self.end_time)
+        starttimeq = self.start_time.isoformat()
+        endtimeq = self.end_time.isoformat()
 
         self.logger.info(self.indexpattern)
         if self.verbose:
@@ -345,9 +343,10 @@ class JobSuccessRateReporter(Reporter):
                                 [elt for elt in
                                  self._get_job_parts_from_jobid(job.jobid)]
 
-                            timestamps_exact = self.get_epoch_stamps_for_grafana(
-                                start_time=job.start_time,
-                                end_time=job.end_time)
+                            jobtimes = (self.parse_datetime(dt, utc=True)
+                                        for dt in (job.start_time, job.end_time))
+
+                            timestamps_exact = self.get_epoch_stamps_for_grafana(*jobtimes)
                             padding = 300000  # milliseconds
                             timestamps_padded = (timestamps_exact[0] - padding,
                                                  timestamps_exact[1] + padding)
@@ -575,7 +574,8 @@ class JobSuccessRateReporter(Reporter):
                              self.email_info["from_email"]),
                             self.email_info["smtphost"])
 
-        self.logger.info("Sent Report for {0}".format(self.vo))
+        self.logger.info("Report sent for {0} to {1}".format(self.vo,
+                                                             ", ".join(self.email_info["to_emails"])))
         return
 
     def _limit_site_check(self):
@@ -610,10 +610,7 @@ def main():
                     '{2}'.format(datetime.datetime.now(),
                                  args.vo,
                                  traceback.format_exc())
-        with open(logfile, 'a') as f:
-            f.write(errstring)
-        print >> sys.stderr, errstring
-        runerror(config, e, errstring)
+        runerror(config, e, errstring, logfile)
         sys.exit(1)
     sys.exit(0)
 

@@ -127,7 +127,6 @@ class TextUtils:
             line = "%s%s" % (line, ecol)
             message = "%s%s\n" % (message, line)
 
-        print message
         return message
 
 

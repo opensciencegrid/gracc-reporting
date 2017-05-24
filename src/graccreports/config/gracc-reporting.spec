@@ -1,6 +1,6 @@
 %define name gracc-reporting
-%define version 0.6
-%define unmangled_version 0.6
+%define version 0.8
+%define unmangled_version 0.8
 %define release 1
 
 Summary: 	GRACC Email Reports
@@ -47,7 +47,7 @@ install -m 0744 $RPM_BUILD_ROOT/%{python2_sitelib}/graccreports/html_templates/*
 
 # Install doc files to /usr/share/doc/graccreports
 install -d -m 0755 $RPM_BUILD_ROOT/%{_defaultdocdir}/graccreports/
-install -m 0744 docs/*.txt $RPM_BUILD_ROOT/%{_defaultdocdir}/graccreports/
+install -m 0744 docs/*.md $RPM_BUILD_ROOT/%{_defaultdocdir}/graccreports/
 
 
 %files

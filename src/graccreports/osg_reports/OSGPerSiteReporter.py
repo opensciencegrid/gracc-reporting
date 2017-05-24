@@ -36,14 +36,13 @@ def monthrange(date):
     :return tuple:datetime.datetime objects that span the month
     (2016-12-05 --> 2016-12-01, 2016-12-31)
     """
-    if isinstance(date, list):
-        startdate = datetime.datetime(*date)
-    elif isinstance(date, datetime.datetime) or \
+    # if isinstance(date, list):
+    #     startdate = datetime.datetime(*date)
+    if isinstance(date, datetime.datetime) or \
             isinstance(date, datetime.date):
         startdate = date
     else:
-        print "monthrange will only work with a datelist or a " \
-              "datetime.datetime object"
+        print "monthrange will only work with a datetime.datetime object"
         sys.exit(1)
     start = startdate.replace(day=1)
     nextmonth_first = (startdate.replace(day=28) +
@@ -191,15 +190,16 @@ class OSGPerSiteReporter(Reporter):
 
         Reporter.__init__(self, report, config, start, end=end,
                           verbose=verbose, is_test=is_test, no_email=no_email,
-                          raw=False, template=template, logfile=rlogfile,
+                          template=template, logfile=rlogfile,
                           logfile_override=logfile_override)
         self.header = ["Site", "Total", "Opportunistic Total",
                        "Percent Opportunistic", "Prev. Month Opp. Total",
                        "Percentage Change Month-Month"]
         self.start_time, self.end_time = \
-            monthrange(self.dateparse(self.start_time))
+            monthrange(self.start_time)
+        fmt = "%Y-%m-%d %H:%M"
         self.title = 'VOs Usage of OSG Sites: {0} - {1}'.format(
-            self.start_time, self.end_time)
+            self.start_time.strftime(fmt), self.end_time.strftime(fmt))
         self.current = True
         self.vodict = {}
         self.sitelist = []
@@ -216,14 +216,14 @@ class OSGPerSiteReporter(Reporter):
 
         :return elasticsearch_dsl.Search: Search object containing ES query
         """
-        startdate = self.dateparse_to_iso(self.start_time)
-        enddate = self.dateparse_to_iso(self.end_time)
+        starttimeq = self.start_time.isoformat()
+        endtimeq = self.end_time.isoformat()
 
         if self.verbose:
             self.logger.info(self.indexpattern)
 
         s = Search(using=self.client, index=self.indexpattern) \
-            .filter("range", EndTime={"gte": startdate, "lt": enddate})\
+            .filter("range", EndTime={"gte": starttimeq, "lt": endtimeq})\
             .filter('term', ResourceType="Batch")
 
         # Note:  Using ?: operator in painless language to coalesce the
@@ -420,10 +420,7 @@ def main():
         print 'OSG Per Site Report Execution finished'
         sys.exit(0)
     except Exception as e:
-        with open(logfile, 'a') as f:
-            f.write(traceback.format_exc())
-        print >> sys.stderr, traceback.format_exc()
-        runerror(config, e, traceback.format_exc())
+        runerror(config, e, traceback.format_exc(), logfile)
         sys.exit(1)
 
 

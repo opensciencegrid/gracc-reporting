@@ -59,15 +59,15 @@ class Reporter(TimeUtils):
     __metaclass__ = abc.ABCMeta
 
     def __init__(self, report, config, start, end=None, verbose=False,
-                 raw=True, allraw=False, template=None, is_test=False, no_email=False,
+                 raw=False, allraw=False, template=None, is_test=False, no_email=False,
                  title=None, logfile=None, logfile_override=False, check_vo=False):
 
         TimeUtils.__init__(self)
         self.header = []
         if config:
             self.config = config.config
-        self.start_time = start
-        self.end_time = end
+        self.start_time = self.parse_datetime(start)
+        self.end_time = self.parse_datetime(end)
         self.verbose = verbose
         self.no_email = no_email
         self.is_test = is_test
@@ -174,10 +174,6 @@ class Reporter(TimeUtils):
         htmldata = emailReport.printAsTextTable("html", content,
                                                 template=self.template)
 
-        for key, value in text.iteritems():
-            print key, type(value)
-
-
         if self.header:
             htmlheader = unicode("\n".join(['<th>{0}</th>'.format(headerelt)
                                     for headerelt in self.header]), 'utf-8')
@@ -201,6 +197,7 @@ class Reporter(TimeUtils):
                              self.email_info["from_email"]),
                             self.email_info["smtphost"],
                             html_template=self.template)
+        self.logger.info("Sent reports to {0}".format(", ".join(self.email_info["to_emails"])))
         return
 
     @abc.abstractmethod
@@ -229,7 +226,7 @@ class Reporter(TimeUtils):
             return parser.parse_args()
         return wrapper
 
-    def indexpattern_generate(self, raw=True, allraw=False):
+    def indexpattern_generate(self, raw=False, allraw=False):
         """Returns the Elasticsearch index pattern based on the class
         variables of start time and end time, and the flags raw and allraw.
         Note that this doesn't inherit raw and allraw from the instance
@@ -481,15 +478,25 @@ class Reporter(TimeUtils):
         return logger
 
 
-def runerror(config, error, traceback):
+def runerror(config, error, traceback, logfile):
     """
-    Global method to email admins if report run errors out
+    Global function to print, log, and email errors to admins
 
     :param Configuration.Configuration config: Report config
     :param str error: Error raised
     :param str traceback: Traceback from error
+    :param str logfile: Filename of logfile
     :return None
     """
+    try:
+        with open(logfile, 'a') as f:
+            f.write(str(error))
+    except IOError: # Permission denied
+        reallogfile = os.path.join(os.path.expanduser('~'), logfile)
+        with open(reallogfile, 'a') as f:
+            f.write(str(error))
+    print >> sys.stderr, error
+
     admin_emails = re.split('[; ,]', config.config.get("email", "test_to_emails"))
     fromemail = config.config.get("email", "from_email")
 

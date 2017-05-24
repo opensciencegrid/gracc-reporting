@@ -44,7 +44,7 @@ class MissingProjectReport(Reporter):
             logfile_override = False
 
         Reporter.__init__(self, report_type, config, start, end, verbose,
-                          raw=False, no_email=no_email, is_test=is_test,
+                          no_email=no_email, is_test=is_test,
                           logfile=self.logfile, logfile_override=logfile_override)
         self.report_type = self._validate_report_type(report_type)
         self.logger.info("Report Type: {0}".format(self.report_type))
@@ -69,8 +69,8 @@ class MissingProjectReport(Reporter):
         """
 
         # Gather parameters, format them for the query
-        starttimeq = self.dateparse_to_iso(self.start_time)
-        endtimeq = self.dateparse_to_iso(self.end_time)
+        starttimeq = self.start_time.isoformat()
+        endtimeq = self.end_time.isoformat()
 
         probes = [_.strip("'") for _ in re.split(",", self.config.get(
             "project", "{0}_probe_list".format(self.report_type)))]
@@ -229,6 +229,7 @@ class MissingProjectReport(Reporter):
             if not data.get(field):
                 data[field] = "{0} not reported".format(field)
 
+        fmt = "%Y-%m-%d %H:%M"
 
         msg = "{count} Payload records dated between {start} and {end} with:\n" \
               "\t CommonName: {cn}\n" \
@@ -237,8 +238,8 @@ class MissingProjectReport(Reporter):
               "\t Wall Hours: {ch}\n " \
               "were reported with no ProjectName (\"{pn}\") to GRACC.  Please " \
               "investigate.\n\n".format(count=data['Count'],
-                                        start=self.start_time,
-                                        end=self.end_time,
+                                        start=self.start_time.strftime(fmt),
+                                        end=self.end_time.strftime(fmt),
                                         cn=data['CommonName'],
                                         vo=data['VOName'],
                                         probe=data['ProbeName'],
@@ -351,10 +352,7 @@ def main():
         r.run_report()
         r.logger.info("OSG Missing Project Report executed successfully")
     except Exception as e:
-        with open(logfile, 'a') as f:
-            f.write(traceback.format_exc())
-        print >> sys.stderr, traceback.format_exc()
-        runerror(config, e, traceback.format_exc())
+        runerror(config, e, traceback.format_exc(), logfile)
         sys.exit(1)
     sys.exit(0)
 

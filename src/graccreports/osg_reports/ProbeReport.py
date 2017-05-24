@@ -7,6 +7,7 @@ import smtplib
 import email.utils
 from email.mime.text import MIMEText
 import datetime
+import dateutil
 import logging
 import traceback
 import sys
@@ -17,8 +18,7 @@ from elasticsearch_dsl import Search, Q
 from . import Reporter, runerror, get_configfile, Configuration
 
 logfile = 'probereport.log'
-now = datetime.datetime.now()
-today = now.date()
+today = datetime.datetime.now()
 
 
 @Reporter.init_reporter_parser
@@ -101,7 +101,7 @@ class OIMInfo(object):
             print "Writing log to {0}".format(fn)
             return fn
 
-        try_locations = ['/var/log', '/var/tmp', '/tmp']
+        try_locations = ['/var/log', os.path.expanduser('~'), '/tmp']
 
         try:
             configdir = self.config.config.get('defaults', 'default_logdir')
@@ -334,7 +334,7 @@ class OIMInfo(object):
                                                 "%b %d, %Y %H:%M %p UTC")
             detime = datetime.datetime.strptime(dtelt.find('./EndTime').text,
                                                 "%b %d, %Y %H:%M %p UTC")
-            if dstime < now < detime:
+            if dstime < today < detime:
                 self.logger.info("{0} in downtime".format(fqdn))
                 down_fqdns.append(fqdn)
 
@@ -379,7 +379,7 @@ class ProbeReport(Reporter):
         Reporter.__init__(self, report, config, start, end=start,
                           logfile=rlogfile, logfile_override=logfile_override,
                           is_test=is_test, verbose=verbose,
-                          no_email=no_email, allraw=True)
+                          no_email=no_email, raw=True, allraw=True)
         self.configuration = config
         self.probematch = re.compile("(.+):(.+)")
         self.estimeformat = re.compile("(.+)T(.+)\.\d+Z")
@@ -406,7 +406,7 @@ class ProbeReport(Reporter):
 
         :return elasticsearch_dsl.Search: Search object containing ES query
         """
-        startdateq = self.dateparse_to_iso(self.start_time)
+        startdateq = self.start_time.isoformat()
 
         s = Search(using=self.client, index=self.indexpattern)\
             .filter(Q({"range": {"@received": {"gte": "{0}".format(startdateq)}}}))\
@@ -423,7 +423,7 @@ class ProbeReport(Reporter):
         self.start_time = today.replace(
             day=1) - datetime.timedelta(days=1)
         self.end_time = today
-        self.indexpattern = self.indexpattern_generate(allraw=True)
+        self.indexpattern = self.indexpattern_generate(raw=True, allraw=True)
 
         if self.verbose:
             print "New index pattern is {0}".format(self.indexpattern)
@@ -505,8 +505,8 @@ class ProbeReport(Reporter):
         cutoff = today - datetime.timedelta(days=7)
         with open(self.historyfile, 'r') as h:
             for line in h:
-                proberepdate = datetime.date(
-                    *self.dateparse(re.split('\t', line)[1].strip())[:3])
+                proberepdate = dateutil.parser.parse(
+                    re.split('\t', line)[1].strip())
                 curprobe = re.split('\t', line)[0]
 
                 if proberepdate > cutoff:
@@ -532,6 +532,9 @@ class ProbeReport(Reporter):
         prev_reported_recent = set()
         if os.path.exists(self.historyfile):
             for curprobe, is_recent_probe in self.getprev_reported_probes():
+                if curprobe not in missingprobes:
+                    self.newhistory.pop()   # The probe is no longer missing.  Remove it
+                    continue
                 prev_reported.add(curprobe)
                 if is_recent_probe:
                     prev_reported_recent.add(curprobe)
@@ -557,8 +560,7 @@ class ProbeReport(Reporter):
                 f.write(self.emailtext())
 
             # Append line to new history
-            self.newhistory.append('{0}\t{1}\n'.format(
-                elt, today))
+            self.newhistory.append('{0}\t{1}\n'.format(elt, today.date()))
             yield
 
         return
@@ -570,7 +572,7 @@ class ProbeReport(Reporter):
         else:
             remindertext = ''
         return "{0}{1} Reporting Account Failure dated {2}"\
-            .format(remindertext, self.resource, today)
+            .format(remindertext, self.resource, today.date())
 
     def emailtext(self):
         """Format the text for our emails"""
@@ -612,7 +614,7 @@ class ProbeReport(Reporter):
             smtpObj = smtplib.SMTP(self.email_info["smtphost"])
             smtpObj.sendmail(emailfrom, emailsto, msg.as_string())
             smtpObj.quit()
-            self.logger.info("Sent Email for {0}".format(self.resource))
+            self.logger.info("Sent Email for {0} to {1}".format(self.resource, ', '.join(emailsto)))
             os.unlink(self.emailfile)
         except Exception as e:
             self.logger.exception("Error:  unable to send email.\n{0}\n".format(e))
@@ -671,10 +673,7 @@ def main():
         preport.run_report(oim_probe_fqdn_dict)
         print 'Probe Report Execution finished'
     except Exception as e:
-        with open(logfile, 'a') as f:
-            f.write(traceback.format_exc())
-        print >> sys.stderr, traceback.format_exc()
-        runerror(config, e, traceback.format_exc())
+        runerror(config, e, traceback.format_exc(), logfile)
         sys.exit(1)
 
     return

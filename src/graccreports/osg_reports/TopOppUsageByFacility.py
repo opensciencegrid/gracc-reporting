@@ -40,28 +40,25 @@ def get_time_range(start=None, end=None, months=None):
     handle absolute range (start-end) or a certain number of months prior to
     today's date (months)
 
-    :param str start: Start of current reporting period.  Date/time in
-    yyyy/mm/dd HH:MM:SS or yyyy-mm-dd HH:MM:SS format
+    :param str start: Start of current reporting period.  Date/time as 
+    datetime.datetime object
     :param str end: Same as start, but end of current reporting period
     :param int months: Number of months prior to current date, to define
     reporting period.
     :return tuple: Tuple of tuples of datetime.datetime objects representing
-    date ranges (cur_period, prior_period)
+    date ranges (cur_period, prior_period)  
     """
     if months:
         if start or end:
             raise Exception("Cannot define both months and start/end times")
-        end_date = datetime.datetime.today()
+        end = datetime.datetime.today()
         diff = relativedelta(months=months)
-        start_date = end_date - diff
+        start = end - diff
     else:
-        T = TimeUtils()
-        start_date = datetime.datetime(*T.dateparse(start))
-        end_date = datetime.datetime(*T.dateparse(end))
-        diff = relativedelta(end_date, start_date)
-    pri_end = start_date - relativedelta(days=1)
+        diff = relativedelta(end, start)
+    pri_end = start - relativedelta(days=1)
     pri_start = pri_end - diff
-    return (start_date, end_date), (pri_start, pri_end)
+    return (start, end), (pri_start, pri_end)
 
 
 @Reporter.init_reporter_parser
@@ -175,7 +172,7 @@ class TopOppUsageByFacility(Reporter):
             logfile_override = False
 
         Reporter.__init__(self, report, config, start, end, verbose=verbose,
-                          no_email=no_email, is_test=is_test, raw=False,
+                          no_email=no_email, is_test=is_test,
                           logfile=rlogfile, logfile_override=logfile_override)
         self.numrank = numrank
         self.template = template
@@ -216,8 +213,8 @@ class TopOppUsageByFacility(Reporter):
         :return elasticsearch_dsl.Search: Search object containing ES query
         """
         # Gather parameters, format them for the query
-        starttimeq = self.dateparse_to_iso(self.start_time)
-        endtimeq = self.dateparse_to_iso(self.end_time)
+        starttimeq = self.start_time.isoformat()
+        endtimeq = self.end_time.isoformat()
 
         if self.verbose:
             self.logger.info(self.indexpattern)
@@ -260,7 +257,6 @@ class TopOppUsageByFacility(Reporter):
         for self.start_time, self.end_time in self.daterange:
             results = self.run_query()
             f_parser = self._parse_to_facilities()
-            # print results
 
             unique_terms = self.unique_terms
             metrics = ['CoreHours']
@@ -475,7 +471,7 @@ class TopOppUsageByFacility(Reporter):
                              self.email_info["from_email"]),
                             self.email_info["smtphost"])
 
-        self.logger.info("Report sent")
+        self.logger.info("Sent reports to {0}".format(", ".join(self.email_info["to_emails"])))
 
         return
 
@@ -509,10 +505,7 @@ def main():
         errstring = '{0}: Error running Top Opportunistic Usage Report. ' \
                     '{1}'.format(datetime.datetime.now(),
                                  traceback.format_exc())
-        with open(logfile, 'a') as f:
-            f.write(errstring)
-        print >> sys.stderr, errstring
-        runerror(config, e, errstring)
+        runerror(config, e, errstring, logfile)
         sys.exit(1)
 
 

@@ -44,14 +44,15 @@ class FlockingReport(Reporter):
             rlogfile = logfile
             logfile_override = False
 
+        self.title = "OSG Flocking: Usage of OSG Sites for {0} - {1}".format(start, end)
+
         Reporter.__init__(self, report, config, start, end=end,
                           template=template, verbose=verbose,
-                          no_email=no_email, is_test=is_test, raw=False,
+                          no_email=no_email, is_test=is_test,
                           logfile=rlogfile, logfile_override=logfile_override)
         self.verbose = verbose
         self.no_email = no_email
         self.is_test = is_test
-        self.title = "OSG Flocking: Usage of OSG Sites for {0} - {1}".format(self.start_time, self.end_time)
         self.header = ["VOName", "SiteName", "ProbeName", "ProjectName",
                        "Wall Hours"]
 
@@ -67,8 +68,8 @@ class FlockingReport(Reporter):
         :return elasticsearch_dsl.Search: Search object containing ES query
         """
         # Gather parameters, format them for the query
-        starttimeq = self.dateparse_to_iso(self.start_time)
-        endtimeq = self.dateparse_to_iso(self.end_time)
+        starttimeq = self.start_time.isoformat()
+        endtimeq = self.end_time.isoformat()
 
         if self.verbose:
             self.logger.info(self.indexpattern)
@@ -173,10 +174,7 @@ def main():
     except Exception as e:
         errstring = '{0}: Error running OSG Flocking Report. ' \
                     '{1}'.format(datetime.datetime.now(), traceback.format_exc())
-        with open(logfile, 'a') as f:
-            f.write(errstring)
-        print >> sys.stderr, errstring
-        runerror(config, e, errstring)
+        runerror(config, e, errstring, logfile)
         sys.exit(1)
     sys.exit(0)
 

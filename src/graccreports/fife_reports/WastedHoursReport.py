@@ -118,16 +118,17 @@ class WastedHoursReport(Reporter):
             rlogfile = logfile
             logfile_override = False
 
+        self.title = "{0:s} Wasted Hours on GPGrid ({1:s} - {2:s})"\
+                            .format("FIFE", start, end)
+
         Reporter.__init__(self, report, config, start, end=end,
-                          verbose=verbose, raw=False, is_test=is_test,
+                          verbose=verbose, is_test=is_test,
                           no_email=no_email, logfile=rlogfile,
                           logfile_override=logfile_override)
         self.template = template
         self.experiments = {}
         self.connect_str = None
         self.text = ''
-        self.title = "{0:s} Wasted Hours on GPGrid ({1:s} - {2:s})"\
-                            .format("FIFE", self.start_time, self.end_time)
 
     def run_report(self):
         """Higher-level method to run all the other methods in report
@@ -145,8 +146,8 @@ class WastedHoursReport(Reporter):
         """
         wildcardProbeNameq = 'condor:fifebatch?.fnal.gov'
 
-        starttimeq = self.dateparse_to_iso(self.start_time)
-        endtimeq = self.dateparse_to_iso(self.end_time)
+        starttimeq = self.start_time.isoformat()
+        endtimeq = self.end_time.isoformat()
 
         s = Search(using=self.client, index=self.indexpattern) \
             .filter("wildcard", ProbeName=wildcardProbeNameq) \
@@ -285,6 +286,7 @@ class WastedHoursReport(Reporter):
                             (self.email_info["from_name"],
                              self.email_info["from_email"]),
                             self.email_info["smtphost"])
+        self.logger.info("Sent reports to {0}".format(", ".join(self.email_info["to_emails"])))
         return
 
 
@@ -308,8 +310,7 @@ def main():
                                    ov_logfile=args.logfile)
         r.run_report()
     except Exception as e:
-        print >> sys.stderr, traceback.format_exc()
-        runerror(config, e, traceback.format_exc())
+        runerror(config, e, traceback.format_exc(), logfile)
         sys.exit(1)
 
     sys.exit(0)

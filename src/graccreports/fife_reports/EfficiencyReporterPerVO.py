@@ -1,5 +1,4 @@
 import sys
-import traceback
 import re
 import datetime
 from ConfigParser import NoSectionError
@@ -76,30 +75,28 @@ class Efficiency(Reporter):
             rlogfile = logfile
             logfile_override = False
 
+        self.title = "{0} Users with Low Efficiency ({1}) on the OSG Sites " \
+                      "({2} - {3})".format(
+                                self.vo,
+                                eff_limit,
+                                start,
+                                end)
+
         Reporter.__init__(self, report, config, start, end, verbose=verbose,
                           logfile=rlogfile, no_email=no_email, is_test=is_test,
-                          logfile_override=logfile_override, check_vo=True)
+                          logfile_override=logfile_override, raw=True, check_vo=True)
         self.hour_limit = hour_limit
         self.eff_limit = eff_limit
         self.facility = facility
         self.template = template
         self.text = ''
         self.table = ''
-        self.fn = "{0}-efficiency.{1}".format(self.vo.lower(),
-                                         self.start_time.replace("/", "-"))
         self.cilogon_match = re.compile('.+CN=UID:(\w+)')
 
         # Patch until we get Gratia probe to report CN again
         # self.non_cilogon_match = re.compile('/CN=([\w\s]+)/?.+?') # Original
         self.non_cilogon_match = re.compile('.+/CN=([\w\s]+)/?.+?')
         # End patch
-
-        self.title = "{0} Users with Low Efficiency ({1}) on the OSG Sites " \
-                      "({2} - {3})".format(
-                                self.vo,
-                                self.eff_limit,
-                                self.start_time,
-                                self.end_time)
 
     def run_report(self):
         """Handles the data flow throughout the report generation.  Generates
@@ -125,8 +122,8 @@ class Efficiency(Reporter):
         :return elasticsearch_dsl.Search: Search object containing ES query
         """
         # Gather parameters, format them for the query
-        starttimeq = self.dateparse_to_iso(self.start_time)
-        endtimeq = self.dateparse_to_iso(self.end_time)
+        starttimeq = self.start_time.isoformat()
+        endtimeq = self.end_time.isoformat()
         wildcardVOq = '*' + self.vo.lower() + '*'
         wildcardProbeNameq = 'condor:fifebatch?.fnal.gov'
 
@@ -304,7 +301,8 @@ class Efficiency(Reporter):
                              self.email_info["from_email"]),
                             self.email_info["smtphost"])
 
-        self.logger.info("Report sent for {0}".format(self.vo))
+        self.logger.info("Report sent for {0} to {1}".format(self.vo,
+                                                             ", ".join(self.email_info["to_emails"])))
 
         return
 
@@ -349,11 +347,8 @@ def main():
     except Exception as e:
         errstring = '{0}: Error running Efficiency Report for {1}. ' \
                     '{2}'.format(datetime.datetime.now(), args.vo,
-                                 traceback.format_exc())
-        with open(logfile, 'a') as f:
-            f.write(errstring)
-        print >> sys.stderr, errstring
-        runerror(config, e, errstring)
+                                 e)
+        runerror(config, e, errstring, logfile)
         sys.exit(1)
     sys.exit(0)
 

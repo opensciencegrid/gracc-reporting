@@ -1,7 +1,7 @@
-include *.txt *.config *.html
+include *.md *.config *.html *.txt
 recursive-include config *
 recursive-include html_templates *
 recursive-include src/graccreports/config/ *
 recursive-include src/graccreports/html_templates/ *.html
-recursive-include docs *.txt
+recursive-include docs *.md
 recursive-include SampleScripts *.sh
