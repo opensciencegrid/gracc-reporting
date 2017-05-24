@@ -334,7 +334,7 @@ class OIMInfo(object):
                                                 "%b %d, %Y %H:%M %p UTC")
             detime = datetime.datetime.strptime(dtelt.find('./EndTime').text,
                                                 "%b %d, %Y %H:%M %p UTC")
-            if dstime < now < detime:
+            if dstime < today < detime:
                 self.logger.info("{0} in downtime".format(fqdn))
                 down_fqdns.append(fqdn)
 
