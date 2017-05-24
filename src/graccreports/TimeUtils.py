@@ -41,7 +41,14 @@ class TimeUtils(object):
         if timestamp is None:
             return None
 
-        x = parser.parse(timestamp)
+        if isinstance(timestamp, datetime):
+            x = timestamp
+        elif isinstance(timestamp, date):
+            mn = datetime.min.time()
+            x = datetime.combine(timestamp, mn)
+        else:
+            x = parser.parse(timestamp)
+
         if not utc:
             x = x.replace(tzinfo=tz.tzlocal())  # Assume time is local TZ
         else:

@@ -7,6 +7,7 @@ import smtplib
 import email.utils
 from email.mime.text import MIMEText
 import datetime
+import dateutil
 import logging
 import traceback
 import sys
@@ -17,8 +18,7 @@ from elasticsearch_dsl import Search, Q
 from . import Reporter, runerror, get_configfile, Configuration
 
 logfile = 'probereport.log'
-now = datetime.datetime.now()
-today = now.date()
+today = datetime.datetime.now()
 
 
 @Reporter.init_reporter_parser
@@ -406,7 +406,7 @@ class ProbeReport(Reporter):
 
         :return elasticsearch_dsl.Search: Search object containing ES query
         """
-        startdateq = self.dateparse_to_iso(self.start_time)
+        startdateq = self.start_time.isoformat()
 
         s = Search(using=self.client, index=self.indexpattern)\
             .filter(Q({"range": {"@received": {"gte": "{0}".format(startdateq)}}}))\
@@ -505,8 +505,8 @@ class ProbeReport(Reporter):
         cutoff = today - datetime.timedelta(days=7)
         with open(self.historyfile, 'r') as h:
             for line in h:
-                proberepdate = datetime.date(
-                    *self.dateparse(re.split('\t', line)[1].strip())[:3])
+                proberepdate = dateutil.parser.parse(
+                    re.split('\t', line)[1].strip())
                 curprobe = re.split('\t', line)[0]
 
                 if proberepdate > cutoff:
@@ -560,8 +560,7 @@ class ProbeReport(Reporter):
                 f.write(self.emailtext())
 
             # Append line to new history
-            self.newhistory.append('{0}\t{1}\n'.format(
-                elt, today))
+            self.newhistory.append('{0}\t{1}\n'.format(elt, today.date()))
             yield
 
         return
@@ -573,7 +572,7 @@ class ProbeReport(Reporter):
         else:
             remindertext = ''
         return "{0}{1} Reporting Account Failure dated {2}"\
-            .format(remindertext, self.resource, today)
+            .format(remindertext, self.resource, today.date())
 
     def emailtext(self):
         """Format the text for our emails"""
