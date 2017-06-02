@@ -17,7 +17,6 @@ setup(name='gracc-reporting',
       package_dir={'': 'src'},
       packages=['graccreports', 'graccreports.fife_reports', 'graccreports.osg_reports', 'graccreports.minerva_report'],
       include_package_data=True,
-      package_data={'graccreports': ['config/*.config', 'html_templates/*.html']},
       entry_points= {
           'console_scripts': [
               'efficiencyreport = graccreports.fife_reports.EfficiencyReporterPerVO:main',

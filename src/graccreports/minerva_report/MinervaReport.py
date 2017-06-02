@@ -34,6 +34,10 @@ def parse_opts():
 
 def main():
     opts, args = parse_opts()
+
+    if opts.is_test:
+        print "Running in test mode"
+
     try:
         config = Configuration.Configuration()
         config.configure(opts.config)
@@ -88,6 +92,7 @@ def main():
                                 (time.ctime()), {"html": template},
                                 ("Gratia Operation", "tlevshin@fnal.gov"),
                                 "smtp.fnal.gov")
+        print "Minerva Report run successful"
     except:
         print >> sys.stderr, traceback.format_exc()
         sys.exit(1)

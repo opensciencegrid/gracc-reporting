@@ -475,6 +475,9 @@ class Reporter(TimeUtils):
         if not exists_ch:
             logger.addHandler(ch)
 
+        if self.is_test:
+            logger.info("Running in test mode")
+
         return logger
 
 
