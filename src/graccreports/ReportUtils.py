@@ -517,6 +517,7 @@ def runerror(config, error, traceback, logfile):
     except Exception as e:
         err = "Error:  unable to send email.\n%s\n" % e
         print err
+        print error, traceback
         raise
 
     return None
