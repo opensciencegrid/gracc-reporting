@@ -2,3 +2,6 @@
 __pycache__/
 *.py[cod]
 *.log
+
+# Special scripts
+Docker/*.sh
