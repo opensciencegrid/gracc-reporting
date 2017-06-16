@@ -1,5 +1,5 @@
 # FIFE base image for gracc-reporting
-FROM shreyb/gracc-reporting:fife_0.9-3
+FROM shreyb/gracc-reporting:fife_0.10-1
 
 # Run executable 
 ENTRYPOINT ["minervareport"]

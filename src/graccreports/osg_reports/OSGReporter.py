@@ -55,6 +55,7 @@ class OSGReporter(Reporter):
                      "Wall Hours"]
         self.logger.info("Report Type: {0}".format(self.report_type))
         self.isSum = isSum
+        self.tgmatch = re.compile('TG-')
 
     def run_report(self):
         """Higher level method to handle the process flow of the report
@@ -162,6 +163,9 @@ class OSGReporter(Reporter):
                 report[name] = []
 
         for result_list in self.generate_report_file():
+            if not self._validate_type_results(result_list[0]):
+                continue
+
             if self.verbose:
                 print u"{0}\t{1}\t{2}\t{3}\t{4}".format(*result_list)
             mapdict = dict(zip(self.header, result_list))
@@ -204,6 +208,20 @@ class OSGReporter(Reporter):
             raise Exception("Must use report type {0}".format(
                 ', '.join((name for name in validtypes)))
             )
+
+    def _validate_type_results(self, pname):
+        """
+        Makes sure we include ONLY "TG-" projects in XD report and only non-
+        "TG-" projects in other reports
+        :param pname:
+        :return:
+        """
+        if self.report_type == 'XD' and self.tgmatch.match(pname):
+            return True
+        elif self.report_type <> 'XD' and not self.tgmatch.match(pname):
+            return True
+        else:
+            return False
 
 
 def main():
