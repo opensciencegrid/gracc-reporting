@@ -10,7 +10,9 @@ import operator
 import os
 import pkg_resources
 import json
-from ConfigParser import NoOptionError, NoSectionError
+import toml
+import copy
+# from ConfigParser import NoOptionError, NoSectionError
 
 from elasticsearch import Elasticsearch
 
@@ -61,11 +63,11 @@ class Reporter(TimeUtils):
     def __init__(self, report, config, start, end=None, verbose=False,
                  raw=False, allraw=False, template=None, is_test=False, no_email=False,
                  title=None, logfile=None, logfile_override=False, check_vo=False):
-
         TimeUtils.__init__(self)
+        self.config = self.__parse_config(config)
+        # if config:
+        #     self.config = config.config
         self.header = []
-        if config:
-            self.config = config.config
         self.start_time = self.parse_datetime(start)
         self.end_time = self.parse_datetime(end)
         self.verbose = verbose
@@ -165,7 +167,7 @@ class Reporter(TimeUtils):
 
         use_title = unicode(use_title, 'utf-8')
 
-        if self.test_no_email(self.email_info["to_emails"]):
+        if self.test_no_email(self.email_info['to']['email']):
             return
 
         emailReport = TextUtils.TextUtils(self.header)
@@ -190,14 +192,14 @@ class Reporter(TimeUtils):
         else:
             text["html"] = u"<html><body><h2>{0}</h2><table border=1>{1}</table></body></html>".format(use_title, htmldata)
 
-        TextUtils.sendEmail((self.email_info["to_names"],
-                             self.email_info["to_emails"]),
+        TextUtils.sendEmail((self.email_info['to']['name'],
+                             self.email_info['to']['email']),
                             use_title, text,
-                            (self.email_info["from_name"],
-                             self.email_info["from_email"]),
-                            self.email_info["smtphost"],
+                            (self.email_info['from']['name'],
+                             self.email_info['from']['email']),
+                            self.email_info['smtphost'],
                             html_template=self.template)
-        self.logger.info("Sent reports to {0}".format(", ".join(self.email_info["to_emails"])))
+        self.logger.info("Sent reports to {0}".format(", ".join(self.email_info['to']['email'])))
         return
 
     @abc.abstractmethod
@@ -316,11 +318,11 @@ class Reporter(TimeUtils):
         try_locations = ['/var/log', os.path.expanduser('~'), '/tmp']
 
         try:
-            configdir = self.config.get('defaults', 'default_logdir')
-            if configdir in try_locations:
-                try_locations.remove(configdir)
-            try_locations.insert(0, configdir)
-        except (NoOptionError, NoSectionError): # No entry in configfile
+            logdir = self.config['default_logdir']
+            if logdir in try_locations:
+                try_locations.remove(logdir)
+            try_locations.insert(0, logdir)
+        except KeyError:    # No entry in configfile
             pass
 
         d = 'gracc-reporting'
@@ -362,14 +364,34 @@ class Reporter(TimeUtils):
 
     # Non-public methods
 
+    @staticmethod
+    def __parse_config(configfile):
+        """
+        Parse our config file and return the config as dictionary
+
+        :param configfile:  Path to TOML config file to be parsed
+        :return: dict of config
+        """
+        if os.path.exists(configfile):
+            try:
+                with open(configfile, 'r') as f:
+                    config = toml.loads(f.read())
+            except toml.TomlDecodeError as e:
+                print "Cannot decode toml file"
+                print e
+                raise
+            return config
+        else:
+            raise OSError("Cannot find file {0:s}".format(configfile))
+
     def __check_vo(self):
         """
         Check to see if the vo is a section in config file (as of this writing,
         only applies to fife_reports package).  If not, raise NoSectionError
         :return None: 
         """
-        if self.vo and not self.config.has_section(self.vo.lower()):
-            raise NoSectionError("The VO {0} was not found in the config file."
+        if self.vo and self.vo.lower() not in self.config:
+            raise KeyError("The VO {0} was not found in the config file."
                             " Please review the config file to see if changes"
                             "need to be made and try again".format(self.vo.lower()))
         return
@@ -379,10 +401,8 @@ class Reporter(TimeUtils):
 
         :return: elasticsearch.Elasticsearch object
         """
-        try:
-            hostname = self.config.get('elasticsearch', 'hostname')
-        except (NoSectionError, NoOptionError):
-            hostname = 'https://gracc.opensciencegrid.org/q'
+        hostname = self.config['elasticsearch'].get('hostname',
+                                                    'https://gracc.opensciencegrid.org/q')
 
         try:
             client = Elasticsearch(hostname,
@@ -400,32 +420,54 @@ class Reporter(TimeUtils):
         """
         Parses config file to grab email-related information.
 
-        :return dict: Dict of sender, recipient(s), smtphost info
+        :return dict: Dict of sender, recipient(s), smtphost info.  Format is:
+            { "to": {"email": ["email1", "email2", ], "name": ["name1", "name2", ]},
+              "from": {"email": "email_address", "name": "named person"},
+              "smtphost": "host.domain.com"
+              }
         """
         email_info = {}
+        config_email_info = copy.deepcopy(self.config['email'])
 
         # Get recipient(s) info
+        emails = copy.deepcopy(config_email_info['test']['emails'])
+        names = copy.deepcopy(config_email_info['test']['names'])
         if self.is_test:
-            emails = re.split('[; ,]', self.config.get("email", "test_to_emails"))
-            names = re.split('[;,]', self.config.get("email", "test_to_names"))
+            pass    # Do nothing.  We want to keep this as our final list
+            # emails = re.split('[; ,]', self.config.get("email", "test_to_emails"))
+            # names = re.split('[;,]', self.config.get("email", "test_to_names"))
         else:
+            attrs = [self.report_type.lower(), 'to_emails']
             try:
-                vo = self.vo
-                emails = re.split('[; ,]', self.config.get(vo.lower(), "{0}_to_emails".format(self.report_type.lower())) +
-                                  ',' + self.config.get("email", "test_to_emails"))
+                vo = self.vo.lower()
+                attrs.insert(0, vo)
                 names = []
+                # emails = re.split('[; ,]', self.config.get(vo.lower(), "{0}_to_emails".format(self.report_type.lower())) +
+                #                   ',' + self.config.get("email", "test_to_emails"))
+                # names = []
             except AttributeError:      # No vo-specific info in config file
-                emails = re.split('[; ,]', self.config.get("email", "{0}_to_emails".format(self.report_type)) +
-                                  ',' + self.config.get("email", "test_to_emails"))
-                names = re.split('[;,]', self.config.get("email", "{0}_to_names".format(self.report_type)) +
-                                 ',' + self.config.get("email", "test_to_names"))
+                # emails = re.split('[; ,]', self.config.get("email", "{0}_to_emails".format(self.report_type)) +
+                #                   ',' + self.config.get("email", "test_to_emails"))
+                add_names = copy.deepcopy(
+                    self.config[self.report_type.lower()]['to_names']
+                )
+                names.extend(add_names)
+                # names = re.split('[;,]', self.config.get("email", "{0}_to_names".format(self.report_type)) +
+                #                  ',' + self.config.get("email", "test_to_names"))
+            finally:
+                # Iterate through config keys (attrs) to get emails we want
+                add_emails = copy.deepcopy(self.config)
+                while len(attrs) != 0:
+                    add_emails = add_emails[attrs.pop(0)]
+                emails.extend(add_emails)
 
-        email_info["to_emails"] = emails
-        email_info["to_names"] = names
+        email_info["to"] = {}
+        email_info["to"]["email"] = emails
+        email_info["to"]["name"] = names
 
         # Get other global info from config file
-        for key in ("from_email", "from_name", "smtphost"):
-            email_info[key] = self.config.get("email", key)
+        for key in ("from", "smtphost"):
+            email_info[key] = copy.deepcopy(config_email_info(key)
 
         return email_info
 
@@ -529,6 +571,7 @@ def get_default_resource(kind, filename):
 
     :param str kind: Must be 'config', or 'html_templates', unless we expand
     the input file kinds in the future
+    :param str filename: The filename of the resource file we're looking for
     :return str: Path of the default resource
     """
     default_path = os.path.join('/etc/gracc-reporting', kind)
@@ -567,7 +610,7 @@ def get_configfile(flag='osg', override=None):
     if override and os.path.exists(override):
         return override
 
-    f = '{0}.config'.format(flag)
+    f = '{0}.toml'.format(flag)
 
     return get_default_resource('config', f)
 
