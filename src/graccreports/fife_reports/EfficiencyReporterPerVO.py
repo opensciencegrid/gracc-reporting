@@ -1,11 +1,10 @@
 import sys
 import re
 import datetime
-from ConfigParser import NoSectionError
 
 from elasticsearch_dsl import Search
 
-from . import Reporter, runerror, get_configfile, get_template, Configuration
+from . import Reporter, runerror, get_configfile, get_template
 from . import TextUtils, NiceNum
 
 default_templatefile = 'template_efficiency.html'
@@ -62,9 +61,8 @@ class Efficiency(Reporter):
     :param bool no_email: If true, don't actually send the email
     :param bool verbose: Verbose flag
     """
-    def __init__(self, config, start, end, vo, hour_limit, eff_limit,
-                 facility, template, is_test=False, no_email=False,
-                 verbose=False, ov_logfile=None):
+    def __init__(self, config, start, end, vo, facility, template,
+                 is_test=False, no_email=False, verbose=False, ov_logfile=None):
         report = 'Efficiency'
         self.vo = vo
 
@@ -74,19 +72,10 @@ class Efficiency(Reporter):
         else:
             rlogfile = logfile
             logfile_override = False
-
-        self.title = "{0} Users with Low Efficiency ({1}) on the OSG Sites " \
-                      "({2} - {3})".format(
-                                self.vo,
-                                eff_limit,
-                                start,
-                                end)
-
         Reporter.__init__(self, report, config, start, end, verbose=verbose,
                           logfile=rlogfile, no_email=no_email, is_test=is_test,
                           logfile_override=logfile_override, raw=True, check_vo=True)
-        self.hour_limit = hour_limit
-        self.eff_limit = eff_limit
+        self.hour_limit, self.eff_limit = self.__get_limits()
         self.facility = facility
         self.template = template
         self.text = ''
@@ -97,6 +86,23 @@ class Efficiency(Reporter):
         # self.non_cilogon_match = re.compile('/CN=([\w\s]+)/?.+?') # Original
         self.non_cilogon_match = re.compile('.+/CN=([\w\s]+)/?.+?')
         # End patch
+        self.title = "{0} Users with Low Efficiency ({1}) on the OSG Sites " \
+                      "({2} - {3})".format(self.vo, self.eff_limit, start, end)
+
+    def __get_limits(self):
+        """
+
+        :return: Grab the min-hours and min-efficiency limits from config dict
+        """
+        try:
+            return (self.config[self.vo.lower()][self.report_type.lower()]['min_{0:s}'.format(tag)]
+                    for tag in ('hours', 'efficiency'))
+        except KeyError as err:
+            err.message += "\n The VO {0:s} was not found in the config file, " \
+                           "or did not have an {1:s} report section."  \
+                           " Please review the config file to see if changes" \
+                           " need to be made and try again\n".format(self.vo.lower(), self.report_type)
+            raise
 
     def run_report(self):
         """Handles the data flow throughout the report generation.  Generates
@@ -289,20 +295,20 @@ class Efficiency(Reporter):
 
         :return: None
         """
-        if self.test_no_email(self.email_info["to_emails"]):
+        if self.test_no_email(self.email_info['to']['email']):
             return
 
         TextUtils.sendEmail(
-                            (self.email_info["to_names"],
-                             self.email_info["to_emails"]),
+                            (self.email_info['to']['name'],
+                             self.email_info['to']['email']),
                             self.title,
                             {"html": self.text},
-                            (self.email_info["from_name"],
-                             self.email_info["from_email"]),
-                            self.email_info["smtphost"])
+                            (self.email_info['from']['name'],
+                             self.email_info['from']['email']),
+                            self.email_info['smtphost'])
 
         self.logger.info("Report sent for {0} to {1}".format(self.vo,
-                                                             ", ".join(self.email_info["to_emails"])))
+                                                             ", ".join(self.email_info['to']['email'])))
 
         return
 
@@ -311,30 +317,17 @@ def main():
     args = parse_opts()
 
     # Set up the configuration
-    config = Configuration.Configuration()
-    config.configure(get_configfile(override=args.config, flag='fife'))
+    config = get_configfile(flag='fife', override=args.config)
 
     templatefile = get_template(override=args.template,
                                 deffile=default_templatefile)
 
     try:
-        # Grab the limits
-        try:
-            repeff = config.config.get(args.vo.lower(), "efficiency")
-            min_hours = config.config.get(args.vo.lower(), "min_hours")
-        except NoSectionError as err:
-            err.message += "\n The VO {0} was not found in the config file."  \
-                           " Please review the config file to see if changes" \
-                           " need to be made and try again\n".format(args.vo.lower())
-            raise
-
         # Create an Efficiency object, create a report for the VO, and send it
         e = Efficiency(config,
                        args.start,
                        args.end,
                        args.vo,
-                       int(min_hours),
-                       float(repeff),
                        args.facility,
                        templatefile,
                        args.is_test,

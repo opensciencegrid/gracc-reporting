@@ -44,7 +44,7 @@ class Reporter(TimeUtils):
     Base class for all OSG reports
 
     :param str report: Which report is getting run
-    :param Configuration.Configuration config: Report Configuration object
+    :param str config: Filename of toml configuration file
     :param str start: Start time of report range
     :param str end: End time of report range
     :param bool verbose: Verbose flag
@@ -359,7 +359,6 @@ class Reporter(TimeUtils):
         else:
             # If none of the prefixes work for some reason, write to local dir
             filepath = fn
-
         return filepath
 
     # Non-public methods
@@ -467,7 +466,7 @@ class Reporter(TimeUtils):
 
         # Get other global info from config file
         for key in ("from", "smtphost"):
-            email_info[key] = copy.deepcopy(config_email_info(key)
+            email_info[key] = copy.deepcopy(config_email_info[key])
 
         return email_info
 
@@ -527,7 +526,7 @@ def runerror(config, error, traceback, logfile):
     """
     Global function to print, log, and email errors to admins
 
-    :param Configuration.Configuration config: Report config
+    :param str config: Config filename
     :param str error: Error raised
     :param str traceback: Traceback from error
     :param str logfile: Filename of logfile
@@ -542,18 +541,24 @@ def runerror(config, error, traceback, logfile):
             f.write(str(error))
     print >> sys.stderr, error
 
-    admin_emails = re.split('[; ,]', config.config.get("email", "test_to_emails"))
-    fromemail = config.config.get("email", "from_email")
+    # admin_emails = re.split('[; ,]', config.config.get("email", "test_to_emails"))
+    # fromemail = config.config.get("email", "from_email")
+
+    with open(config, 'r') as f:
+        c = toml.loads(f.read())
+    admin_emails = c['email']['test']['emails']
+    from_email = c['email']['from']['email']
+
 
     msg = MIMEText("ERROR: {0}\n\n{1}".format(error, traceback))
     msg['Subject'] = "ERROR PRODUCING REPORT: Date Generated {0}".format(
         datetime.now())
-    msg['From'] = fromemail
+    msg['From'] = from_email
     msg['To'] = ', '.join(admin_emails)
 
     try:
-        s = smtplib.SMTP(config.config.get("email", "smtphost"))
-        s.sendmail(fromemail, admin_emails, msg.as_string())
+        s = smtplib.SMTP(c['email']['smtphost'])
+        s.sendmail(from_email, admin_emails, msg.as_string())
         s.quit()
         print "Successfully sent error email"
     except Exception as e:
