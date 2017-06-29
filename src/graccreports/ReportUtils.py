@@ -126,7 +126,7 @@ class Reporter(TimeUtils):
             if self.verbose:
                 print json.dumps(response.to_dict(), sort_keys=True, indent=4)
 
-            if hasattr(response, 'aggregations'):
+            if hasattr(response, 'aggregations') and response.aggregations:
                 results = response.aggregations
             else:
                 results = s
