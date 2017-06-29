@@ -3,11 +3,10 @@ import re
 from time import sleep
 import traceback
 import datetime
-from ConfigParser import NoOptionError
 
 from elasticsearch_dsl import Search
 
-from . import Reporter, runerror, get_configfile, get_template, Configuration
+from . import Reporter, runerror, get_configfile, get_template
 from . import TextUtils
 
 # Various config values and their default values
@@ -85,7 +84,7 @@ class JobSuccessRateReporter(Reporter):
     Class to hold information about and run Job Success Rate report.  To
     execute, instantiate the class and then use the run_report() method.
 
-    :param Configuration.Configuration config: Report Configuration object
+    :param config: Report Configuration file
     :param str start: Start time of report range
     :param str end: End time of report range
     :param str vo: Experiment to run report on
@@ -145,7 +144,8 @@ class JobSuccessRateReporter(Reporter):
         :return elasticsearch_dsl.Search: Search object containing ES query
         """
         # Set up our search parameters
-        voq = self.config.get(self.vo.lower(), "voname".format(self.vo.lower()))
+        rep_config = self.config[self.vo.lower()][self.report_type.lower()]
+        voq = rep_config['voname']
         productioncheck = '*Role=Production*'
 
         starttimeq = self.start_time.isoformat()
@@ -160,7 +160,7 @@ class JobSuccessRateReporter(Reporter):
             .filter("range", EndTime={"gte": starttimeq, "lt": endtimeq}) \
             .filter("term", ResourceType="Payload")
 
-        if self.vo.lower() in re.split(',', self.config.get('noproduction', 'list')):
+        if 'no_production' in rep_config and rep_config['no_production']:
             s = s.filter("wildcard", VOName=voq)
         else:
             s = s.filter("wildcard", VOName=productioncheck)\
@@ -296,8 +296,8 @@ class JobSuccessRateReporter(Reporter):
         # Grab config values.  If they don't exist, keep defaults
         for key in config_vals:
             try:
-                config_vals[key] = int(self.config.get(self.vo.lower(), key))
-            except NoOptionError:
+                config_vals[key] = int(self.config[self.vo.lower()][self.report_type.lower()][key])
+            except KeyError:
                 pass
 
         table_summary = ""
@@ -563,33 +563,34 @@ class JobSuccessRateReporter(Reporter):
 
     def send_report(self):
         """Method to send emails of report file to intended recipients."""
-        if self.test_no_email(self.email_info["to_emails"]):
+        if self.test_no_email(self.email_info['to']['email']):
             return
 
-        TextUtils.sendEmail((self.email_info["to_names"],
-                             self.email_info["to_emails"]),
+        TextUtils.sendEmail(
+                            (self.email_info['to']['name'],
+                             self.email_info['to']['email']),
                             self.title,
                             {"html": self.text},
-                            (self.email_info["from_name"],
-                             self.email_info["from_email"]),
-                            self.email_info["smtphost"])
+                            (self.email_info['from']['name'],
+                             self.email_info['from']['email']),
+                            self.email_info['smtphost'])
 
         self.logger.info("Report sent for {0} to {1}".format(self.vo,
-                                                             ", ".join(self.email_info["to_emails"])))
+                                                             ", ".join(self.email_info['to']['email'])))
         return
 
     def _limit_site_check(self):
         """Check to see if the num_failed_sites option is set in the config
         file for the VO"""
-        return self.config.has_option(self.vo.lower(), 'num_failed_sites')
+        return 'num_failed_sites' in \
+               self.config[self.vo.lower()][self.report_type.lower()]
 
 
 def main():
     args = parse_opts()
 
     # Set up the configuration
-    config = Configuration.Configuration()
-    config.configure(get_configfile(override=args.config, flag='fife'))
+    config = get_configfile(flag='fife', override=args.config)
 
     templatefile = get_template(override=args.template, deffile=default_templatefile)
 
