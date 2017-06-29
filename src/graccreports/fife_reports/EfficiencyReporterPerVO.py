@@ -47,7 +47,7 @@ class Efficiency(Reporter):
     """
     Class to hold information about and to run Efficiency report.
 
-    :param Configuration.Configuration config: Report Configuration object
+    :param config: Report Configuration file
     :param str start: Start time of report range
     :param str end: End time of report range
     :param str vo: Experiment to run report on
