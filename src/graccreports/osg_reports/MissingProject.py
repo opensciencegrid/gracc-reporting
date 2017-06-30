@@ -1,5 +1,4 @@
 import os
-import re
 import traceback
 import smtplib
 import email.utils
@@ -9,7 +8,7 @@ import copy
 
 from elasticsearch_dsl import Search
 
-from . import Reporter, runerror, get_configfile, Configuration
+from . import Reporter, runerror, get_configfile
 
 from ProjectNameCollector import ProjectNameCollector
 
@@ -28,7 +27,7 @@ def parse_opts(parser):
     """
     # Report-specific args
     parser.add_argument("-r", "--report-type", dest="report_type",
-                        help="Report type (OSG, XD. or OSG-Connect")
+                        help="Report type (OSG, XD, or OSG-Connect")
 
 
 class MissingProjectReport(Reporter):
@@ -72,8 +71,7 @@ class MissingProjectReport(Reporter):
         starttimeq = self.start_time.isoformat()
         endtimeq = self.end_time.isoformat()
 
-        probes = [_.strip("'") for _ in re.split(",", self.config.get(
-            "project", "{0}_probe_list".format(self.report_type)))]
+        probes = self.config['project'][self.report_type.lower()]['probe_list']
 
         if self.verbose:
             print probes
@@ -263,18 +261,15 @@ class MissingProjectReport(Reporter):
 
         if xd_admins:
             if not self.is_test:
-                self.email_info["to_emails"] = \
-                    self.config.get('email', 'xd_admins_to_emails').split(
-                        ',')
-                self.email_info["to_names"] = \
-                    self.config.get('email', 'xd_admins_to_names').split(',')
+                self.email_info['to'] = {key: self.config['project']['xd']['admins_to_{0:s}s'.format(key)]
+                                         for key in ('email', 'name')}
                 self.logger.info("xd_admins flag is True.  Sending email to "
                                  "xd_admins")
             fname = self.fxdadminname
         else:
             fname = self.fname
 
-        if self.test_no_email(self.email_info["to_emails"]):
+        if self.test_no_email(self.email_info['to']['email']):
             return
 
         try:
@@ -288,8 +283,8 @@ class MissingProjectReport(Reporter):
 
         to_stage = [email.utils.formataddr(pair)
                     for pair in zip(
-                self.email_info['to_names'],
-                self.email_info['to_emails'])]
+                (self.email_info['to'][key]
+                 for key in ('name', 'email')))]
 
         if xd_admins:
             msg['Subject'] = 'XD Projects not found in XD database'
@@ -297,18 +292,18 @@ class MissingProjectReport(Reporter):
             msg['Subject'] = 'Records with no Project or Projects not ' \
                              'registered in OIM'
         msg['To'] = COMMASPACE.join(to_stage)
-        msg['From'] = email.utils.formataddr((self.email_info['from_name'],
-                                              self.email_info['from_email']))
+        msg['From'] = email.utils.formataddr((self.email_info['from']['name'],
+                                              self.email_info['from']['email']))
 
         try:
             smtpObj = smtplib.SMTP(self.email_info["smtphost"])
             smtpObj.sendmail(
-                self.email_info['from_email'],
-                self.email_info['to_emails'],
+                self.email_info['from']['email'],
+                self.email_info['to']['email'],
                 msg.as_string())
             smtpObj.quit()
             self.logger.info("Sent email from file {0} to recipients {1}"
-                             .format(fname, self.email_info['to_emails']))
+                             .format(fname, self.email_info['to']['email']))
         except Exception as e:
             self.logger.exception("Error:  unable to send email.\n{0}\n".format(e))
             raise
@@ -337,8 +332,7 @@ def main():
     args = parse_opts()
 
     # Set up the configuration
-    config = Configuration.Configuration()
-    config.configure(get_configfile(override=args.config))
+    config = get_configfile(override=args.config)
 
     try:
         r = MissingProjectReport(args.report_type,
