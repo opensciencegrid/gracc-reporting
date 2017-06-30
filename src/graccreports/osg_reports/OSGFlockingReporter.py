@@ -1,11 +1,10 @@
 import datetime
 import traceback
 import sys
-from re import split
 
 from elasticsearch_dsl import Search
 
-from . import Reporter, runerror, get_configfile, get_template, Configuration
+from . import Reporter, runerror, get_configfile, get_template
 
 logfile = 'osgflockingreport.log'
 default_templatefile = 'template_flocking.html'
@@ -25,7 +24,7 @@ def parse_opts(parser):
 class FlockingReport(Reporter):
     """Class to hold information for and to run OSG Flocking report
 
-    :param Configuration.Configuration config: Report Configuration object
+    :param str config: Report Configuration filename
     :param str start: Start time of report range
     :param str end: End time of report range
     :param str template: Filename of HTML template to generate report
@@ -74,9 +73,7 @@ class FlockingReport(Reporter):
         if self.verbose:
             self.logger.info(self.indexpattern)
 
-        probes = self.config.get('{0}_report'.format(self.report_type.lower()),
-                                 'flocking_probe_list')
-        probeslist = split(',', probes)
+        probeslist = self.config[self.report_type.lower()]['probe_list']
 
         # Elasticsearch query and aggregations
         s = Search(using=self.client, index=self.indexpattern) \
@@ -154,8 +151,7 @@ def main():
     args = parse_opts()
 
     # Set up the configuration
-    config = Configuration.Configuration()
-    config.configure(get_configfile(override=args.config))
+    config = get_configfile(override=args.config)
 
     templatefile = get_template(override=args.template, deffile=default_templatefile)
 
