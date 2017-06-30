@@ -3,7 +3,6 @@
 import sys
 import optparse
 
-from . import Configuration
 from XDProject import XDProject
 
 __author__ = "Tanya Levshina"
@@ -16,7 +15,7 @@ class ProjectNameCollector:
     def __init__(self, config, verbose=False):
         """ Collects ProjectName information from all available sources (OIM, XD DB).
         Args:
-            config(Configuration)
+            config(dict)
             verbose(boolean) - debug messages flag
         """
         self.projects = {}
@@ -176,13 +175,10 @@ def parse_opts():
     if len(args) != 1:
         parser.print_usage()
         sys.exit(1)
-    Configuration.checkRequiredArguments(opts, parser)
     return opts, args
 
 if __name__ == "__main__":
     opts, args = parse_opts()
-    config = Configuration.Configuration()
-    config.configure(opts.config)
     pnc = ProjectNameCollector(config, opts.verbose)
     p = pnc.get_project(args[0], opts.report_type)
     print p.__dict__
