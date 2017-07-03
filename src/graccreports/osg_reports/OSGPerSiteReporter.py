@@ -4,7 +4,7 @@ import datetime
 
 from elasticsearch_dsl import Search
 
-from . import Reporter, runerror, get_configfile, get_template, Configuration
+from . import Reporter, runerror, get_configfile, get_template
 
 logfile = 'osgpersitereport.log'
 default_templatefile = 'template_persite.html'
@@ -169,7 +169,7 @@ class OSGPerSiteReporter(Reporter):
     """Class to store information and perform actions for the OSG Per Site
     Report
 
-    :param Configuration.Configuration config: Report Configuration object
+    :param str config: Report Configuration file
     :param str start: Start time of report range
     :param str end: End time of report range
     :param str template: Filename of HTML template to generate report
@@ -401,8 +401,7 @@ def main():
     args = parse_opts()
 
     # Set up the configuration
-    config = Configuration.Configuration()
-    config.configure(get_configfile(override=args.config))
+    config = get_configfile(override=args.config)
 
     templatefile = get_template(override=args.template, deffile=default_templatefile)
 
