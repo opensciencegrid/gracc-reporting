@@ -4,7 +4,7 @@ import datetime
 
 from elasticsearch_dsl import Search
 
-from . import Reporter, runerror, get_configfile, get_template
+from . import Reporter, runerror, get_configfile, get_template, coroutine
 
 logfile = 'osgpersitereport.log'
 default_templatefile = 'template_persite.html'
@@ -12,20 +12,6 @@ opp_vos = ['glow', 'gluex', 'hcc', 'osg', 'sbgrid']
 
 
 # Helper Functions
-def coroutine(func):
-    """Decorator to prime coroutines by advancing them to their first yield
-    point
-
-    :param function func: Coroutine function to prime
-    :return function: Coroutine that's been primed
-    """
-    def wrapper(*args, **kwargs):
-        cr = func(*args, **kwargs)
-        cr.next()
-        return cr
-    return wrapper
-
-
 def monthrange(date):
     """
     Takes a start date and finds out the start and end of the month that that
