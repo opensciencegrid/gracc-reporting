@@ -1,7 +1,6 @@
 import abc
 import argparse
 from datetime import datetime
-import re
 import sys
 import smtplib
 from email.mime.text import MIMEText
@@ -12,7 +11,6 @@ import pkg_resources
 import json
 import toml
 import copy
-# from ConfigParser import NoOptionError, NoSectionError
 
 from elasticsearch import Elasticsearch
 
@@ -433,20 +431,13 @@ class Reporter(TimeUtils):
         names = copy.deepcopy(config_email_info['test']['names'])
         if self.is_test:
             pass    # Do nothing.  We want to keep this as our final list
-            # emails = re.split('[; ,]', self.config.get("email", "test_to_emails"))
-            # names = re.split('[;,]', self.config.get("email", "test_to_names"))
         else:
             attrs = [self.report_type.lower(), 'to_emails']
             try:
                 vo = self.vo.lower()
                 attrs.insert(0, vo)
                 names = []
-                # emails = re.split('[; ,]', self.config.get(vo.lower(), "{0}_to_emails".format(self.report_type.lower())) +
-                #                   ',' + self.config.get("email", "test_to_emails"))
-                # names = []
             except AttributeError:      # No vo-specific info in config file
-                # emails = re.split('[; ,]', self.config.get("email", "{0}_to_emails".format(self.report_type)) +
-                #                   ',' + self.config.get("email", "test_to_emails"))
                 try:
                     add_names = copy.deepcopy(
                         self.config[self.report_type.lower()]['to_names']
@@ -460,8 +451,6 @@ class Reporter(TimeUtils):
                         raise
                 finally:
                     names.extend(add_names)
-                # names = re.split('[;,]', self.config.get("email", "{0}_to_names".format(self.report_type)) +
-                #                  ',' + self.config.get("email", "test_to_names"))
             finally:
                 # Iterate through config keys (attrs) to get emails we want
                 add_emails = copy.deepcopy(self.config)

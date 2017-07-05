@@ -338,7 +338,7 @@ class ProbeReport(Reporter):
     """
     Class to hold information about and generate the probe report
 
-    :param Configuration.Configuration config: Report Configuration object
+    :param strconfig: Report Configuration file
     :param datetime.datetime start: Start time of report range
     :param bool verbose: Verbose flag
     :param bool is_test: Whether or not this is a test run.
