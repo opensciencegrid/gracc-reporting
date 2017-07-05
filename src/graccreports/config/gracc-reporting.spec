@@ -1,6 +1,6 @@
 %define name gracc-reporting
-%define version 0.10
-%define unmangled_version 0.10
+%define version 0.11
+%define unmangled_version 0.11
 %define release 1
 
 Summary: 	GRACC Email Reports
@@ -9,7 +9,7 @@ Version: 	%{version}
 Release: 	%{release}
 Source0: 	%{name}-%{unmangled_version}.tar.gz
 License: 	ASL 2.0
-BuildRoot: 	%{_tmppath}/%{name}-%{version}-%{release}-buildroot
+BuildRoot: 	%{_tmppath}/%{name}-%{version}-%{release}-buildrooty
 Prefix: 	%{_prefix}
 BuildArch: 	noarch
 Url: 		https://github.com/opensciencegrid/gracc-reporting
@@ -25,6 +25,7 @@ Requires:	python-elasticsearch
 Requires:       python-dateutil
 Requires:	python-psycopg2
 Requires:	python-requests
+Requires:   python-toml
 Requires(pre): shadow-utils
 
 %description
@@ -66,3 +67,8 @@ install -m 0744 docs/*.md $RPM_BUILD_ROOT/%{_defaultdocdir}/graccreports/
 
 %clean
 rm -rf $RPM_BUILD_ROOT
+
+% changelog
+
+* Wed June 28 2017 Shreyas Bhat 0.11
+- Added python-toml as requirement and am porting all config files to toml
