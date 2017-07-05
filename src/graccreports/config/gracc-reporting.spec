@@ -20,7 +20,7 @@ BuildRequires:  python-srpm-macros
 BuildRequires:  python-rpm-macros 
 BuildRequires:  python2-rpm-macros 
 BuildRequires:  epel-rpm-macros
-Requires:       python-elasticsearch-dsl = 5.0.0
+Requires:       python-elasticsearch-dsl
 Requires:	python-elasticsearch
 Requires:       python-dateutil
 Requires:	python-psycopg2
@@ -42,7 +42,7 @@ gracc-reporting is a set of reports that collect and present data from the Open 
 
 # Install config and html_template files in /etc/graccreports
 install -d -m 0755 $RPM_BUILD_ROOT/%{_sysconfdir}/graccreports/config/
-install -m 0744 $RPM_BUILD_ROOT/%{python2_sitelib}/graccreports/config/*.config $RPM_BUILD_ROOT/%{_sysconfdir}/graccreports/config/
+install -m 0744 $RPM_BUILD_ROOT/%{python2_sitelib}/graccreports/config/*.toml $RPM_BUILD_ROOT/%{_sysconfdir}/graccreports/config/
 install -d -m 0755 $RPM_BUILD_ROOT/%{_sysconfdir}/graccreports/html_templates/
 install -m 0744 $RPM_BUILD_ROOT/%{python2_sitelib}/graccreports/html_templates/*.html $RPM_BUILD_ROOT/%{_sysconfdir}/graccreports/html_templates/
 
@@ -61,14 +61,9 @@ install -m 0744 docs/*.md $RPM_BUILD_ROOT/%{_defaultdocdir}/graccreports/
 %{python2_sitelib}/gracc_reporting-%{version}-py2.7.egg-info
 
 # Include config and doc files
-%config(noreplace) %{_sysconfdir}/graccreports/config/*.config
+%config(noreplace) %{_sysconfdir}/graccreports/config/*.toml
 %config(noreplace) %{_sysconfdir}/graccreports/html_templates/*.html
 %doc %{_defaultdocdir}/graccreports/*
 
 %clean
 rm -rf $RPM_BUILD_ROOT
-
-% changelog
-
-* Wed June 28 2017 Shreyas Bhat 0.11
-- Added python-toml as requirement and am porting all config files to toml
