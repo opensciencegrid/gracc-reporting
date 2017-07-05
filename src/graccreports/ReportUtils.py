@@ -64,7 +64,7 @@ class Reporter(TimeUtils):
                  raw=False, allraw=False, template=None, is_test=False, no_email=False,
                  title=None, logfile=None, logfile_override=False, check_vo=False):
         TimeUtils.__init__(self)
-        self.config = self.__parse_config(config)
+        self.config = self._parse_config(config)
         # if config:
         #     self.config = config.config
         self.header = []
@@ -364,7 +364,7 @@ class Reporter(TimeUtils):
     # Non-public methods
 
     @staticmethod
-    def __parse_config(configfile):
+    def _parse_config(configfile):
         """
         Parse our config file and return the config as dictionary
 
@@ -447,10 +447,19 @@ class Reporter(TimeUtils):
             except AttributeError:      # No vo-specific info in config file
                 # emails = re.split('[; ,]', self.config.get("email", "{0}_to_emails".format(self.report_type)) +
                 #                   ',' + self.config.get("email", "test_to_emails"))
-                add_names = copy.deepcopy(
-                    self.config[self.report_type.lower()]['to_names']
-                )
-                names.extend(add_names)
+                try:
+                    add_names = copy.deepcopy(
+                        self.config[self.report_type.lower()]['to_names']
+                    )
+                except KeyError:    # This is the project or missing project report
+                    try:
+                        attrs.insert(0, 'project')
+                        add_names = copy.deepcopy(
+                            self.config['project'][self.report_type.lower()]['to_names'])
+                    except KeyError:    # Some case that shouldn't pop up.  Raise an error
+                        raise
+                finally:
+                    names.extend(add_names)
                 # names = re.split('[;,]', self.config.get("email", "{0}_to_names".format(self.report_type)) +
                 #                  ',' + self.config.get("email", "test_to_names"))
             finally:
@@ -634,3 +643,4 @@ def get_template(override=None, deffile=None):
         return override
     else:
         return get_default_resource('html_templates', deffile)
+
