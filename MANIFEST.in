@@ -1,4 +1,4 @@
-include *.md *.config *.html *.txt
+include *.md *.html *.txt *.toml
 recursive-include config *
 recursive-include html_templates *
 recursive-include src/graccreports/config/ *
