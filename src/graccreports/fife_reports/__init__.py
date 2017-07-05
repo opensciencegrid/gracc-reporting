@@ -1,1 +1,1 @@
-from .. import Reporter, runerror, get_configfile, get_template, NiceNum, TextUtils
+from .. import Reporter, runerror, get_configfile, get_template, coroutine, NiceNum, TextUtils
