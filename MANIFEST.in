@@ -3,4 +3,4 @@ recursive-include config *.toml *.spec
 recursive-include html_templates *.html
 recursive-include src/graccreports/config *.toml *.spec
 recursive-include src/graccreports/html_templates *.html
-recursive-include docs *.mdgit
+recursive-include docs *.md
