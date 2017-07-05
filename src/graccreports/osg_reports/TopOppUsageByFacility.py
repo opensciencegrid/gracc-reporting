@@ -6,7 +6,7 @@ from dateutil.relativedelta import *
 
 from elasticsearch_dsl import Search
 
-from . import Reporter, runerror, get_configfile, get_template
+from . import Reporter, runerror, get_configfile, get_template, coroutine
 from . import TextUtils, NiceNum
 from NameCorrection import NameCorrection
 
@@ -18,20 +18,6 @@ facilities = {}
 
 
 # Helper functions
-def coroutine(func):
-    """Decorator to prime coroutines by advancing them to their first yield
-    point
-
-    :param function func: Coroutine function to prime
-    :return function: Coroutine that's been primed
-    """
-    def wrapper(*args, **kwargs):
-        cr = func(*args, **kwargs)
-        cr.next()
-        return cr
-    return wrapper
-
-
 def get_time_range(start=None, end=None, months=None):
     """
     Returns time ranges for current and prior reporting periods  Can either
