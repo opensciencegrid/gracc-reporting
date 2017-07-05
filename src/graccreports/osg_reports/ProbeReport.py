@@ -11,11 +11,11 @@ import dateutil
 import logging
 import traceback
 import sys
-from ConfigParser import NoSectionError, NoOptionError
 
 from elasticsearch_dsl import Search, Q
 
-from . import Reporter, runerror, get_configfile, Configuration
+from . import Reporter, runerror, get_configfile
+
 
 logfile = 'probereport.log'
 today = datetime.datetime.now()
@@ -33,9 +33,15 @@ class OIMInfo(object):
     """Class to hold and operate on OIM information
 
     :param bool verbose: Verbose flag
+    :param str config: Configuration file
+    :param str ov_logfile: Path to logfile override
     """
+    # Default OIM URLs
+    oim_url = {'rg': 'http://myosg.grid.iu.edu/rgsummary/xml?summary_attrs_showhierarchy=on&summary_attrs_showwlcg=on&summary_attrs_showservice=on&summary_attrs_showfqdn=on&gip_status_attrs_showtestresults=on&downtime_attrs_showpast=&account_type=cumulative_hours&ce_account_type=gip_vo&se_account_type=vo_transfer_volume&bdiitree_type=total_jobs&bdii_object=service&bdii_server=is-osg&all_resources=on&facility_sel%5B%5D=10009&gridtype=on&gridtype_1=on&service=on&service_sel%5B%5D=1&active=on&active_value=1&disable=on&disable_value=0&has_wlcg=on',
+        'dt':'http://myosg.grid.iu.edu/rgdowntime/xml?summary_attrs_showservice=on&summary_attrs_showrsvstatus=on&summary_attrs_showfqdn=on&gip_status_attrs_showtestresults=on&downtime_attrs_showpast=&account_type=cumulative_hours&ce_account_type=gip_vo&se_account_type=vo_transfer_volume&bdiitree_type=total_jobs&bdii_object=service&bdii_server=is-osg&start_type=7daysago&start_date={0}%2F{1}%2F{2}&end_type=now&end_date={3}%2F{4}%2F{5}&all_resources=on&facility_sel%5B%5D=10009&gridtype=on&gridtype_1=on&service=on&service_sel%5B%5D=1&active=on&active_value=1&disable=on&disable_value=0&has_wlcg=on'}
+
     def __init__(self, verbose=False, config=None, ov_logfile=None):
-        self.config = config
+        self.config = Reporter._parse_config(config)
         self.verbose = verbose
 
         if ov_logfile:
@@ -50,8 +56,7 @@ class OIMInfo(object):
         self.root = None
         self.resourcedict = {}
 
-        self.dateslist = self.dateslist_init()
-        self.xml_file = self.get_file_from_OIM()
+        self.xml_file = self.get_file_from_OIM(tag='rg')
         if self.xml_file:
             self.rgparse_xml()
             self.logger.info('Successfully parsed OIM file')
@@ -104,11 +109,11 @@ class OIMInfo(object):
         try_locations = ['/var/log', os.path.expanduser('~'), '/tmp']
 
         try:
-            configdir = self.config.config.get('defaults', 'default_logdir')
+            configdir = self.config['default_logdir']
             if configdir in try_locations:
                 try_locations.remove(configdir)
             try_locations.insert(0, configdir)
-        except (NoOptionError, NoSectionError): # No entry in configfile
+        except KeyError:    # No entry in configfile
             pass
 
         d = 'gracc-reporting'
@@ -154,44 +159,29 @@ class OIMInfo(object):
         rawdateslist = [startdate.month, startdate.day, startdate.year,
                         today.month, today.day, today.year]
         return ['0' + str(elt) if len(str(elt)) == 1 else str(elt)
-                     for elt in rawdateslist]
+                for elt in rawdateslist]
 
-    def get_file_from_OIM(self, rg=True):
+    def get_file_from_OIM(self, tag='rg'):
         """Get RG file from OIM for parsing, return the XML file
 
-        :param bool rg: If true, go to the resource group OIM page and grab
-        that data.  If false, get downtimes page
+        :param str tag: If 'rg', go to the resource group OIM page and grab
+        that data.  If 'dt', get downtimes page
 
         :return Response: Response from URL we tried to contact
         """
-        if rg:
-            oim_url = 'http://myosg.grid.iu.edu/rgsummary/xml?' \
-                  'summary_attrs_showhierarchy=on&summary_attrs_showwlcg=on' \
-                  '&summary_attrs_showservice=on&summary_attrs_showfqdn=on' \
-                  '&gip_status_attrs_showtestresults=on' \
-                  '&downtime_attrs_showpast=&account_type=cumulative_hours' \
-                  '&ce_account_type=gip_vo&se_account_type=vo_transfer_volume' \
-                  '&bdiitree_type=total_jobs&bdii_object=service' \
-                  '&bdii_server=is-osg&start_type=7daysago' \
-                  '&start_date={0}%2F{1}%2F{2}&end_type=now' \
-                  '&end_date={3}%2F{4}%2F{5}&all_resources=on' \
-                  '&facility_sel%5B%5D=10009&gridtype=on&gridtype_1=on' \
-                  '&service=on&service_sel%5B%5D=1&active=on&active_value=1' \
-                  '&disable=on&disable_value=0&has_wlcg=on'.format(*self.dateslist)
-            label = "Resource Group"
-        else:
-            oim_url = 'http://myosg.grid.iu.edu/rgdowntime/xml?' \
-                     'summary_attrs_showservice=on&' \
-                     'summary_attrs_showrsvstatus=on&summary_attrs_showfqdn=on&' \
-                     'gip_status_attrs_showtestresults=on&downtime_attrs_showpast=&' \
-                     'account_type=cumulative_hours&ce_account_type=gip_vo&' \
-                     'se_account_type=vo_transfer_volume&bdiitree_type=total_jobs&' \
-                     'bdii_object=service&bdii_server=is-osg&start_type=7daysago&' \
-                     'start_date={0}%2F{1}%2F{2}&end_type=now&end_date={3}%2F{4}%2F{5}&' \
-                     'all_resources=on&facility_sel%5B%5D=10009&gridtype=on&' \
-                     'gridtype_1=on&service=on&service_sel%5B%5D=1&active=on&' \
-                     'active_value=1&disable=on&disable_value=0&has_wlcg=on'.format(*self.dateslist)
-            label = "Downtimes"
+        tagdict = {'rg': 'Resource Group', 'dt': 'Downtimes'}
+
+        label = tagdict[tag]
+
+        try:
+            oim_url = self.config['probe']['oim_url'][tag]
+        except KeyError:
+            oim_url = self.oim_url[tag]
+        finally:
+            # print oim_url
+            if tag == 'dt':
+                oim_url = oim_url.format(*self.dateslist_init())
+                print oim_url
 
         if self.verbose:
             self.logger.info(oim_url)
@@ -202,7 +192,7 @@ class OIMInfo(object):
         except (urllib2.HTTPError, urllib2.URLError) as e:
             self.logger.error("Couldn't get OIM {0} file".format(label))
             self.logger.exception(e)
-            if rg:
+            if tag == 'rg':
                 sys.exit(1)
             else:
                 return None
@@ -275,24 +265,13 @@ class OIMInfo(object):
         :param rname: Name of resource
         :return dict: dictionary that has relevant OIM information
         """
-        # This could (and probably should) be moved to a config file
-        rg_pathdictionary = {
-            'Facility': './Facility/Name',
-            'Site': './Site/Name',
-            'ResourceGroup': './GroupName'}
-
-        r_pathdictionary = {
-            'Resource': './Name',
-            'ID': './ID',
-            'FQDN': './FQDN',
-            'WLCGInteropAcct': './WLCGInformation/InteropAccounting'
-        }
+        xpathsdict = self.config['probe']['xpaths']
 
         returndict = {}
 
         # Resource group-specific info
         resource_group_elt = self.root.find(rgpath)
-        for key, path in rg_pathdictionary.iteritems():
+        for key, path in xpathsdict['rg_pathdictionary'].iteritems():
             try:
                 returndict[key] = resource_group_elt.find(path).text
             except AttributeError:
@@ -302,7 +281,7 @@ class OIMInfo(object):
         # Resource-specific info
         resource_elt = resource_group_elt.find(
             './Resources/Resource/[Name="{0}"]'.format(rname))
-        for key, path in r_pathdictionary.iteritems():
+        for key, path in xpathsdict['r_pathdictionary'].iteritems():
             try:
                 returndict[key] = resource_elt.find(path).text
             except AttributeError:
@@ -318,7 +297,7 @@ class OIMInfo(object):
         :return list: List of probe FQDNs that are currently in downtime
         """
         nolist = []
-        xml_file = self.get_file_from_OIM(rg=False)
+        xml_file = self.get_file_from_OIM(tag='dt')
         if not xml_file:
             return nolist
 
@@ -360,7 +339,7 @@ class ProbeReport(Reporter):
     Class to hold information about and generate the probe report
 
     :param Configuration.Configuration config: Report Configuration object
-    :param str start: Start time of report range
+    :param datetime.datetime start: Start time of report range
     :param bool verbose: Verbose flag
     :param bool is_test: Whether or not this is a test run.
     :param bool no_email: If true, don't actually send the email
@@ -380,7 +359,7 @@ class ProbeReport(Reporter):
                           logfile=rlogfile, logfile_override=logfile_override,
                           is_test=is_test, verbose=verbose,
                           no_email=no_email, raw=True, allraw=True)
-        self.configuration = config
+        # self.configuration = config
         self.probematch = re.compile("(.+):(.+)")
         self.estimeformat = re.compile("(.+)T(.+)\.\d+Z")
         self.emailfile = '/tmp/filetoemail.txt'
@@ -590,10 +569,7 @@ class ProbeReport(Reporter):
 
     def send_report(self):
         """Send our emails"""
-        emailfrom = self.email_info["from_email"]
-        emailsto = self.email_info["to_emails"]
-
-        if self.test_no_email(emailsto):
+        if self.test_no_email(self.email_info['to']['email']):
             self.logger.info("Resource name: {0}\tProbe Name: {1}"
                              .format(self.resource, self.probe))
 
@@ -605,16 +581,18 @@ class ProbeReport(Reporter):
         with open(self.emailfile, 'rb') as fp:
             msg = MIMEText(fp.read())
 
-        msg['To'] = ', '.join(emailsto)
-        msg['From'] = email.utils.formataddr((self.email_info["from_name"],
-                                              emailfrom))
+        msg['To'] = ', '.join(self.email_info['to']['email'])
+        msg['From'] = email.utils.formataddr((self.email_info['from']['name'],
+                                              self.email_info['from']['email']))
         msg['Subject'] = self.emailsubject()
 
         try:
             smtpObj = smtplib.SMTP(self.email_info["smtphost"])
-            smtpObj.sendmail(emailfrom, emailsto, msg.as_string())
+            smtpObj.sendmail(self.email_info['from']['email'],
+                             self.email_info['to']['email'],
+                             msg.as_string())
             smtpObj.quit()
-            self.logger.info("Sent Email for {0} to {1}".format(self.resource, ', '.join(emailsto)))
+            self.logger.info("Sent Email for {0} to {1}".format(self.resource, ', '.join(self.email_info['to']['email'])))
             os.unlink(self.emailfile)
         except Exception as e:
             self.logger.exception("Error:  unable to send email.\n{0}\n".format(e))
@@ -652,8 +630,7 @@ def main():
     args = parse_opts()
 
     # Set up the configuration
-    config = Configuration.Configuration()
-    config.configure(get_configfile(override=args.config))
+    config = get_configfile(override=args.config)
 
     try:
         # Get OIM Information
