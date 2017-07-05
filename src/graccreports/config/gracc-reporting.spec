@@ -1,6 +1,6 @@
 %define name gracc-reporting
-%define version 0.10
-%define unmangled_version 0.10
+%define version 0.11
+%define unmangled_version 0.11
 %define release 1
 
 Summary: 	GRACC Email Reports
@@ -9,7 +9,7 @@ Version: 	%{version}
 Release: 	%{release}
 Source0: 	%{name}-%{unmangled_version}.tar.gz
 License: 	ASL 2.0
-BuildRoot: 	%{_tmppath}/%{name}-%{version}-%{release}-buildroot
+BuildRoot: 	%{_tmppath}/%{name}-%{version}-%{release}-buildrooty
 Prefix: 	%{_prefix}
 BuildArch: 	noarch
 Url: 		https://github.com/opensciencegrid/gracc-reporting
@@ -20,11 +20,12 @@ BuildRequires:  python-srpm-macros
 BuildRequires:  python-rpm-macros 
 BuildRequires:  python2-rpm-macros 
 BuildRequires:  epel-rpm-macros
-Requires:       python-elasticsearch-dsl = 5.0.0
+Requires:       python-elasticsearch-dsl
 Requires:	python-elasticsearch
 Requires:       python-dateutil
 Requires:	python-psycopg2
 Requires:	python-requests
+Requires:   python-toml
 Requires(pre): shadow-utils
 
 %description
@@ -41,7 +42,7 @@ gracc-reporting is a set of reports that collect and present data from the Open 
 
 # Install config and html_template files in /etc/graccreports
 install -d -m 0755 $RPM_BUILD_ROOT/%{_sysconfdir}/graccreports/config/
-install -m 0744 $RPM_BUILD_ROOT/%{python2_sitelib}/graccreports/config/*.config $RPM_BUILD_ROOT/%{_sysconfdir}/graccreports/config/
+install -m 0744 $RPM_BUILD_ROOT/%{python2_sitelib}/graccreports/config/*.toml $RPM_BUILD_ROOT/%{_sysconfdir}/graccreports/config/
 install -d -m 0755 $RPM_BUILD_ROOT/%{_sysconfdir}/graccreports/html_templates/
 install -m 0744 $RPM_BUILD_ROOT/%{python2_sitelib}/graccreports/html_templates/*.html $RPM_BUILD_ROOT/%{_sysconfdir}/graccreports/html_templates/
 
@@ -60,7 +61,7 @@ install -m 0744 docs/*.md $RPM_BUILD_ROOT/%{_defaultdocdir}/graccreports/
 %{python2_sitelib}/gracc_reporting-%{version}-py2.7.egg-info
 
 # Include config and doc files
-%config(noreplace) %{_sysconfdir}/graccreports/config/*.config
+%config(noreplace) %{_sysconfdir}/graccreports/config/*.toml
 %config(noreplace) %{_sysconfdir}/graccreports/html_templates/*.html
 %doc %{_defaultdocdir}/graccreports/*
 

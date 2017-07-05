@@ -2,7 +2,6 @@ import json
 import optparse
 import subprocess
 
-from . import Configuration
 
 class Job:
 
@@ -24,11 +23,13 @@ class CurrentJobs:
     def __init__(self,config,template):
         self.access_fifemon = True
         self.jobs = {}
-        self.add_job("current",json.loads(self.query_graphite(config.get("jobs","current_jobs_curl")))[0])
-        self.add_job("idle",json.loads(self.query_graphite(config.get("jobs","idle_jobs_curl")))[0])
-        self.add_job("held",json.loads(self.query_graphite(config.get("jobs","held_jobs_curl")))[0])
-        self.limit = int(config.get("jobs","slot_quota"))
-        self.held_limit = int(config.get("jobs","held_limit"))
+
+        for state in ('current', 'idle', 'held'):
+            self.add_job(state, json.loads(self.query_graphite(config['jobs']['{0:s}_jobs_curl'.format(state)]))[0])
+
+        self.limit = int(config['jobs']['slot_quota'])
+        self.held_limit = int(config['jobs']['held_limit'])
+
         self.template = template
         self.should_check_held = False
         self.should_check_running = False
@@ -98,11 +99,9 @@ def parse_opts():
 
 if __name__ == '__main__':
     opts, args = parse_opts()
-    print opts
-    config = Configuration.Configuration()
-    config.configure(opts.config)
-    template = "".join(open(config.config.get("common", "template")).readlines())
-    cjobs = CurrentJobs(config.config, template)
+    config = opts.confi
+    template = "".join(open(config['common']['template']).readlines())
+    cjobs = CurrentJobs(config, template)
     report = open("minerva_report.html", 'w')
     report.write(cjobs.update_template())
     report.close()

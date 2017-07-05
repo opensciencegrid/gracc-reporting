@@ -3,10 +3,10 @@
 import traceback
 import sys
 import optparse
+from copy import deepcopy
 
 import psycopg2
 
-from . import Configuration
 from ProjectName import ProjectName
 
 
@@ -55,14 +55,7 @@ class XDProject(ProjectName):
 
     def get_connection_string(self):
         """Creates a connection string for accessing xd database, set temporarily file with db password."""
-
-        password = self.config.get("xd_db", "password")
-        host = self.config.get("xd_db", "hostname")
-        port = self.config.get("xd_db", "port")
-        username = self.config.get("xd_db", "username")
-        schema = self.config.get("xd_db", "schema")
-        return "dbname='%s' user='%s' host='%s' password='%s'" % (schema, username, host,password)
-
+        return deepcopy(self.config['xd_db'])
 
     def execute_query(self, url_type='project'):
         """
@@ -74,7 +67,8 @@ class XDProject(ProjectName):
 
         try:
             print "Trying to run query to XD DB"
-            connection = psycopg2.connect(self.get_connection_string())
+            connection = psycopg2.connect(**self.get_connection_string())
+            print "Connected to DB"
             cursor = connection.cursor()
             abstract = "n/a"
             cursor.execute("""select distinct p.person_id,first_name,last_name,email_address,organization_name,
@@ -114,18 +108,12 @@ def parse_opts():
         parser.add_option("-v", "--verbose", action="store_true", dest="verbose", default=False,
                           help="print debug messages to stdout")
         opts, args = parser.parse_args()
-        if len(args) != 1:
-                parser.print_usage()
-                sys.exit(1)
-        Configuration.checkRequiredArguments(opts, parser)
         return opts, args
 
 
 if __name__ == "__main__":
     opts, args = parse_opts()
-    config = Configuration.Configuration()
-    config.configure(opts.config)
-    xd = XDProject(args[0], config)
+    xd = XDProject(args[0], args.config)
     xd.set_info_for_projectname()
     print "%s, %s, %s, %s, %s, %s, %s" % (xd.get_pi(), xd.get_email(), xd.get_institution(), xd.get_department(),
                                           xd.get_project_name(), xd.get_fos(), xd.get_abstract())

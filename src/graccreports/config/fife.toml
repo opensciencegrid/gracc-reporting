@@ -1,0 +1,139 @@
+# General
+
+default_logdir = '/var/log'
+
+[elasticsearch]
+    hostname = 'https://gracc.opensciencegrid.org/q'
+
+# Email
+# Set the global email related values under this section
+
+[email]
+    # This is the FQDN of the mail server, which GRACC will use to send the email
+    smtphost = 'smtp.example.com'
+
+    [email.from]
+        name = 'GRACC Operations'  # This is the real name from which the report appears to be emailed from
+        email = 'nobody@example.com'  # This is the email from which the reports appears to be emailed from
+
+    # Tester emails
+    [email.test]
+        names = ['Test Recipient', ]
+        emails = ['nobody@example.com', ]
+
+
+# VO-specific parameters.
+
+[cdf]
+    [cdf.efficiency]
+        min_hours = 1000
+        min_efficiency = 0.5
+        to_emails = ['nobody@example.com', ]
+
+[cdms]
+    [cdms.efficiency]
+        min_hours = 1000
+        min_efficiency = 0.5
+        to_emails = ['nobody@example.com', ]
+
+[darkside]
+    [darkside.efficiency]
+        min_hours = 500
+        min_efficiency = 0.35
+        to_emails = ['nobody@example.com', ]
+
+    [darkside.jobsuccessrate]
+        voname = '/fermilab/darkside/Role=*'
+        to_emails = ['nobody@example.com', ]
+        noproduction = true
+
+[dune]
+    [dune.efficiency]
+        min_hours = 1000
+        min_efficiency = 0.5
+        to_emails = ['nobody@example.com', ]
+
+    [dune.jobsuccessrate]
+        voname = '/dune/Role=Production/Capability=NULL'
+        to_emails = ['nobody@example.com', ]
+
+[gm2]
+    [gm2.efficiency]
+        min_hours = 1000
+        min_efficiency = 0.5
+        to_emails = ['nobody@example.com', ]
+
+[mars]
+    [mars.efficiency]
+        min_hours = 1000
+        min_efficiency = 0.5
+        to_emails = ['nobody@example.com', ]
+
+[minerva]
+    [minerva.efficiency]
+        min_hours = 1000
+        min_efficiency = 0.5
+        to_emails = ['nobody@example.com', ]
+
+
+[minos]
+    [minos.efficiency]
+        min_hours = 1000
+        min_efficiency = 0.5
+        to_emails = ['nobody@example.com', ]
+
+[mu2e]
+    [mu2e.efficiency]
+        min_hours = 1000
+        min_efficiency = 0.5
+        commonname = '/CN=production/mu2egpvm01.fnal.gov'
+        to_emails = ['nobody@example.com', ]
+
+    [mu2e.jobsuccessrate]
+        voname = '/fermilab/mu2e/Role=Production/Capability=NULL'
+        to_emails = ['nobody@example.com', ]
+
+[nova]
+    [nova.efficiency]
+        min_hours=1000
+        min_efficiency=0.5
+        commonname='/CN=novaproduction/nova-offline.fnal.gov'
+        to_emails = ['nobody@example.com', ]
+
+    [nova.jobsuccessrate]
+        # num_clusters = 100
+        jobs_per_cluster = 20
+        # num_failed_sites = 20
+        # num_hosts_per_site = 20
+        # errors_per_host = 20
+        voname = '/fermilab/nova/Role=Production/Capability=NULL'
+        to_emails = ['nobody@example.com', ]
+
+[sbnd]
+    [sbnd.efficiency]
+        min_hours = 500
+        min_efficiency = 0.65
+        to_emails = ['nobody@example.com', ]
+
+[seaquest]
+    [seaquest.efficiency]
+        min_hours = 1000
+        min_efficiency = 0.5
+        to_emails = ['nobody@example.com', ]
+
+    [seaquest.jobsuccessrate]
+        voname = '/fermilab/seaquest/Role=*'
+        to_emails = ['nobody@example.com', ]
+        no_production = true
+
+[uboone]
+    [uboone.efficiency]
+        min_hours = 1000
+        min_efficiency = 0.5
+        commonname ='/CN=uboonepro/uboonegpvm01.fnal.gov'
+        to_emails = ['nobody@example.com', ]
+
+    [uboone.jobsuccessrate]
+        voname = '/fermilab/uboone/Role=Production/Capability=NULL'
+        to_emails = ['nobody@example.com', ]
+

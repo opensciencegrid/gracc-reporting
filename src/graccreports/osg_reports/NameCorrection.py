@@ -14,7 +14,7 @@ class MWT2Correction(object):
 
     def __init__(self, config):
         if not mwt2info:
-            self.mwt2url = config.get('namecorrection', 'mwt2url')
+            self.mwt2url = config['namecorrection']['mwt2url']
             self._get_info_from_oim()
             self._parse_xml()
 

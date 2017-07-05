@@ -5,7 +5,7 @@ import copy
 
 from elasticsearch_dsl import Search
 
-from . import Reporter, runerror, get_configfile, get_template, Configuration
+from . import Reporter, runerror, get_configfile, get_template
 
 logfile = 'osgreporter.log'
 default_templatefile = 'template_project.html'
@@ -71,10 +71,7 @@ class OSGReporter(Reporter):
         starttimeq = self.start_time.isoformat()
         endtimeq = self.end_time.isoformat()
 
-        probes = [rawprobe.strip("'") for rawprobe in
-                  re.split(",", self.config.get(
-                               "project",
-                               "{0}_probe_list".format(self.report_type)))]
+        probes = self.config['project'][self.report_type.lower()]['probe_list']
 
         if self.verbose:
             self.logger.debug(probes)
@@ -228,8 +225,8 @@ def main():
     args = parse_opts()
 
     # Set up the configuration
-    config = Configuration.Configuration()
-    config.configure(get_configfile(override=args.config))
+    config = get_configfile(override=args.config)
+
 
     templatefile = get_template(override=args.template, deffile=default_templatefile)
 

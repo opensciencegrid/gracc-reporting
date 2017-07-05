@@ -1,15 +1,13 @@
 import sys
 import traceback
-import re
 import datetime
 import copy
 from dateutil.relativedelta import *
 
 from elasticsearch_dsl import Search
 
-from . import Reporter, runerror, get_configfile, get_template, Configuration
+from . import Reporter, runerror, get_configfile, get_template, coroutine
 from . import TextUtils, NiceNum
-from graccreports.TimeUtils import TimeUtils
 from NameCorrection import NameCorrection
 
 
@@ -20,20 +18,6 @@ facilities = {}
 
 
 # Helper functions
-def coroutine(func):
-    """Decorator to prime coroutines by advancing them to their first yield
-    point
-
-    :param function func: Coroutine function to prime
-    :return function: Coroutine that's been primed
-    """
-    def wrapper(*args, **kwargs):
-        cr = func(*args, **kwargs)
-        cr.next()
-        return cr
-    return wrapper
-
-
 def get_time_range(start=None, end=None, months=None):
     """
     Returns time ranges for current and prior reporting periods  Can either
@@ -148,7 +132,7 @@ class TopOppUsageByFacility(Reporter):
     """
     Class to hold information and generate Top Opp Usage by Facility report
 
-    :param Configuration.Configuration config: Report Configuration object
+    :param str config: Report Configuration file
     :param str start: Start time of report range
     :param str end: End time of report range
     :param str template: Filename of HTML template to generate report
@@ -184,16 +168,6 @@ class TopOppUsageByFacility(Reporter):
         self.title = "Opportunistic Resources provided by the top {0} OSG " \
                      "Sites for the OSG Open Facility ({1} - {2})".format(
                         self.numrank, *dates_formatted)
-        self.probelist = self._get_probelist()
-
-    def _get_probelist(self):
-        """
-        Helper method to get the OSG Flocking probes from the config file
-
-        :return list: List of OSG Flocking probes
-        """
-        probes = self.config.get(self.report_type.lower(), 'OSG_flocking_probe_list')
-        return [elt.strip("'") for elt in re.split(',', probes)]
 
     def run_report(self):
         """Handles the data flow throughout the report generation.  Generates
@@ -216,13 +190,16 @@ class TopOppUsageByFacility(Reporter):
         starttimeq = self.start_time.isoformat()
         endtimeq = self.end_time.isoformat()
 
+        probelist = self.config[self.report_type.lower()]['OSG_flocking_probe_list']
+
         if self.verbose:
             self.logger.info(self.indexpattern)
+            self.logger.info(probelist)
 
         # Elasticsearch query and aggregations
         s = Search(using=self.client, index=self.indexpattern) \
                 .filter("range", EndTime={"gte": starttimeq, "lt": endtimeq}) \
-                .filter("terms", ProbeName=self.probelist) \
+                .filter("terms", ProbeName=probelist) \
                 .filter("term", ResourceType="Payload")[0:0]
 
         # Size 0 to return only aggregations
@@ -384,7 +361,10 @@ class TopOppUsageByFacility(Reporter):
         htmlheader = '<th>' + '</th><th>'.join(header) + '</th>'
         htmldict = dict(title=self.title, header=htmlheader, table=self.table,
                         summary=summarytext)
-        self.text = "".join(open(self.template).readlines())
+
+        with open(self.template, 'r') as f:
+            self.text = f.read()
+
         self.text = self.text.format(**htmldict)
 
         return
@@ -459,19 +439,19 @@ class TopOppUsageByFacility(Reporter):
 
         :return: None
         """
-        if self.test_no_email(self.email_info["to_emails"]):
+        if self.test_no_email(self.email_info['to']['email']):
             return
 
         TextUtils.sendEmail(
-                            (self.email_info["to_names"],
-                             self.email_info["to_emails"]),
+                            (self.email_info['to']['name'],
+                             self.email_info['to']['email']),
                             self.title,
                             {"html": self.text},
-                            (self.email_info["from_name"],
-                             self.email_info["from_email"]),
+                            (self.email_info['from']['name'],
+                             self.email_info['from']['email']),
                             self.email_info["smtphost"])
 
-        self.logger.info("Sent reports to {0}".format(", ".join(self.email_info["to_emails"])))
+        self.logger.info("Sent reports to {0}".format(", ".join(self.email_info['to']['email'])))
 
         return
 
@@ -480,8 +460,7 @@ def main():
     args = parse_opts()
 
     # Set up the configuration
-    config = Configuration.Configuration()
-    config.configure(get_configfile(override=args.config))
+    config = get_configfile(override=args.config)
 
     templatefile = get_template(override=args.template, deffile=default_templatefile)
 
