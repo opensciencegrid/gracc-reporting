@@ -1,7 +1,6 @@
-include *.md *.html *.txt *.toml
-recursive-include config *
-recursive-include html_templates *
-recursive-include src/graccreports/config/ *
-recursive-include src/graccreports/html_templates/ *.html
+include *.md *.txt
+recursive-include config *.toml *.spec
+recursive-include html_templates *.html
+recursive-include src/graccreports/config *.toml *.spec
+recursive-include src/graccreports/html_templates *.html
 recursive-include docs *.md
-recursive-include SampleScripts *.sh
