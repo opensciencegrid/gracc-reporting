@@ -644,3 +644,16 @@ def get_template(override=None, deffile=None):
     else:
         return get_default_resource('html_templates', deffile)
 
+
+def coroutine(func):
+    """Decorator to prime coroutines by advancing them to their first yield
+    point
+
+    :param function func: Coroutine function to prime
+    :return function: Coroutine that's been primed
+    """
+    def wrapper(*args, **kwargs):
+        cr = func(*args, **kwargs)
+        cr.next()
+        return cr
+    return wrapper
