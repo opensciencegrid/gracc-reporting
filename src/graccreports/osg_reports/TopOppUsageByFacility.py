@@ -364,7 +364,7 @@ class TopOppUsageByFacility(Reporter):
 
         with open(self.template, 'r') as f:
             self.text = f.read()
-        
+
         self.text = self.text.format(**htmldict)
 
         return
