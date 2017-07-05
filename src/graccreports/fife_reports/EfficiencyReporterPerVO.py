@@ -4,7 +4,7 @@ import datetime
 
 from elasticsearch_dsl import Search
 
-from . import Reporter, runerror, get_configfile, get_template
+from . import Reporter, runerror, get_configfile, get_template, coroutine
 from . import TextUtils, NiceNum
 
 default_templatefile = 'template_efficiency.html'
@@ -12,19 +12,6 @@ logfile = 'efficiencyreport.log'
 
 
 # Helper functions
-def coroutine(func):
-    """Decorator to prime coroutines by advancing them to their first yield
-    point
-
-    :param function func: Coroutine function to prime
-    :return function: Coroutine that's been primed
-    """
-    def wrapper(*args, **kwargs):
-        cr = func(*args, **kwargs)
-        cr.next()
-        return cr
-    return wrapper
-
 
 @Reporter.init_reporter_parser
 def parse_opts(parser):
