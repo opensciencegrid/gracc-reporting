@@ -262,7 +262,10 @@ class WastedHoursReport(Reporter):
         # Yes, the header and footer are the same on purpose
         htmldict = dict(title=self.title, table=table,
                         header=header, footer=header)
-        self.text = "".join(open(self.template).readlines())
+        
+        with open(self.template, 'r') as f:
+            self.text = f.read()
+
         self.text = self.text.format(**htmldict)
 
         if self.verbose:

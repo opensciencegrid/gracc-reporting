@@ -271,7 +271,10 @@ class Efficiency(Reporter):
                   'Efficiency']
         htmlheader = '<th>' + '</th><th>'.join(header) + '</th>'
         htmldict = dict(title=self.title, header=htmlheader, table=self.table)
-        self.text = "".join(open(self.template).readlines())
+
+        with open(self.template, 'r') as f:
+            self.text = f.read()
+
         self.text = self.text.format(**htmldict)
         return
 

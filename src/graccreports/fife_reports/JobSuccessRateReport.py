@@ -535,7 +535,9 @@ class JobSuccessRateReporter(Reporter):
         for tag, l in headerdict.iteritems():
             htmldict[tag] = self._generate_header(l)
 
-        self.text = "".join(open(self.template).readlines())
+        with open(self.template, 'r') as f:
+            self.text = f.read()
+
         self.text = self.text.format(**htmldict)
 
         return
