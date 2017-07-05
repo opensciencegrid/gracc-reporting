@@ -31,7 +31,6 @@ default_logdir = '/var/log'
     to_emails = ['nobody@example.com', ]
     to_names = ['Recipient Name', ]
 
-
 [news]
     OSG_flocking_probe_list = ['condor:osg-xsede.grid.iu.edu', 'condor:gw68.quarry.iu.teragrid.org',
         'condor:xd-login.opensciencegrid.org', 'condor:csiu.grid.iu.edu',
@@ -50,6 +49,24 @@ default_logdir = '/var/log'
     to_emails = ['nobody@example.com', ]
     to_names = ['Recipient Name', ]
 
+    [probe.oim_url]
+        rg = 'http://myosg.grid.iu.edu/rgsummary/xml?summary_attrs_showhierarchy=on&summary_attrs_showwlcg=on&summary_attrs_showservice=on&summary_attrs_showfqdn=on&gip_status_attrs_showtestresults=on&downtime_attrs_showpast=&account_type=cumulative_hours&ce_account_type=gip_vo&se_account_type=vo_transfer_volume&bdiitree_type=total_jobs&bdii_object=service&bdii_server=is-osg&all_resources=on&facility_sel%5B%5D=10009&gridtype=on&gridtype_1=on&service=on&service_sel%5B%5D=1&active=on&active_value=1&disable=on&disable_value=0&has_wlcg=on'
+        dt = 'http://myosg.grid.iu.edu/rgdowntime/xml?summary_attrs_showservice=on&summary_attrs_showrsvstatus=on&summary_attrs_showfqdn=on&gip_status_attrs_showtestresults=on&downtime_attrs_showpast=&account_type=cumulative_hours&ce_account_type=gip_vo&se_account_type=vo_transfer_volume&bdiitree_type=total_jobs&bdii_object=service&bdii_server=is-osg&start_type=7daysago&start_date={0}%2F{1}%2F{2}&end_type=now&end_date={3}%2F{4}%2F{5}&all_resources=on&facility_sel%5B%5D=10009&gridtype=on&gridtype_1=on&service=on&service_sel%5B%5D=1&active=on&active_value=1&disable=on&disable_value=0&has_wlcg=on'
+
+    [probe.xpaths]
+        [probe.xpaths.rg_pathdictionary]
+            Facility = './Facility/Name'
+            Site = './Site/Name'
+            ResourceGroup = './GroupName'
+
+
+        [probe.xpaths.r_pathdictionary]
+            Resource = './Name'
+            ID = './ID'
+            FQDN = './FQDN'
+            WLCGInteropAcct = './WLCGInformation/InteropAccounting'
+
+# For project and missing project reports
 [project]
     [project.xd]
         probe_list = ['condor:osg-xsede.grid.iu.edu', 'condor:gw68.quarry.iu.teragrid.org', 'condor:xd-login.opensciencegrid.org']
