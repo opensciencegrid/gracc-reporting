@@ -3,7 +3,7 @@ import traceback
 
 from elasticsearch_dsl import Search
 
-from . import Reporter, runerror, get_configfile, get_template, Configuration
+from . import Reporter, runerror, get_configfile, get_template
 from . import TextUtils, NiceNum
 
 default_templatefile = 'template_wasted_hours.html'
@@ -99,7 +99,7 @@ class Experiment:
 class WastedHoursReport(Reporter):
     """
     Class to hold information about and run Wasted Hours report.
-    :param Configuration.Configuration config: Report Configuration object
+    :param str config: Report Configuration file
     :param str start: Start time of report range
     :param str end: End time of report range
     :param str template: Filename of HTML template to generate report
@@ -276,17 +276,17 @@ class WastedHoursReport(Reporter):
 
         :return: None
         """
-        if self.test_no_email(self.email_info["to_emails"]):
+        if self.test_no_email(self.email_info['to']['email']):
             return
 
-        TextUtils.sendEmail((self.email_info["to_names"],
-                             self.email_info["to_emails"]),
+        TextUtils.sendEmail((self.email_info['to']['name'],
+                             self.email_info['to']['email']),
                             self.title,
                             {"html": self.text},
-                            (self.email_info["from_name"],
-                             self.email_info["from_email"]),
+                            (self.email_info['from']['name'],
+                             self.email_info['from']['email']),
                             self.email_info["smtphost"])
-        self.logger.info("Sent reports to {0}".format(", ".join(self.email_info["to_emails"])))
+        self.logger.info("Sent reports to {0}".format(", ".join(self.email_info['to']['email'])))
         return
 
 
@@ -294,8 +294,7 @@ def main():
     args = parse_opts()
 
     # Set up the configuration
-    config = Configuration.Configuration()
-    config.configure(get_configfile(override=args.config))
+    config = get_configfile(override=args.config)
 
     templatefile = get_template(override=args.template, deffile=default_templatefile)
 
