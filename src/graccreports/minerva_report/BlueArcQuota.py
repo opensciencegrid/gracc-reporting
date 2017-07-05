@@ -8,12 +8,10 @@ import json
 import optparse
 import subprocess
 
-from . import Configuration
-
 
 class BlueArcQuota:
     def __init__(self, config, template):
-        self.url = (config.get("blue_arc", "curl"))
+        self.url = config['blue_arc']['curl']
         cmd = "curl -k \'%s\'" % (self.url,)
         proc = subprocess.Popen(cmd, shell=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
         result, error = proc.communicate()
@@ -30,7 +28,7 @@ class BlueArcQuota:
                 quota["datapoints"][0][0] = "0"
             self.quotas[target] = int(quota["datapoints"][0][0])
         self.template = template
-        self.limit = int(config.get("blue_arc", "limit"))
+        self.limit = int(config['blue_arc']['limit'])
         self.problem = False
 
 
@@ -74,10 +72,9 @@ def parse_opts():
 
 if __name__ == '__main__':
     opts, args = parse_opts()
-    config = Configuration.Configuration()
-    config.configure(opts.config)
-    template = "".join(open(config.config.get("common", "template")).readlines())
-    crt = BlueArcQuota(config.config, template)
-    report = open(config.config.get("common", "report"), 'w')
+    config = opts.config
+    template = "".join(open(config['common']['template']).readlines())
+    crt = BlueArcQuota(config, template)
+    report = open(config["common"]["report"], 'w')
     report.write(crt.update_template())
     report.close()

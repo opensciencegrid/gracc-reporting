@@ -3,7 +3,6 @@ import optparse
 import time
 import subprocess
 
-from . import Configuration
 
 class User:
 
@@ -33,9 +32,10 @@ class User:
 class UserWastedTime:
 
     def __init__(self,config,template):
-        self.url = (config.get("wasted_time", "wasted_curl"))
-        self.limit = int(config.get("wasted_time", "limit"))
-        self.average_jobs_url = (config.get("wasted_time", "duration_curl"))
+        self.url, self.limit, self.average_jobs_url = config['wasted_time']['wasted_curl'], \
+                                                      config['wasted_time']['limit'], \
+                                                      config['wasted_time']['duration_curl']
+
         cmd = "curl -k \'%s\'" % (self.url)
         proc = subprocess.Popen(cmd,shell=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
         # Reads from pipes, avoides blocking
@@ -128,10 +128,9 @@ def parse_opts():
 
 if __name__ == '__main__':
     opts, args = parse_opts()
-    config=Configuration.Configuration()
-    config.configure(opts.config)
-    template = "".join(open(config.config.get("common", "template")).readlines())
-    ejobs = UserWastedTime(config.config, template)
+    config = opts.config
+    template = "".join(open(config['common']['template']).readlines())
+    ejobs = UserWastedTime(config, template)
     report = open("minerva_report.html", 'w')
     report.write(ejobs.update_template())
     report.close()

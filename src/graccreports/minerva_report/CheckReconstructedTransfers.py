@@ -2,11 +2,10 @@ import json
 import optparse
 import subprocess
 
-from . import Configuration
 
 class CheckReconstructedTransfers:
     def __init__(self, config, template):
-        self.url = (config.get("reconstructed_transfers", "curl"))
+        self.url = config['reconstructed_transfers']['curl']
         cmd = "curl %s" % (self. url,)
         proc = subprocess.Popen(cmd, shell=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
         # Reads from pipes, avoides blocking
@@ -93,10 +92,9 @@ def parse_opts():
 
 if __name__ == '__main__':
     opts, args = parse_opts()
-    config = Configuration.Configuration()
-    config.configure(opts.config)
-    template = "".join(open(config.config.get("common", "template")).readlines())
-    crt = CheckReconstructedTransfers(config.config, template)
+    config = opts.config
+    template = "".join(open(config['common']['template']).readlines())
+    crt = CheckReconstructedTransfers(config, template)
     report = open("minerva_report.html", 'w')
     report.write(crt.update_template())
     report.close()

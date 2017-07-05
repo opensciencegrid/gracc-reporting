@@ -9,7 +9,7 @@ import time
 import sys
 import traceback
 
-from . import Configuration, TextUtils
+from . import TextUtils, Reporter
 
 from CheckReconstructedTransfers import CheckReconstructedTransfers
 from BlueArcQuota import BlueArcQuota
@@ -39,21 +39,20 @@ def main():
         print "Running in test mode"
 
     try:
-        config = Configuration.Configuration()
-        config.configure(opts.config)
-        template = "".join(
-            open(config.config.get("common", "template")).readlines())
+        config = Reporter._parse_config(opts.config)
+        template = open(config['common']['template']).read()
         template = template.replace("$START", time.ctime())
-        cjobs = CurrentJobs(config.config, template)
+        cjobs = CurrentJobs(config, template)
         template = cjobs.update_template()
-        ejobs = UserWastedTime(config.config, template)
+        ejobs = UserWastedTime(config, template)
         template = ejobs.update_template()
-        cpn = CPNLocks(config.config, template)
+        cpn = CPNLocks(config, template)
         template = cpn.update_template()
-        crt = CheckReconstructedTransfers(config.config, template)
+        crt = CheckReconstructedTransfers(config, template)
         template = crt.update_template()
-        bluearc = BlueArcQuota(config.config, template)
+        bluearc = BlueArcQuota(config, template)
         template = bluearc.update_template()
+
         found = False
         if not opts.is_alarm:
             found = True
@@ -82,12 +81,10 @@ def main():
                 template = template.replace("$IGNORE3_ENDS", "")
                 found = True
         if found:
-            if opts.is_test:
-                emails = config.config.get("email", "test_to").split(", ")
-            else:
-                emails = config.config.get("email", "minerva_email").split(
-                    ", ") + \
-                         config.config.get("email", "test_to").split(", ")
+            emails = config['email']['test_to']
+            if not opts.is_test:
+                emails.extend(config['email']['minerva_email'])
+            print emails
             TextUtils.sendEmail(([], emails), "MINERvA Report %s" %
                                 (time.ctime()), {"html": template},
                                 ("Gratia Operation", "tlevshin@fnal.gov"),
