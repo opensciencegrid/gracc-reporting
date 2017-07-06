@@ -62,6 +62,7 @@ class Reporter(TimeUtils):
                  raw=False, allraw=False, template=None, is_test=False, no_email=False,
                  title=None, logfile=None, logfile_override=False, check_vo=False):
         TimeUtils.__init__(self)
+        self.configfile = config
         self.config = self._parse_config(config)
         # if config:
         #     self.config = config.config
@@ -388,9 +389,13 @@ class Reporter(TimeUtils):
         :return None: 
         """
         if self.vo and self.vo.lower() not in self.config:
+            if self.verbose:
+                self.logger.info(self.configfile)
+                self.logger.info(self.config)
             raise KeyError("The VO {0} was not found in the config file."
                             " Please review the config file to see if changes"
-                            "need to be made and try again".format(self.vo.lower()))
+                            " need to be made and try again.  The config file"
+                           " used was {1}".format(self.vo.lower(), self.configfile))
         return
 
     def __establish_client(self):
@@ -538,9 +543,6 @@ def runerror(config, error, traceback, logfile):
         with open(reallogfile, 'a') as f:
             f.write(str(error))
     print >> sys.stderr, error
-
-    # admin_emails = re.split('[; ,]', config.config.get("email", "test_to_emails"))
-    # fromemail = config.config.get("email", "from_email")
 
     with open(config, 'r') as f:
         c = toml.loads(f.read())
