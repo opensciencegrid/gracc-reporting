@@ -283,7 +283,7 @@ class MissingProjectReport(Reporter):
 
         to_stage = [email.utils.formataddr(pair)
                     for pair in zip(
-                (self.email_info['to'][key]
+                *(self.email_info['to'][key]
                  for key in ('name', 'email')))]
 
         if xd_admins:
