@@ -1,5 +1,5 @@
 #gracc-reporting base image
-FROM shreyb/gracc-reporting:base_0.11-2
+FROM shreyb/gracc-reporting:base_0.11-3
 
 # ifmon user setup 
 ENV MYGID 1003
