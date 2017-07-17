@@ -1,7 +1,8 @@
 %define name gracc-reporting
-%define version 0.11
-%define unmangled_version 0.11
-%define release 3
+%define version 0.11.4
+%define unmangled_version 0.11.4
+%define release 1
+%define _rpmfilename %%{ARCH}/%%{NAME}-%%{VERSION}.%%{ARCH}.rpm
 
 Summary: 	GRACC Email Reports
 Name: 		%{name}
