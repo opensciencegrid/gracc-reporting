@@ -9,7 +9,7 @@ if sys.version_info < version_tuple:
     exit(1)
 
 setup(name='gracc-reporting',
-      version='0.11.4',
+      version='1.0dev',
       description='GRACC Email Reports',
       author_email='sbhat@fnal.gov',
       author='Shreyas Bhat',
@@ -28,8 +28,9 @@ setup(name='gracc-reporting',
               'osgprobereport = graccreports.osg_reports.ProbeReport:main',
               'osgtopoppusagereport = graccreports.osg_reports.TopOppUsageByFacility:main',
               'osgmissingprojects = graccreports.osg_reports.MissingProject:main',
-              'copyfiles = graccreports.copyfiles:main',
-              'minervareport = graccreports.minerva_report.MinervaReport:main'
+              # 'copyfiles = graccreports.copyfiles:main',
+              'minervareport = graccreports.minerva_report.MinervaReport:main',
+              'topwastedhoursvoreport = graccreports.fife_reports.TopWastedHoursVO:main'
             ]
       }
       )
