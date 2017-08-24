@@ -385,7 +385,7 @@ class Reporter(TimeUtils):
     def __check_vo(self):
         """
         Check to see if the vo is a section in config file (as of this writing,
-        only applies to fife_reports package).  If not, raise NoSectionError
+        only applies to fife_reports package).  If not, raise KeyError
         :return None: 
         """
         if self.vo and self.vo.lower() not in self.config:
