@@ -176,7 +176,7 @@ class WastedHoursReport(Reporter):
         """Higher-level method to run all the other methods in report
         generation"""
         self.generate()
-        # self.generate_report_file()
+        self.generate_report_file()
         # self.send_report()
         return
 
@@ -349,7 +349,12 @@ class WastedHoursReport(Reporter):
 
         :return: None
         """
+        masterlist = sorted(self.users.values(), key=lambda user: user.get_wasted_hours_percent(), reverse=True)
 
+        for item in masterlist:
+            print item.user, item.get_wasted_hours_percent()
+
+        # Implement cutoffs
 
         # if len(self.experiments) == 0:
         #     print "No experiments; nothing to report"
