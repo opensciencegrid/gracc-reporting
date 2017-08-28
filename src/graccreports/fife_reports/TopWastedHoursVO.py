@@ -20,6 +20,8 @@ and ran less than 1000 hours (CONFIGURABLE) - config file
 
 default_templatefile = 'template_top_wasted_hours_vo.html'
 logfile = 'topwastedhoursvo.log'
+perc_cutoff = 0.5
+hours_cutoff = 1000
 
 
 @Reporter.init_reporter_parser
@@ -53,6 +55,8 @@ class User:
         self.user = user_name
         self.success = {}
         self.failure = {}
+        self.total_Njobs = 0
+        self.total_CoreHours = 0
 
     @staticmethod
     def _check_datadict(data):
@@ -68,10 +72,14 @@ class User:
         """
         if self._check_datadict(datadict):
             rawattr = datadict['Status'].lower()
-            selfattr = getattr(self, rawattr)
+            selfrawattr = getattr(self, rawattr)
             del datadict['Status']
             for key in datadict:
-                selfattr[key] = datadict[key]
+                selfrawattr[key] = datadict[key]
+
+                # Update the appropriate total
+                totalkey = 'total_{0}'.format(key)
+                setattr(self, totalkey, getattr(self, totalkey) + datadict[key])
         else:
             # Data validation
             raise ValueError("Improper format for data passing.  "
@@ -83,9 +91,8 @@ class User:
         (Njobs failed / Njobs total)
         """
         failure_rate = 0
-        totaljobs = self.success['Njobs'] + self.failure['Njobs']
-        if totaljobs > 0:
-            failure_rate = (self.failure['Njobs'] / totaljobs) * 100.
+        if self.total_Njobs > 0:
+            failure_rate = (self.failure['Njobs'] / self.total_Njobs) * 100.
         return failure_rate
 
     def get_wasted_hours_percent(self):
@@ -94,33 +101,33 @@ class User:
         (Failed CoreHours/ Total CoreHours)
         """
         waste_per = 0
-        totalhours = self.success['CoreHours'] + self.failure['CoreHours']
-        if totalhours > 0:
-            waste_per = (self.failure['CoreHours'] / totalhours) * 100.
+        # totalhours = self.success['CoreHours'] + self.failure['CoreHours']
+        if self.total_CoreHours > 0:
+            waste_per = (self.failure['CoreHours'] / self.total_CoreHours) * 100.
         return waste_per
 
 
-class Experiment:
-    """
-    Hold all experiment-specific information for this report
-
-    :param exp_name: Experiment name
-    """
-    def __init__(self, exp_name):
-        self.experiment = exp_name
-        self.success = [0, 0]
-        self.failure = [0, 0]
-        self.users = {}
-
-    def add_user(self, user_name, user):
-        """
-        Adds user to an experiment
-
-        :param user_name: username of user
-        :param User user: User object holding user's info
-        :return: None
-        """
-        self.users[user_name] = user
+# class Experiment:
+#     """
+#     Hold all experiment-specific information for this report
+#
+#     :param exp_name: Experiment name
+#     """
+#     def __init__(self, exp_name):
+#         self.experiment = exp_name
+#         self.success = [0, 0]
+#         self.failure = [0, 0]
+#         self.users = {}
+#
+#     def add_user(self, user_name, user):
+#         """
+#         Adds user to an experiment
+#
+#         :param user_name: username of user
+#         :param User user: User object holding user's info
+#         :return: None
+#         """
+#         self.users[user_name] = user
 
 
 class WastedHoursReport(Reporter):
@@ -157,10 +164,13 @@ class WastedHoursReport(Reporter):
         self.template = template
         self.facility = facility
         self.numrank = numrank
+        self._get_configfile_limits()
         self.users = {}
         self.experiments = {}
         self.connect_str = None
         self.text = ''
+        self.dnusermatch_CILogon = re.compile('.+CN=UID:(\w+)$')
+        self.dnusermatch_FNAL = re.compile('.+\/(.+\.fnal\.gov)$')
 
     def run_report(self):
         """Higher-level method to run all the other methods in report
@@ -207,7 +217,7 @@ class WastedHoursReport(Reporter):
 
     def generate(self):
         """
-        Generates the raw data for the report, sends it to a parser
+        Generates the raw data for the report
 
         :return: None
         """
@@ -220,11 +230,11 @@ class WastedHoursReport(Reporter):
             for status in ('Success', 'Failure'):
                 for label in ('CoreHours', 'Njobs'):
                     statusbucket = getattr(bucket.Status.buckets, status)
-                    userparser.send((dn, status, label, getattr(statusbucket, label).value))
-                # print bucket.Status.buckets.Failure.label
+                    userparser.send((dn, status, label,
+                                     getattr(statusbucket, label).value))
 
-                # print getattr(bucket.Status.buckets.Failure, label)
-            # item.Status.buckets.Failure.CoreHours
+        # for user in self.users.itervalues():
+        #     print user.user, user.success, user.failure, user.get_job_failure_percent(), user.get_wasted_hours_percent(), user.total_Njobs, user.total_CoreHours
 
 
         # unique_terms = ['DN', 'Status']
@@ -292,12 +302,8 @@ class WastedHoursReport(Reporter):
         """
         while True:
             dn, status, label, value = yield
+            user = self._parse_dn(dn)
 
-            # Do username extraction ELSE dn
-            # TEMPORARY:
-            user = dn
-
-            # # Fill this in
             if user not in self.users:
                 u = User(user)
                 self.users[user] = u
@@ -305,90 +311,94 @@ class WastedHoursReport(Reporter):
                 u = self.users[user]
             u.add_data({'Status': status, label: value})
 
+    def _parse_dn(self, trydn):
+        """
+        Parse a DN to extract the FNAL username
 
+        :param str trydn: DN that we want to try to parse
+        :return userid: Username or trydn if parsing failed
+        """
+        userid = trydn
+        try:
+            # Grabs the first parenthesized subgroup in the
+            # hit['CommonName'] string, where that subgroup comes
+            # after "CN=UID:"
+            userid = self.dnusermatch_CILogon.match(trydn).group(1)
+        except AttributeError:
+            # If this doesn't match CILogon standard, see if it
+            # matches *.fnal.gov string at the end.  If so,
+            # it's a managed proxy most likely, so give the last part of
+            # the string.
+            # e.g. for DN "/DC=org/DC=opensciencegrid/O=Open Science Grid/OU=Services/CN=novaproduction/nova-offline.fnal.gov" grab "nova-offline.fnal.gov"
+            try:
+                userid = self.dnusermatch_FNAL.match(trydn).group(1)
+            except AttributeError:
+                userid = trydn  # Just print the DN string, move on
+        finally:
+            return userid
 
-
-
-    def _parse_data_to_experiments(self):
-        """Coroutine that parses raw data and stores the information in the
-        Experiment and User class instances"""
-        while True:
-            name, expname, status, count, hours = yield
-            count = int(count)
-            hours = float(hours)
-
-            if self.verbose:
-                print name, expname, status, count, hours
-
-            if expname not in self.experiments:
-                exp = Experiment(expname)
-                self.experiments[expname] = exp
-            else:
-                exp = self.experiments[expname]
-            if name not in exp.users:
-                user = User(name)
-                exp.add_user(name, user)
-            else:
-                user = exp.users[name]
-            if status == 'Success':
-                user.add_success(count, hours)
-            else:
-                user.add_failure(count, hours)
+    def _get_configfile_limits(self):
+        """Get limits from config file"""
+        for key, value in self.config[self.vo.lower()][self.report_type.lower()].iteritems():
+            if key != u'to_emails':
+                setattr(self, key, value)
 
     def generate_report_file(self):
-        """Reads the Experiment and User objects and generates the report
+        """Reads the User objects and generates the report
         HTML file
 
         :return: None
         """
-        if len(self.experiments) == 0:
-            print "No experiments; nothing to report"
-            self.no_email = True
-            return
-        total_hrs = 0
-        total_jobs = 0
-        table = ""
 
-        def tdalign(info, align):
-            """HTML generator to wrap a table cell with alignment"""
-            return '<td align="{0}">{1}</td>'.format(align, info)
 
-        for key, exp in self.experiments.items():
-            for uname, user in exp.users.items():
-                failure_rate = round(user.get_failure_rate(), 1)
-                waste_per = round(user.get_waste_per(), 1)
-
-                linemap = ((key, 'left'), (uname, 'left'),
-                           (NiceNum.niceNum(user.success[0] + user.failure[0]), 'right'),
-                           (NiceNum.niceNum(user.failure[0]), 'right'),
-                           (failure_rate, 'right'),
-                           (NiceNum.niceNum(user.success[1] + user.failure[1],1), 'right'),
-                           (NiceNum.niceNum(user.failure[1], 1), 'right'), (waste_per, 'right'))
-
-                table += '\n<tr>' + ''.join((tdalign(key, al) for key, al in linemap)) + '</tr>'
-
-                if self.verbose:
-                    total_hrs += (user.success[1] + user.failure[1])
-                    total_jobs += (user.success[0] + user.failure[0])
-
-        headerlist = ['Experiment', 'User', 'Total #Jobs', '# Failures',
-                      'Failure Rate (%)', 'Wall Duration (Hours)',
-                      'Time Wasted (Hours)', '% Hours Wasted']
-
-        header = ''.join(('<th>{0}</th>'.format(elt) for elt in headerlist))
-
-        # Yes, the header and footer are the same on purpose
-        htmldict = dict(title=self.title, table=table,
-                        header=header, footer=header)
-
-        with open(self.template, 'r') as f:
-            self.text = f.read()
-
-        self.text = self.text.format(**htmldict)
-
-        if self.verbose:
-            print total_jobs, total_hrs
-        return
+        # if len(self.experiments) == 0:
+        #     print "No experiments; nothing to report"
+        #     self.no_email = True
+        #     return
+        # total_hrs = 0
+        # total_jobs = 0
+        # table = ""
+        #
+        # def tdalign(info, align):
+        #     """HTML generator to wrap a table cell with alignment"""
+        #     return '<td align="{0}">{1}</td>'.format(align, info)
+        #
+        # for key, exp in self.experiments.items():
+        #     for uname, user in exp.users.items():
+        #         failure_rate = round(user.get_failure_rate(), 1)
+        #         waste_per = round(user.get_waste_per(), 1)
+        #
+        #         linemap = ((key, 'left'), (uname, 'left'),
+        #                    (NiceNum.niceNum(user.success[0] + user.failure[0]), 'right'),
+        #                    (NiceNum.niceNum(user.failure[0]), 'right'),
+        #                    (failure_rate, 'right'),
+        #                    (NiceNum.niceNum(user.success[1] + user.failure[1],1), 'right'),
+        #                    (NiceNum.niceNum(user.failure[1], 1), 'right'), (waste_per, 'right'))
+        #
+        #         table += '\n<tr>' + ''.join((tdalign(key, al) for key, al in linemap)) + '</tr>'
+        #
+        #         if self.verbose:
+        #             total_hrs += (user.success[1] + user.failure[1])
+        #             total_jobs += (user.success[0] + user.failure[0])
+        #
+        # headerlist = ['Experiment', 'User', 'Total #Jobs', '# Failures',
+        #               'Failure Rate (%)', 'Wall Duration (Hours)',
+        #               'Time Wasted (Hours)', '% Hours Wasted']
+        #
+        # header = ''.join(('<th>{0}</th>'.format(elt) for elt in headerlist))
+        #
+        # # Yes, the header and footer are the same on purpose
+        # htmldict = dict(title=self.title, table=table,
+        #                 header=header, footer=header)
+        #
+        # with open(self.template, 'r') as f:
+        #     self.text = f.read()
+        #
+        # self.text = self.text.format(**htmldict)
+        #
+        # if self.verbose:
+        #     print total_jobs, total_hrs
+        # return
 
     def send_report(self):
         """
