@@ -40,7 +40,7 @@ def parse_opts(parser):
                         help="facility name/host description", default=None, required=True)
     parser.add_argument("-N", "--numrank", dest="numrank",
                         help="Number of Users to rank",
-                        default=None, type=int)
+                        default=100, type=int)
     pass
 
 
@@ -53,22 +53,33 @@ class User:
 
     def __init__(self, user_name):
         self.user = user_name
+
+        # When filled, these both will be of the form
+        # {'Njobs': <value>, 'CoreHours': <value>}
         self.success = {}
         self.failure = {}
+
         self.total_Njobs = 0
         self.total_CoreHours = 0
 
     @staticmethod
     def _check_datadict(data):
+        """
+        Data validation for incoming data dictionary
+        :param dict data: Dict of the form
+        {'Status': [Success|Failure], ['Njobs'|'CoreHours']: <value>}
+
+        :return bool: True if data passes test
+        """
         return 'Status' in data and ('Njobs' in data or 'CoreHours' in data)
 
     def add_data(self, datadict):
         """
-        Adds to the Failure dict for user
+        Adds to the success or failure dict for User instance
 
         :param njobs: Number of jobs in summary record
         :param wall_duration: Wall duration in summary record
-        :return:
+        :return None:
         """
         if self._check_datadict(datadict):
             rawattr = datadict['Status'].lower()
@@ -101,7 +112,6 @@ class User:
         (Failed CoreHours/ Total CoreHours)
         """
         waste_per = 0
-        # totalhours = self.success['CoreHours'] + self.failure['CoreHours']
         if self.total_CoreHours > 0:
             waste_per = (self.failure['CoreHours'] / self.total_CoreHours) * 100.
         return waste_per
@@ -154,8 +164,8 @@ class WastedHoursReport(Reporter):
             rlogfile = logfile
             logfile_override = False
 
-        self.title = "{0:s} Wasted Hours on GPGrid ({1:s} - {2:s})"\
-                            .format("FIFE", start, end)
+        # self.title = "{0:s} Wasted Hours on GPGrid ({1:s} - {2:s})"\
+        #                     .format("FIFE", start, end)
 
         Reporter.__init__(self, report, config, start, end=end,
                           verbose=verbose, is_test=is_test,
@@ -169,6 +179,13 @@ class WastedHoursReport(Reporter):
         self.experiments = {}
         self.connect_str = None
         self.text = ''
+        self.title = "Top {0} Users in {1} Ranked by Wasted Hours on {2} " \
+                     "({3:%Y-%m-%d %H:%M} - {4:%Y-%m-%d %H:%M})".format(
+                        self.numrank,
+                        self.vo,
+                        self.facility,
+                        self.start_time,
+                        self.end_time)
         self.dnusermatch_CILogon = re.compile('.+CN=UID:(\w+)$')
         self.dnusermatch_FNAL = re.compile('.+\/(.+\.fnal\.gov)$')
 
@@ -182,7 +199,7 @@ class WastedHoursReport(Reporter):
 
     def query(self):
         """
-        Method to query Elasticsearch cluster for EfficiencyReport information
+        Method to query Elasticsearch cluster for this report's information
 
         :return elasticsearch_dsl.Search: Search object containing ES query
         """
@@ -223,8 +240,7 @@ class WastedHoursReport(Reporter):
         """
         results = self.run_query()
         userparser = self._parse_data_to_users()
-        #
-        # print results.
+
         for bucket in results.DN.buckets:
             dn = bucket.key
             for status in ('Success', 'Failure'):
@@ -232,65 +248,6 @@ class WastedHoursReport(Reporter):
                     statusbucket = getattr(bucket.Status.buckets, status)
                     userparser.send((dn, status, label,
                                      getattr(statusbucket, label).value))
-
-        # for user in self.users.itervalues():
-        #     print user.user, user.success, user.failure, user.get_job_failure_percent(), user.get_wasted_hours_percent(), user.total_Njobs, user.total_CoreHours
-
-
-        # unique_terms = ['DN', 'Status']
-        # metrics = ['Njobs',  'CoreHours']
-        #
-        # def recurseBucket(curData, curBucket, index, data):
-        #     """
-        #     Recursively process the buckets down the nested aggregations
-        #
-        #     :param curData: Current parsed data that describes curBucket and will be copied and appended to
-        #     :param bucket curBucket: A elasticsearch bucket object
-        #     :param int index: Index of the unique_terms that we are processing
-        #     :param data: list of dicts that holds results of processing
-        #
-        #     :return: None.  But this will operate on a list *data* that's passed in and modify it
-        #     """
-        #     curTerm = unique_terms[index]
-        #
-        #     # Check if we are at the end of the list
-        #     if not curBucket[curTerm]['buckets']:
-        #         # Make a copy of the data
-        #         nowData = copy.deepcopy(curData)
-        #         data.append(nowData)
-        #     else:
-        #         # Get the current key, and add it to the data
-        #         for bucket in curBucket[curTerm]['buckets']:
-        #             print bucket
-        #             nowData = copy.deepcopy(
-        #                 curData)  # Hold a copy of curData so we can pass that in to any future recursion
-        #             nowData[curTerm] = bucket['key']
-        #             if index == (len(unique_terms) - 1):
-        #                 # reached the end of the unique terms
-        #                 for metric in metrics:
-        #                     nowData[metric] = bucket[metric].value
-        #                     # Add the doc count
-        #                 nowData["Count"] = bucket['doc_count']
-        #                 data.append(nowData)
-        #             else:
-        #                 recurseBucket(nowData, bucket, index + 1, data)
-        #
-        # data = []
-        # recurseBucket({}, results, 0, data)
-        #
-        # print data
-
-
-        # data_parser = self._parse_data_to_experiments()
-        # data_parser.send(None)
-        # for status in results.group_status.buckets:
-        #     for VO in results.group_status.buckets[status].group_VO.buckets:
-        #         for CommonName in VO['group_CommonName'].buckets:
-        #             data_parser.send((CommonName.key, VO.key, status,
-        #                                   CommonName['numJobs'].value,
-        #                                   CommonName['WallHours'].value))
-        # for u in self.users.itervalues():
-        #     print u.user, u.get_job_failure_percent(), u.get_wasted_hours_percent()
 
         return
 
@@ -339,9 +296,17 @@ class WastedHoursReport(Reporter):
 
     def _get_configfile_limits(self):
         """Get limits from config file"""
-        for key, value in self.config[self.vo.lower()][self.report_type.lower()].iteritems():
-            if key != u'to_emails':
-                setattr(self, key, value)
+        for attr in ('hours_cutoff', 'perc_cutoff'):
+            try:
+                value = self.config[self.vo.lower()][self.report_type.lower()][attr]
+            except KeyError:
+                value = globals()[attr]
+                self.logger.warning('Could not find value for attribute {0}'
+                                    ' in config file.  Will use module '
+                                    'default of {1}'.format(attr, value))
+            finally:
+                setattr(self, attr, value)
+
 
     def generate_report_file(self):
         """Reads the User objects and generates the report
@@ -349,10 +314,53 @@ class WastedHoursReport(Reporter):
 
         :return: None
         """
-        masterlist = sorted(self.users.values(), key=lambda user: user.get_wasted_hours_percent(), reverse=True)
+        # All of self.users sorted
+        sorteduserlist = sorted(self.users.values(),
+                                key=lambda user: user.get_wasted_hours_percent(),
+                                reverse=True)
 
-        for item in masterlist:
-            print item.user, item.get_wasted_hours_percent()
+        # Generate report lines, with some cutoffs
+        all_report_lines_gen = (
+            (user.user,
+             self.vo,
+             int(user.total_Njobs),
+             int(user.failure['Njobs']),
+             NiceNum.niceNum(user.get_job_failure_percent(), 0.1),
+             NiceNum.niceNum(user.total_CoreHours, 1),
+             NiceNum.niceNum(user.failure['CoreHours'], 1),
+             NiceNum.niceNum(user.get_wasted_hours_percent(), 0.1))
+            for user in sorteduserlist
+            # Cutoffs:  Core hours and Wasted Hours Percent
+            if user.total_CoreHours >= self.hours_cutoff
+                and user.get_wasted_hours_percent() / 100. >= self.perc_cutoff
+        )
+
+
+        # Read in the template
+        # Create HTML lines - make a table
+        # Make all substitutions
+
+        # Cutoff:  Only act on the first self.numrank entries
+        for count, line in enumerate(all_report_lines_gen, start=1):
+            if count <= self.numrank:
+                # Do some work here
+                print count, line
+
+        print self.title
+
+    def _line_to_html(self):
+
+        # Limits:  Number of entries (numrank)
+        """
+don't show user who wasted less than X% (CONFIGURABLE) - config file (DONE)
+and ran less than 1000 hours (CONFIGURABLE) - config file  (DONE)"""
+
+        # for line in report_lines:
+        #     print line
+
+
+        # for rank, item in enumerate(masterlist[:self.numrank]):
+        #     print rank + 1, item.user, item.get_wasted_hours_percent()
 
         # Implement cutoffs
 
@@ -404,6 +412,7 @@ class WastedHoursReport(Reporter):
         # if self.verbose:
         #     print total_jobs, total_hrs
         # return
+        pass
 
     def send_report(self):
         """
