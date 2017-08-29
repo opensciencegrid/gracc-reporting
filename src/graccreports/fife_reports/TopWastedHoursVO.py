@@ -18,7 +18,7 @@ don't show user who wasted less than X% (CONFIGURABLE) - config file
 and ran less than 1000 hours (CONFIGURABLE) - config file 
 """
 
-default_templatefile = 'template_top_wasted_hours_vo.html'
+default_templatefile = 'template_topwastedhoursvo.html'
 logfile = 'topwastedhoursvo.log'
 perc_cutoff = 0.5
 hours_cutoff = 1000
@@ -323,17 +323,67 @@ class WastedHoursReport(Reporter):
         all_report_lines_gen = (
             (user.user,
              self.vo,
-             int(user.total_Njobs),
-             int(user.failure['Njobs']),
-             NiceNum.niceNum(user.get_job_failure_percent(), 0.1),
-             NiceNum.niceNum(user.total_CoreHours, 1),
              NiceNum.niceNum(user.failure['CoreHours'], 1),
-             NiceNum.niceNum(user.get_wasted_hours_percent(), 0.1))
+             NiceNum.niceNum(user.get_wasted_hours_percent(), 0.1),
+             NiceNum.niceNum(user.total_CoreHours, 1),
+             NiceNum.niceNum(user.failure['Njobs'], 1),
+             NiceNum.niceNum(user.get_job_failure_percent(), 0.1),
+             NiceNum.niceNum(user.total_Njobs, 1))
             for user in sorteduserlist
             # Cutoffs:  Core hours and Wasted Hours Percent
             if user.total_CoreHours >= self.hours_cutoff
-                and user.get_wasted_hours_percent() / 100. >= self.perc_cutoff
+               and user.get_wasted_hours_percent() / 100. >= self.perc_cutoff
         )
+
+        top_lines_gen = ((count,) + line
+                         for count, line in enumerate(all_report_lines_gen, start=1)
+                         if count <= self.numrank
+                         )
+
+
+        # Break these into internal functions
+
+        table = ''
+
+        # Header HTML
+        headerlist = ['Rank', 'User', 'VO', 'Hours Wasted',
+                  '% Hours Wasted of Total', 'Total Used Wall Hours',
+                  'Total Jobs Failed', '% Jobs Failed', 'Total Jobs Ran']
+
+        if self.verbose:
+            print headerlist
+        #     for line in top_lines_gen:
+        #         print line
+
+        header = ''.join(('<th>{0}</th>'.format(elt) for elt in headerlist))
+
+        # Generate table lines
+        def tdalign(info, align):
+            """HTML generator to wrap a table cell with alignment"""
+            return '<td align="{0}">{1}</td>'.format(align, info)
+
+        lineal = ('right', 'left', 'left', 'right', 'right', 'right', 'right', 'right', 'right')
+        for line in top_lines_gen:
+            if self.verbose:
+                print line
+            linemap = zip(line, lineal)
+            table += '\n<tr>' + ''.join((tdalign(key, al) for key, al in linemap)) + '</tr>'
+
+        htmldict = dict(title=self.title, table=table, header=header)
+
+        with open(self.template, 'r') as f:
+            self.text = f.read()
+
+        self.text = self.text.format(**htmldict)
+
+        with open('/tmp/test.html', 'w') as f:
+            f.write(self.text)
+
+        # if self.verbose:
+        #     print total_jobs, total_hrs
+
+
+
 
 
         # Read in the template
@@ -341,28 +391,15 @@ class WastedHoursReport(Reporter):
         # Make all substitutions
 
         # Cutoff:  Only act on the first self.numrank entries
-        for count, line in enumerate(all_report_lines_gen, start=1):
-            if count <= self.numrank:
-                # Do some work here
-                print count, line
+        # for count, line in enumerate(all_report_lines_gen, start=1):
+        #     if count <= self.numrank:
+        #         # Do some work here
+        #         print count, line
 
-        print self.title
+        # print self.title
 
     def _line_to_html(self):
 
-        # Limits:  Number of entries (numrank)
-        """
-don't show user who wasted less than X% (CONFIGURABLE) - config file (DONE)
-and ran less than 1000 hours (CONFIGURABLE) - config file  (DONE)"""
-
-        # for line in report_lines:
-        #     print line
-
-
-        # for rank, item in enumerate(masterlist[:self.numrank]):
-        #     print rank + 1, item.user, item.get_wasted_hours_percent()
-
-        # Implement cutoffs
 
         # if len(self.experiments) == 0:
         #     print "No experiments; nothing to report"
