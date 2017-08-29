@@ -1,6 +1,6 @@
 %define name gracc-reporting
-%define version 0.11.4
-%define unmangled_version 0.11.4
+%define version 1.0dev
+%define unmangled_version 1.0dev
 %define release 1
 %define _rpmfilename %%{ARCH}/%%{NAME}-%%{VERSION}.%%{ARCH}.rpm
 

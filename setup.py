@@ -28,7 +28,6 @@ setup(name='gracc-reporting',
               'osgprobereport = graccreports.osg_reports.ProbeReport:main',
               'osgtopoppusagereport = graccreports.osg_reports.TopOppUsageByFacility:main',
               'osgmissingprojects = graccreports.osg_reports.MissingProject:main',
-              # 'copyfiles = graccreports.copyfiles:main',
               'minervareport = graccreports.minerva_report.MinervaReport:main',
               'topwastedhoursvoreport = graccreports.fife_reports.TopWastedHoursVO:main'
             ]
