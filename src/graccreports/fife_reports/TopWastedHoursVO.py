@@ -194,7 +194,7 @@ class WastedHoursReport(Reporter):
         generation"""
         self.generate()
         self.generate_report_file()
-        # self.send_report()
+        self.send_report()
         return
 
     def query(self):
@@ -314,6 +314,7 @@ class WastedHoursReport(Reporter):
 
         :return: None
         """
+        # Organize raw data into lines for HTML processing
         # All of self.users sorted
         sorteduserlist = sorted(self.users.values(),
                                 key=lambda user: user.get_wasted_hours_percent(),
@@ -340,35 +341,41 @@ class WastedHoursReport(Reporter):
                          if count <= self.numrank
                          )
 
+        # Generate HTML for report
 
-        # Break these into internal functions
-
+        # Column info in (column name, column alignment) form
+        columns_setup = [('Rank', 'right'),
+                         ('User', 'left'),
+                         ('VO', 'left'),
+                         ('Hours Wasted', 'right'),
+                         ('% Hours Wasted of Total', 'right'),
+                         ('Total Used Wall Hours', 'right'),
+                         ('Total Jobs Failed', 'right'),
+                         ('% Jobs Failed', 'right'),
+                         ('Total Jobs Ran', 'right')]
         table = ''
-
-        # Header HTML
-        headerlist = ['Rank', 'User', 'VO', 'Hours Wasted',
-                  '% Hours Wasted of Total', 'Total Used Wall Hours',
-                  'Total Jobs Failed', '% Jobs Failed', 'Total Jobs Ran']
-
-        if self.verbose:
-            print headerlist
-        #     for line in top_lines_gen:
-        #         print line
-
-        header = ''.join(('<th>{0}</th>'.format(elt) for elt in headerlist))
 
         # Generate table lines
         def tdalign(info, align):
             """HTML generator to wrap a table cell with alignment"""
             return '<td align="{0}">{1}</td>'.format(align, info)
 
-        lineal = ('right', 'left', 'left', 'right', 'right', 'right', 'right', 'right', 'right')
+        lineal = [elt[1] for elt in columns_setup]
         for line in top_lines_gen:
             if self.verbose:
                 print line
             linemap = zip(line, lineal)
-            table += '\n<tr>' + ''.join((tdalign(key, al) for key, al in linemap)) + '</tr>'
+            table += '\n<tr>' + ''.join((tdalign(info, al) for info, al in linemap)) + '</tr>'
 
+        if len(table) == 0:
+            self.logger.info('The report is empty.  Will not send anything.')
+            sys.exit(0)
+
+        # Generate header HTML
+        headernames = (elt[0] for elt in columns_setup)
+        header = ''.join(('<th>{0}</th>'.format(elt) for elt in headernames))
+
+        # Put it all into the template
         htmldict = dict(title=self.title, table=table, header=header)
 
         with open(self.template, 'r') as f:
@@ -376,80 +383,11 @@ class WastedHoursReport(Reporter):
 
         self.text = self.text.format(**htmldict)
 
-        with open('/tmp/test.html', 'w') as f:
-            f.write(self.text)
+        # with open('/tmp/test.html', 'w') as f:
+        #     f.write(self.text)
 
-        # if self.verbose:
-        #     print total_jobs, total_hrs
+        return
 
-
-
-
-
-        # Read in the template
-        # Create HTML lines - make a table
-        # Make all substitutions
-
-        # Cutoff:  Only act on the first self.numrank entries
-        # for count, line in enumerate(all_report_lines_gen, start=1):
-        #     if count <= self.numrank:
-        #         # Do some work here
-        #         print count, line
-
-        # print self.title
-
-    def _line_to_html(self):
-
-
-        # if len(self.experiments) == 0:
-        #     print "No experiments; nothing to report"
-        #     self.no_email = True
-        #     return
-        # total_hrs = 0
-        # total_jobs = 0
-        # table = ""
-        #
-        # def tdalign(info, align):
-        #     """HTML generator to wrap a table cell with alignment"""
-        #     return '<td align="{0}">{1}</td>'.format(align, info)
-        #
-        # for key, exp in self.experiments.items():
-        #     for uname, user in exp.users.items():
-        #         failure_rate = round(user.get_failure_rate(), 1)
-        #         waste_per = round(user.get_waste_per(), 1)
-        #
-        #         linemap = ((key, 'left'), (uname, 'left'),
-        #                    (NiceNum.niceNum(user.success[0] + user.failure[0]), 'right'),
-        #                    (NiceNum.niceNum(user.failure[0]), 'right'),
-        #                    (failure_rate, 'right'),
-        #                    (NiceNum.niceNum(user.success[1] + user.failure[1],1), 'right'),
-        #                    (NiceNum.niceNum(user.failure[1], 1), 'right'), (waste_per, 'right'))
-        #
-        #         table += '\n<tr>' + ''.join((tdalign(key, al) for key, al in linemap)) + '</tr>'
-        #
-        #         if self.verbose:
-        #             total_hrs += (user.success[1] + user.failure[1])
-        #             total_jobs += (user.success[0] + user.failure[0])
-        #
-        # headerlist = ['Experiment', 'User', 'Total #Jobs', '# Failures',
-        #               'Failure Rate (%)', 'Wall Duration (Hours)',
-        #               'Time Wasted (Hours)', '% Hours Wasted']
-        #
-        # header = ''.join(('<th>{0}</th>'.format(elt) for elt in headerlist))
-        #
-        # # Yes, the header and footer are the same on purpose
-        # htmldict = dict(title=self.title, table=table,
-        #                 header=header, footer=header)
-        #
-        # with open(self.template, 'r') as f:
-        #     self.text = f.read()
-        #
-        # self.text = self.text.format(**htmldict)
-        #
-        # if self.verbose:
-        #     print total_jobs, total_hrs
-        # return
-        pass
 
     def send_report(self):
         """
