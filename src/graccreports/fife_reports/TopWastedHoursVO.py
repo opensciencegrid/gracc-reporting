@@ -7,17 +7,6 @@ from elasticsearch_dsl import Search
 from . import Reporter, runerror, get_configfile, get_template, coroutine
 from . import TextUtils, NiceNum
 
-
-"""
-Should use same calculation as current Wasted Hours report to get wasted hours, percentage, etc. I think this means we'll use a very similar query.
-Add FIFE Logo at the top,
-Sort by Wasted Hours (Most to least)
-Should be able to constrain by host description (let's constrain to gpgrid for us) (CONFIGURABLE) - argparse (DONE)
-I was also thinking, maybe we only want to show the top 100 or something like that (CONFIGURABLE) - argparse (DONE)
-don't show user who wasted less than X% (CONFIGURABLE) - config file
-and ran less than 1000 hours (CONFIGURABLE) - config file 
-"""
-
 default_templatefile = 'template_topwastedhoursvo.html'
 logfile = 'topwastedhoursvo.log'
 perc_cutoff = 0.5
@@ -41,14 +30,14 @@ def parse_opts(parser):
     parser.add_argument("-N", "--numrank", dest="numrank",
                         help="Number of Users to rank",
                         default=100, type=int)
-    pass
 
 
 class User:
     """
     Holds all user-specific information for this report
 
-    :param str user_name: username of user
+    :param str user_name: username of user (or DN if username couldn't
+    be determined)
     """
 
     def __init__(self, user_name):
@@ -77,8 +66,8 @@ class User:
         """
         Adds to the success or failure dict for User instance
 
-        :param njobs: Number of jobs in summary record
-        :param wall_duration: Wall duration in summary record
+        :param dict datadict:  Dictionary of data that satsifies
+            self._check_datadict(datadict) == True
         :return None:
         """
         if self._check_datadict(datadict):
@@ -92,7 +81,6 @@ class User:
                 totalkey = 'total_{0}'.format(key)
                 setattr(self, totalkey, getattr(self, totalkey) + datadict[key])
         else:
-            # Data validation
             raise ValueError("Improper format for data passing.  "
                              "Must be a dict with keys Status, and (Njobs or CoreHours)")
 
@@ -100,6 +88,8 @@ class User:
         """
         Calculates the failure rate of a user's jobs
         (Njobs failed / Njobs total)
+
+        :return float: Failure rate as a percentage (not decimal)
         """
         failure_rate = 0
         if self.total_Njobs > 0:
@@ -110,6 +100,8 @@ class User:
         """
         Gets a user's wasted hours percentage
         (Failed CoreHours/ Total CoreHours)
+
+        :return float: Wasted Hours as a percentage of total hours (not decimal)
         """
         waste_per = 0
         if self.total_CoreHours > 0:
@@ -117,39 +109,20 @@ class User:
         return waste_per
 
 
-# class Experiment:
-#     """
-#     Hold all experiment-specific information for this report
-#
-#     :param exp_name: Experiment name
-#     """
-#     def __init__(self, exp_name):
-#         self.experiment = exp_name
-#         self.success = [0, 0]
-#         self.failure = [0, 0]
-#         self.users = {}
-#
-#     def add_user(self, user_name, user):
-#         """
-#         Adds user to an experiment
-#
-#         :param user_name: username of user
-#         :param User user: User object holding user's info
-#         :return: None
-#         """
-#         self.users[user_name] = user
-
-
-class WastedHoursReport(Reporter):
+class TopWastedHoursReport(Reporter):
     """
-    Class to hold information about and run Wasted Hours report.
+    Class to hold information about and run Top Wasted Hours report.
     :param str config: Report Configuration file
     :param str start: Start time of report range
     :param str end: End time of report range
     :param str template: Filename of HTML template to generate report
+    :param str vo: VO we want to filter this report on
+    :param int numrank: How many entries that match other filters we want to show
+    :param str facility: Host description in GRACC (e.g. GPGrid)
     :param bool is_test: Whether or not this is a test run.
     :param bool verbose: Verbose flag
     :param bool no_email: If true, don't actually send the email
+    :param str ov_logfile: Path to override logfile
     """
     def __init__(self, config, start, end, template, vo,
                  numrank=100, facility=None, is_test=True,
@@ -164,22 +137,18 @@ class WastedHoursReport(Reporter):
             rlogfile = logfile
             logfile_override = False
 
-        # self.title = "{0:s} Wasted Hours on GPGrid ({1:s} - {2:s})"\
-        #                     .format("FIFE", start, end)
-
         Reporter.__init__(self, report, config, start, end=end,
                           verbose=verbose, is_test=is_test,
                           no_email=no_email, logfile=rlogfile,
                           logfile_override=logfile_override, check_vo=True)
+
         self.template = template
         self.facility = facility
         self.numrank = numrank
         self._get_configfile_limits()
         self.users = {}
-        self.experiments = {}
-        self.connect_str = None
         self.text = ''
-        self.title = "Top {0} Users in {1} Ranked by Wasted Hours on {2} " \
+        self.title = "Top {0} Users in {1} Ranked by Percent Wasted Hours on {2} " \
                      "({3:%Y-%m-%d %H:%M} - {4:%Y-%m-%d %H:%M})".format(
                         self.numrank,
                         self.vo,
@@ -196,6 +165,19 @@ class WastedHoursReport(Reporter):
         self.generate_report_file()
         self.send_report()
         return
+
+    def _get_configfile_limits(self):
+        """Get limits from config file"""
+        for attr in ('hours_cutoff', 'perc_cutoff'):
+            try:
+                value = self.config[self.vo.lower()][self.report_type.lower()][attr]
+            except KeyError:
+                value = globals()[attr]
+                self.logger.warning('Could not find value for attribute {0}'
+                                    ' in config file.  Will use module '
+                                    'default of {1}'.format(attr, value))
+            finally:
+                setattr(self, attr, value)
 
     def query(self):
         """
@@ -234,7 +216,8 @@ class WastedHoursReport(Reporter):
 
     def generate(self):
         """
-        Generates the raw data for the report
+        Parse the response from the ES server and extract the raw data for
+        the report
 
         :return: None
         """
@@ -254,6 +237,7 @@ class WastedHoursReport(Reporter):
     @coroutine
     def _parse_data_to_users(self):
         """
+        Coroutine to create User objects and populate them with data
 
         :return:
         """
@@ -273,7 +257,7 @@ class WastedHoursReport(Reporter):
         Parse a DN to extract the FNAL username
 
         :param str trydn: DN that we want to try to parse
-        :return userid: Username or trydn if parsing failed
+        :return str: Username or trydn if parsing failed
         """
         userid = trydn
         try:
@@ -293,20 +277,6 @@ class WastedHoursReport(Reporter):
                 userid = trydn  # Just print the DN string, move on
         finally:
             return userid
-
-    def _get_configfile_limits(self):
-        """Get limits from config file"""
-        for attr in ('hours_cutoff', 'perc_cutoff'):
-            try:
-                value = self.config[self.vo.lower()][self.report_type.lower()][attr]
-            except KeyError:
-                value = globals()[attr]
-                self.logger.warning('Could not find value for attribute {0}'
-                                    ' in config file.  Will use module '
-                                    'default of {1}'.format(attr, value))
-            finally:
-                setattr(self, attr, value)
-
 
     def generate_report_file(self):
         """Reads the User objects and generates the report
@@ -336,6 +306,7 @@ class WastedHoursReport(Reporter):
                and user.get_wasted_hours_percent() / 100. >= self.perc_cutoff
         )
 
+        # Enforce cutoff for number of entries to include (self.numrank)
         top_lines_gen = ((count,) + line
                          for count, line in enumerate(all_report_lines_gen, start=1)
                          if count <= self.numrank
@@ -352,7 +323,7 @@ class WastedHoursReport(Reporter):
                          ('Total Used Wall Hours', 'right'),
                          ('Total Jobs Failed', 'right'),
                          ('% Jobs Failed', 'right'),
-                         ('Total Jobs Ran', 'right')]
+                         ('Total Jobs Run', 'right')]
         table = ''
 
         # Generate table lines
@@ -383,11 +354,7 @@ class WastedHoursReport(Reporter):
 
         self.text = self.text.format(**htmldict)
 
-        # with open('/tmp/test.html', 'w') as f:
-        #     f.write(self.text)
-
         return
-
 
     def send_report(self):
         """
@@ -419,7 +386,7 @@ def main():
     templatefile = get_template(override=args.template, deffile=default_templatefile)
 
     try:
-        r = WastedHoursReport(config,
+        r = TopWastedHoursReport(config,
                               args.start,
                               args.end,
                               templatefile,
