@@ -129,7 +129,7 @@ class Efficiency(Reporter):
             .filter("wildcard", ProbeName=wildcardProbeNameq) \
             .filter("range", EndTime={"gte": starttimeq, "lt": endtimeq}) \
             .filter("range", WallDuration={"gt": 0}) \
-            .filter("term", Host_description="GPGrid") \
+            .filter("term", Host_description=self.facility) \
             .filter("term", ResourceType="Payload")[0:0]
         # Size 0 to return only aggregations
 
