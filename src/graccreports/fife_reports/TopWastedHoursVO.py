@@ -26,7 +26,8 @@ def parse_opts(parser):
     parser.add_argument("-E", "--experiment", dest="vo",
                         help="experiment name", default=None, required=True)
     parser.add_argument("-F", "--facility", dest="facility",
-                        help="facility name/host description", default=None, required=True)
+                        help="facility name/host description", default=None,
+                        required=True)
     parser.add_argument("-N", "--numrank", dest="numrank",
                         help="Number of Users to rank",
                         default=100, type=int)
@@ -194,7 +195,7 @@ class TopWastedHoursReport(Reporter):
             .filter("wildcard", ProbeName=wildcardProbeNameq) \
             .filter("range", EndTime={"gte": starttimeq, "lt": endtimeq}) \
             .filter("term", Host_description=self.facility) \
-            .filter("term", VOName=self.vo) \
+            .filter("term", VOName=self.vo.lower()) \
             .filter("term", ResourceType="Payload") \
             [0:0]   # Only print aggregations
 
