@@ -41,6 +41,11 @@ class Reporter(TimeUtils):
     """
     Base class for all OSG reports
 
+        :param logfile_override:
+        :param check_vo:
+        :param althost:
+
+
     :param str report: Which report is getting run
     :param str config: Filename of toml configuration file
     :param str start: Start time of report range
@@ -55,18 +60,25 @@ class Reporter(TimeUtils):
     :param bool no_email: If true, don't send any emails
     :param str title: Report title
     :param str logfile: Filename of log file for report
+    :param bool logfile_override: Override default logfile location
+    :param bool check_vo: Should we do VO validation?
+    :param str althost: Alternate Elasticsearch Host key from config file.
+        Must be specified in [elasticsearch] section of
+        config file by name (e.g. my_es_cluster="https://hostname.me")
     """
     __metaclass__ = abc.ABCMeta
 
     def __init__(self, report, config, start, end=None, verbose=False,
                  raw=False, allraw=False, template=None, is_test=False, no_email=False,
-                 title=None, logfile=None, logfile_override=False, check_vo=False):
+                 title=None, logfile=None, logfile_override=False, check_vo=False,
+                 althost=None):
         TimeUtils.__init__(self)
         self.configfile = config
         self.config = self._parse_config(config)
         # if config:
         #     self.config = config.config
         self.header = []
+        self.althost = althost
         self.start_time = self.parse_datetime(start)
         self.end_time = self.parse_datetime(end)
         self.verbose = verbose
@@ -403,8 +415,12 @@ class Reporter(TimeUtils):
 
         :return: elasticsearch.Elasticsearch object
         """
-        hostname = self.config['elasticsearch'].get('hostname',
-                                                    'https://gracc.opensciencegrid.org/q')
+        if self.althost is None:
+            hostname = self.config['elasticsearch'].get('hostname',
+                                                        'https://gracc.opensciencegrid.org/q')
+        else:
+            hostname = self.config['elasticsearch'].get(self.althost,
+                                                        'https://gracc.opensciencegrid.org/q')
 
         try:
             client = Elasticsearch(hostname,
