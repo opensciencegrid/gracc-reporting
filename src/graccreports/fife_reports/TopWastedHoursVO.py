@@ -171,7 +171,7 @@ class TopWastedHoursReport(Reporter):
         """Get limits from config file"""
         for attr in ('hours_cutoff', 'perc_cutoff'):
             try:
-                value = self.config[self.vo.lower()][self.report_type.lower()][attr]
+                value = self.config[self.report_type.lower()][self.vo.lower()][attr]
             except KeyError:
                 value = globals()[attr]
                 self.logger.warning('Could not find value for attribute {0}'

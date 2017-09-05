@@ -144,7 +144,7 @@ class JobSuccessRateReporter(Reporter):
         :return elasticsearch_dsl.Search: Search object containing ES query
         """
         # Set up our search parameters
-        rep_config = self.config[self.vo.lower()][self.report_type.lower()]
+        rep_config = self.config[self.report_type.lower()][self.vo.lower()]
         voq = rep_config['voname']
         productioncheck = '*Role=Production*'
 
@@ -296,7 +296,7 @@ class JobSuccessRateReporter(Reporter):
         # Grab config values.  If they don't exist, keep defaults
         for key in config_vals:
             try:
-                config_vals[key] = int(self.config[self.vo.lower()][self.report_type.lower()][key])
+                config_vals[key] = int(self.config[self.report_type.lower()][self.vo.lower()][key])
             except KeyError:
                 pass
 
@@ -585,7 +585,7 @@ class JobSuccessRateReporter(Reporter):
         """Check to see if the num_failed_sites option is set in the config
         file for the VO"""
         return 'num_failed_sites' in \
-               self.config[self.vo.lower()][self.report_type.lower()]
+               self.config[self.report_type.lower()][self.vo.lower()]
 
 
 def main():

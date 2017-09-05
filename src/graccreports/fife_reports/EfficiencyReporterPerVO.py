@@ -82,7 +82,7 @@ class Efficiency(Reporter):
         :return: Grab the min-hours and min-efficiency limits from config dict
         """
         try:
-            return (self.config[self.vo.lower()][self.report_type.lower()]['min_{0:s}'.format(tag)]
+            return (self.config[self.report_type.lower()][self.vo.lower()]['min_{0:s}'.format(tag)]
                     for tag in ('hours', 'efficiency'))
         except KeyError as err:
             err.message += "\n The VO {0:s} was not found in the config file, " \

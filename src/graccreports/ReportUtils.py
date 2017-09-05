@@ -40,12 +40,6 @@ class ContextFilter(logging.Filter):
 class Reporter(TimeUtils):
     """
     Base class for all OSG reports
-
-        :param logfile_override:
-        :param check_vo:
-        :param althost:
-
-
     :param str report: Which report is getting run
     :param str config: Filename of toml configuration file
     :param str start: Start time of report range
@@ -400,7 +394,12 @@ class Reporter(TimeUtils):
         only applies to fife_reports package).  If not, raise KeyError
         :return None: 
         """
-        if self.vo and self.vo.lower() not in self.config:
+        # Put check in for SECTION
+
+        if not self.vo or \
+                (self.vo
+                    and self.vo.lower() not in self.config['configured_vos']
+                    and self.vo.lower() not in self.config[self.report_type.lower()]):
             if self.verbose:
                 self.logger.info(self.configfile)
                 self.logger.info(self.config)
@@ -456,7 +455,7 @@ class Reporter(TimeUtils):
             attrs = [self.report_type.lower(), 'to_emails']
             try:
                 vo = self.vo.lower()
-                attrs.insert(0, vo)
+                attrs.insert(1, vo)
                 names = []
             except AttributeError:      # No vo-specific info in config file
                 try:
@@ -478,6 +477,33 @@ class Reporter(TimeUtils):
                 while len(attrs) != 0:
                     add_emails = add_emails[attrs.pop(0)]
                 emails.extend(add_emails)
+        # else:
+        #     attrs = [self.report_type.lower(), 'to_emails']
+        #     try:
+        #         vo = self.vo.lower()
+        #         attrs.insert(0, vo)
+        #         names = []
+        #     except AttributeError:      # No vo-specific info in config file
+        #         try:
+        #             add_names = copy.deepcopy(
+        #                 self.config[self.report_type.lower()]['to_names']
+        #             )
+        #         except KeyError:    # This is the project or missing project report
+        #             try:
+        #                 attrs.insert(0, 'project')
+        #                 add_names = copy.deepcopy(
+        #                     self.config['project'][self.report_type.lower()]['to_names'])
+        #             except KeyError:    # Some case that shouldn't pop up.  Raise an error
+        #                 raise
+        #         finally:
+        #             names.extend(add_names)
+        #     finally:
+        #         # Iterate through config keys (attrs) to get emails we want
+        #         add_emails = copy.deepcopy(self.config)
+        #         while len(attrs) != 0:
+        #             add_emails = add_emails[attrs.pop(0)]
+        #         emails.extend(add_emails)
+
 
         email_info["to"] = {}
         email_info["to"]["email"] = emails
