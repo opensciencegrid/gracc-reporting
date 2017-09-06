@@ -36,15 +36,13 @@ class MissingProjectReport(Reporter):
     def __init__(self, report_type, config, start, end=None, verbose=False,
                  no_email=False, is_test=False, ov_logfile=None):
 
-        if ov_logfile:
-            self.logfile = ov_logfile
-            logfile_override = True
-        else:
-            logfile_override = False
+        logfile_fname = ov_logfile if ov_logfile is not None else self.logfile
+        logfile_override = True if ov_logfile is not None else False
 
         Reporter.__init__(self, report_type, config, start, end, verbose,
                           no_email=no_email, is_test=is_test,
-                          logfile=self.logfile, logfile_override=logfile_override)
+                          logfile=logfile_fname,
+                          logfile_override=logfile_override)
         self.report_type = self._validate_report_type(report_type)
         self.logger.info("Report Type: {0}".format(self.report_type))
         

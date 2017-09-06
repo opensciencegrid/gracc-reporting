@@ -127,12 +127,12 @@ class TopWastedHoursReport(Reporter):
         report = 'TopWastedHoursVO'
         self.vo = vo
 
-        logfile_path = ov_logfile if ov_logfile is not None else logfile
+        logfile_fname = ov_logfile if ov_logfile is not None else logfile
         logfile_override = True if ov_logfile is not None else False
 
         Reporter.__init__(self, report, config, start, end=end,
                           verbose=verbose, is_test=is_test,
-                          no_email=no_email, logfile=logfile_path,
+                          no_email=no_email, logfile=logfile_fname,
                           logfile_override=logfile_override, check_vo=True)
 
         self.template = template

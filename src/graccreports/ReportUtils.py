@@ -84,7 +84,8 @@ class Reporter(TimeUtils):
         self.report_type = report
 
         if logfile:
-            self.logfile = self.get_logfile_path(logfile, override=logfile_override)
+            self.logfile = self.get_logfile_path(logfile,
+                                                 override=logfile_override)
         else:
             self.logfile = 'reports.log'
 

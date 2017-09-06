@@ -98,7 +98,7 @@ class JobSuccessRateReporter(Reporter):
         report = 'JobSuccessRate'
         self.vo = vo
 
-        logfile_path = ov_logfile if ov_logfile is not None else logfile
+        logfile_fname = ov_logfile if ov_logfile is not None else logfile
         logfile_override = True if ov_logfile is not None else False
 
         self.title = "{0} Production Jobs Success Rate on the OSG Sites " \
@@ -106,7 +106,7 @@ class JobSuccessRateReporter(Reporter):
 
         Reporter.__init__(self, report, config, start, end, verbose,
                           is_test=is_test, no_email=no_email,
-                          logfile=logfile_path,
+                          logfile=logfile_fname,
                           logfile_override=logfile_override, raw=True,
                           check_vo=True)
         self.template = template
