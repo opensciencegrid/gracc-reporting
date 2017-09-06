@@ -27,7 +27,7 @@ def parse_opts(parser):
     """
     # Report-specific args
     parser.add_argument("-r", "--report-type", dest="report_type",
-                        help="Report type (OSG, XD, or OSG-Connect")
+                        type=unicode, help="Report type (OSG, XD, or OSG-Connect")
 
 
 class MissingProjectReport(Reporter):
