@@ -6,7 +6,7 @@ from elasticsearch_dsl import Search
 
 from . import Reporter, runerror, get_configfile, get_template, coroutine
 from . import TextUtils, NiceNum
-å
+
 default_templatefile = 'template_topwastedhoursvo.html'
 logfile = 'topwastedhoursvo.log'
 perc_cutoff = 0.5
@@ -92,10 +92,8 @@ class User:
 
         :return float: Failure rate as a percentage (not decimal)
         """
-        failure_rate = 0
-        if self.total_Njobs > 0:
-            failure_rate = (self.failure['Njobs'] / self.total_Njobs) * 100.
-        return failure_rate
+        return (self.failure['Njobs'] / self.total_Njobs) * 100. if self.total_Njobs > 0 \
+            else 0.
 
     def get_wasted_hours_percent(self):
         """
@@ -104,10 +102,8 @@ class User:
 
         :return float: Wasted Hours as a percentage of total hours (not decimal)
         """
-        waste_per = 0
-        if self.total_CoreHours > 0:
-            waste_per = (self.failure['CoreHours'] / self.total_CoreHours) * 100.
-        return waste_per
+        return (self.failure['CoreHours'] / self.total_CoreHours) * 100. if self.total_CoreHours > 0 \
+            else 0.
 
 
 class TopWastedHoursReport(Reporter):
@@ -131,16 +127,12 @@ class TopWastedHoursReport(Reporter):
         report = 'TopWastedHoursVO'
         self.vo = vo
 
-        if ov_logfile:
-            rlogfile = ov_logfile
-            logfile_override = True
-        else:
-            rlogfile = logfile
-            logfile_override = False
+        logfile_path = ov_logfile if ov_logfile is not None else logfile
+        logfile_override = True if ov_logfile is not None else False
 
         Reporter.__init__(self, report, config, start, end=end,
                           verbose=verbose, is_test=is_test,
-                          no_email=no_email, logfile=rlogfile,
+                          no_email=no_email, logfile=logfile_path,
                           logfile_override=logfile_override, check_vo=True)
 
         self.template = template
