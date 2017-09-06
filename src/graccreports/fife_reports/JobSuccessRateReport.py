@@ -98,18 +98,15 @@ class JobSuccessRateReporter(Reporter):
         report = 'JobSuccessRate'
         self.vo = vo
 
-        if ov_logfile:
-            rlogfile = ov_logfile
-            logfile_override = True
-        else:
-            rlogfile = logfile
-            logfile_override = False
+        logfile_path = ov_logfile if ov_logfile is not None else logfile
+        logfile_override = True if ov_logfile is not None else False
 
         self.title = "{0} Production Jobs Success Rate on the OSG Sites " \
                      "({1} - {2})".format(self.vo, start, end)
 
         Reporter.__init__(self, report, config, start, end, verbose,
-                          is_test=is_test, no_email=no_email, logfile=rlogfile,
+                          is_test=is_test, no_email=no_email,
+                          logfile=logfile_path,
                           logfile_override=logfile_override, raw=True,
                           check_vo=True)
         self.template = template
@@ -296,7 +293,8 @@ class JobSuccessRateReporter(Reporter):
         # Grab config values.  If they don't exist, keep defaults
         for key in config_vals:
             try:
-                config_vals[key] = int(self.config[self.report_type.lower()][self.vo.lower()][key])
+                config_vals[key] = int(self.config[self.report_type.lower()]
+                                       [self.vo.lower()][key])
             except KeyError:
                 pass
 
