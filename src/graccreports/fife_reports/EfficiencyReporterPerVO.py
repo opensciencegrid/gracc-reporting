@@ -53,15 +53,13 @@ class Efficiency(Reporter):
         report = 'Efficiency'
         self.vo = vo
 
-        if ov_logfile:
-            rlogfile = ov_logfile
-            logfile_override = True
-        else:
-            rlogfile = logfile
-            logfile_override = False
+        logfile_path = ov_logfile if ov_logfile is not None else logfile
+        logfile_override = True if ov_logfile is not None else False
+
         Reporter.__init__(self, report, config, start, end, verbose=verbose,
-                          logfile=rlogfile, no_email=no_email, is_test=is_test,
-                          logfile_override=logfile_override, raw=True, check_vo=True)
+                          logfile=logfile_path,
+                          logfile_override=logfile_override, no_email=no_email,
+                          is_test=is_test, raw=True, check_vo=True)
         self.hour_limit, self.eff_limit = self.__get_limits()
         self.facility = facility
         self.template = template
@@ -244,7 +242,7 @@ class Efficiency(Reporter):
         :param float cpusec: CPU time (in seconds) of a bucket
         :return float: Efficiency of that bucket
         """
-        return (cpusec / 3600) / wallhours
+        return (cpusec / 3600) / wallhours if wallhours > 0 else 0.
 
     def _parseCN(self, cn):
         """Parse the CN to grab the username
