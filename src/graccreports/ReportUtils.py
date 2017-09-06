@@ -477,33 +477,6 @@ class Reporter(TimeUtils):
                 while len(attrs) != 0:
                     add_emails = add_emails[attrs.pop(0)]
                 emails.extend(add_emails)
-        # else:
-        #     attrs = [self.report_type.lower(), 'to_emails']
-        #     try:
-        #         vo = self.vo.lower()
-        #         attrs.insert(0, vo)
-        #         names = []
-        #     except AttributeError:      # No vo-specific info in config file
-        #         try:
-        #             add_names = copy.deepcopy(
-        #                 self.config[self.report_type.lower()]['to_names']
-        #             )
-        #         except KeyError:    # This is the project or missing project report
-        #             try:
-        #                 attrs.insert(0, 'project')
-        #                 add_names = copy.deepcopy(
-        #                     self.config['project'][self.report_type.lower()]['to_names'])
-        #             except KeyError:    # Some case that shouldn't pop up.  Raise an error
-        #                 raise
-        #         finally:
-        #             names.extend(add_names)
-        #     finally:
-        #         # Iterate through config keys (attrs) to get emails we want
-        #         add_emails = copy.deepcopy(self.config)
-        #         while len(attrs) != 0:
-        #             add_emails = add_emails[attrs.pop(0)]
-        #         emails.extend(add_emails)
-
 
         email_info["to"] = {}
         email_info["to"]["email"] = emails
@@ -689,3 +662,9 @@ def coroutine(func):
         cr.next()
         return cr
     return wrapper
+
+def force_to_unicode(text):
+    """If text is unicode, it is returned as is.
+    If it's str, convert it to Unicode using UTF-8 encoding
+    """
+    return text if isinstance(text, unicode) else text.decode('utf8')
