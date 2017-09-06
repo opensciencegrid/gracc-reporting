@@ -6,7 +6,7 @@ from elasticsearch_dsl import Search
 
 from . import Reporter, runerror, get_configfile, get_template, coroutine
 from . import TextUtils, NiceNum
-
+å
 default_templatefile = 'template_topwastedhoursvo.html'
 logfile = 'topwastedhoursvo.log'
 perc_cutoff = 0.5
@@ -24,9 +24,9 @@ def parse_opts(parser):
     :return: None
     """
     parser.add_argument("-E", "--experiment", dest="vo",
-                        help="experiment name", default=None, required=True)
+                        help="experiment name", type=unicode, required=True)
     parser.add_argument("-F", "--facility", dest="facility",
-                        help="facility name/host description", default=None,
+                        help="facility name/host description", type=unicode,
                         required=True)
     parser.add_argument("-N", "--numrank", dest="numrank",
                         help="Number of Users to rank",

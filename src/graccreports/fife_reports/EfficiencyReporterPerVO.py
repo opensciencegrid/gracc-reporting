@@ -25,9 +25,9 @@ def parse_opts(parser):
     """
     # Report-specific args
     parser.add_argument("-E", "--experiment", dest="vo",
-                        help="experiment name", default=None, required=True)
+                        help="experiment name", type=unicode, required=True)
     parser.add_argument("-F", "--facility", dest="facility",
-                        help="facility name", default=None, required=True)
+                        help="facility name", type=unicode, required=True)
 
 
 class Efficiency(Reporter):

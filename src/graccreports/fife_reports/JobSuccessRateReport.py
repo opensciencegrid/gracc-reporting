@@ -29,7 +29,7 @@ def parse_opts(parser):
     """
     # Report-specific args
     parser.add_argument("-E", "--experiment", dest="vo",
-                        help="experiment name", default=None, required=True)
+                        help="experiment name", type=unicode, required=True)
 
 
 def sum_errors(dic):
