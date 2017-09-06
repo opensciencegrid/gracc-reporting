@@ -134,10 +134,7 @@ class VO(object):
     def get_old_sitehours(self, sitename):
         """Get the previous month's value of core hours for a particular
         sitename for the VO"""
-        if sitename in self.sites:
-            return self.sites[sitename][1]
-        else:
-            return 0
+        return self.sites[sitename][1] if sitename in self.sites else 0
 
     def get_old_totalhours(self):
         """Get the previous month's value of total core hours for the VO"""
@@ -167,16 +164,12 @@ class OSGPerSiteReporter(Reporter):
                  is_test=False, no_email=False, ov_logfile=None):
         report = 'siteusage'
 
-        if ov_logfile:
-            rlogfile = ov_logfile
-            logfile_override = True
-        else:
-            rlogfile = logfile
-            logfile_override = False
+        logfile_fname = ov_logfile if ov_logfile is not None else logfile
+        logfile_override = True if ov_logfile is not None else Falsecat
 
         Reporter.__init__(self, report, config, start, end=end,
                           verbose=verbose, is_test=is_test, no_email=no_email,
-                          template=template, logfile=rlogfile,
+                          template=template, logfile=logfile_fname,
                           logfile_override=logfile_override)
         self.header = ["Site", "Total", "Opportunistic Total",
                        "Percent Opportunistic", "Prev. Month Opp. Total",
