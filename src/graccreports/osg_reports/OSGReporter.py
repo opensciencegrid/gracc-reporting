@@ -38,16 +38,12 @@ class OSGReporter(Reporter):
                  verbose=False, no_email=False, is_test=False, template=None,
                  ov_logfile=None):
 
-        if ov_logfile:
-            rlogfile = ov_logfile
-            logfile_override = True
-        else:
-            rlogfile = logfile
-            logfile_override = False
+        logfile_fname = ov_logfile if ov_logfile is not None else logfile
+        logfile_override = True if ov_logfile is not None else False
 
         Reporter.__init__(self, report_type, config, start, end, verbose,
                           no_email=no_email, is_test=is_test,
-                          template=template, logfile=rlogfile,
+                          template=template, logfile=logfile_fname,
                           logfile_override=logfile_override)
         self.isSum = isSum
         self.report_type = self._validate_report_type(report_type)
@@ -213,12 +209,10 @@ class OSGReporter(Reporter):
         :param pname:
         :return:
         """
-        if self.report_type == 'XD' and self.tgmatch.match(pname):
-            return True
-        elif self.report_type <> 'XD' and not self.tgmatch.match(pname):
-            return True
-        else:
-            return False
+        return True if \
+            (self.report_type == 'XD' and self.tgmatch.match(pname) or
+             self.report_type != 'XD' and not self.tgmatch.match(pname)) \
+            else False
 
 
 def main():
