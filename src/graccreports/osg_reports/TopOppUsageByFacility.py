@@ -148,16 +148,13 @@ class TopOppUsageByFacility(Reporter):
                  months=None, ov_logfile=None):
         report = 'news'
 
-        if ov_logfile:
-            rlogfile = ov_logfile
-            logfile_override = True
-        else:
-            rlogfile = logfile
-            logfile_override = False
+        logfile_fname = ov_logfile if ov_logfile is not None else logfile
+        logfile_override = True if ov_logfile is not None else False
 
         Reporter.__init__(self, report, config, start, end, verbose=verbose,
                           no_email=no_email, is_test=is_test,
-                          logfile=rlogfile, logfile_override=logfile_override)
+                          logfile=logfile_fname,
+                          logfile_override=logfile_override)
         self.numrank = numrank
         self.template = template
         self.text = ''
