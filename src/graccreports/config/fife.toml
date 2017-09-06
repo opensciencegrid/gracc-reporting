@@ -23,6 +23,7 @@ configured_vos = ['cdf', 'cdms', 'darkside', 'dune', 'gm2', 'mars', 'minerva', '
         emails = ['nobody@example.com', ]
 
 # Report-specific parameters
+# Note that in TOML, True and False must be all lowercase.  Seems weird, but there you go.
 
 [efficiency]
 
