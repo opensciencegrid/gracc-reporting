@@ -591,7 +591,6 @@ def runerror(config, error, traceback, logfile):
     admin_emails = c['email']['test']['emails']
     from_email = c['email']['from']['email']
 
-
     msg = MIMEText("ERROR: {0}\n\n{1}".format(error, traceback))
     msg['Subject'] = "ERROR PRODUCING REPORT: Date Generated {0}".format(
         datetime.now())
