@@ -58,7 +58,7 @@ class FlockingReport(Reporter):
     def run_report(self):
         """Higher level method to handle the process flow of the report
         being run"""
-        self.send_report(title=self.title)
+        self.send_report()
 
     def query(self):
         """Method to query Elasticsearch cluster for Flocking Report

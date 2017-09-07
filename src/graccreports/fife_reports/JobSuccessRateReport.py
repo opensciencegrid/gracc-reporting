@@ -132,7 +132,9 @@ class JobSuccessRateReporter(Reporter):
         """Method that runs all of the applicable actions in this class."""
         self.generate()
         self.generate_report_file()
-        self.send_report()
+        smsg = "Report sent for {0} to {1}".format(
+            self.vo,", ".join(self.email_info['to']['email']))
+        self.send_report(successmessage=smsg)
 
     def query(self):
         """
@@ -560,24 +562,6 @@ class JobSuccessRateReporter(Reporter):
         htmlheader = '<th style="text-align:center">' + \
             '</th><th>'.join(headerlist) + '</th>'
         return htmlheader
-
-    def send_report(self):
-        """Method to send emails of report file to intended recipients."""
-        if self.test_no_email(self.email_info['to']['email']):
-            return
-
-        TextUtils.sendEmail(
-                            (self.email_info['to']['name'],
-                             self.email_info['to']['email']),
-                            self.title,
-                            {"html": self.text},
-                            (self.email_info['from']['name'],
-                             self.email_info['from']['email']),
-                            self.email_info['smtphost'])
-
-        self.logger.info("Report sent for {0} to {1}".format(self.vo,
-                                                             ", ".join(self.email_info['to']['email'])))
-        return
 
     def _limit_site_check(self):
         """Check to see if the num_failed_sites option is set in the config

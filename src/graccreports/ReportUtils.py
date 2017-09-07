@@ -151,28 +151,51 @@ class Reporter(TimeUtils):
         CSV and HTML generation"""
         pass
 
-    def send_report(self, title=None):
+    def send_report(self, title=None, successmessage=None):
         """Send reports as ascii, csv, html attachments.
 
         :param str title: Title of report
         """
+
+        successmessage = successmessage if successmessage is not None \
+            else "Report sent successfully."
+
         text = {}
         content = self.format_report()
 
-        if not content:
+        if self.test_no_email(self.email_info['to']['email']):
+            return
+
+        if content is None:  # self.format_report() does nothing.
+            # Assume all necessary operations are handled elsewhere, and all we
+            # need to do is send the email.  Need self.title, self.text to be
+            # set prior to calling this
+            try:
+                TextUtils.sendEmail(
+                    (self.email_info['to']['name'],
+                     self.email_info['to']['email']),
+                    self.title,
+                    {"html": self.text},
+                    (self.email_info['from']['name'],
+                     self.email_info['from']['email']),
+                    self.email_info['smtphost'])
+
+                self.logger.info(successmessage)
+                return
+
+            except Exception as e:
+                self.logger.info(e)
+                raise
+
+        if not content:  # Check for any other falsy values like {}
             self.logger.error("There is no content being passed to generate a "
                               "report file")
             sys.exit(1)
 
-        if title:
-            use_title = title
-        else:
-            use_title = "GRACC Report"
-
-        use_title = unicode(use_title, 'utf-8')
-
-        if self.test_no_email(self.email_info['to']['email']):
-            return
+        try:
+            use_title = self.title
+        except NameError:
+            use_title = title if title else u"GRACC Report"
 
         emailReport = TextUtils.TextUtils(self.header)
         text["text"] = emailReport.printAsTextTable("text", content)
@@ -182,7 +205,8 @@ class Reporter(TimeUtils):
 
         if self.header:
             htmlheader = unicode("\n".join(['<th>{0}</th>'.format(headerelt)
-                                    for headerelt in self.header]), 'utf-8')
+                                            for headerelt in self.header]),
+                                 'utf-8')
 
         if self.template:
             with open(self.template, 'r') as t:
@@ -194,7 +218,9 @@ class Reporter(TimeUtils):
             text["html"] = htmltext
 
         else:
-            text["html"] = u"<html><body><h2>{0}</h2><table border=1>{1}</table></body></html>".format(use_title, htmldata)
+            text[
+                "html"] = u"<html><body><h2>{0}</h2><table border=1>{1}</table></body></html>".format(
+                use_title, htmldata)
 
         TextUtils.sendEmail((self.email_info['to']['name'],
                              self.email_info['to']['email']),
@@ -203,7 +229,8 @@ class Reporter(TimeUtils):
                              self.email_info['from']['email']),
                             self.email_info['smtphost'],
                             html_template=self.template)
-        self.logger.info("Sent reports to {0}".format(", ".join(self.email_info['to']['email'])))
+        self.logger.info("Sent reports to {0}".format(
+            ", ".join(self.email_info['to']['email'])))
         return
 
     @abc.abstractmethod

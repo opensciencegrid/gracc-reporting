@@ -186,7 +186,7 @@ class OSGPerSiteReporter(Reporter):
     def run_report(self):
         """Method to run the OSG per site report"""
         self.generate()
-        self.send_report(title=self.title)
+        self.send_report()
         return
 
     def query(self):

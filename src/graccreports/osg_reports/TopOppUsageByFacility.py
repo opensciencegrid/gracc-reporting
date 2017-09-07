@@ -174,7 +174,9 @@ class TopOppUsageByFacility(Reporter):
         """
         self.generate()
         self.generate_report_file()
-        self.send_report()
+        smsg = "Sent reports to {0}".format(
+            ", ".join(self.email_info['to']['email']))
+        self.send_report(successmessage=smsg)
         return
 
     def query(self):
@@ -428,29 +430,6 @@ class TopOppUsageByFacility(Reporter):
 
                 dline = '<tr>' + dline + '</tr>\n'
                 self.table += dline
-
-    def send_report(self):
-        """
-        Sends the HTML report file in an email (or doesn't if self.no_email
-        is set to True)
-
-        :return: None
-        """
-        if self.test_no_email(self.email_info['to']['email']):
-            return
-
-        TextUtils.sendEmail(
-                            (self.email_info['to']['name'],
-                             self.email_info['to']['email']),
-                            self.title,
-                            {"html": self.text},
-                            (self.email_info['from']['name'],
-                             self.email_info['from']['email']),
-                            self.email_info["smtphost"])
-
-        self.logger.info("Sent reports to {0}".format(", ".join(self.email_info['to']['email'])))
-
-        return
 
 
 def main():
