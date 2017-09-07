@@ -112,10 +112,8 @@ class Reporter(TimeUtils):
         search object itself, so it can be scanned using .scan() (JSR, for
         example)
         """
-        if overridequery:
-            s = overridequery()
-        else:
-            s = self.query()
+
+        s = overridequery() if overridequery is not None else self.query()
 
         t = s.to_dict()
         if self.verbose:
