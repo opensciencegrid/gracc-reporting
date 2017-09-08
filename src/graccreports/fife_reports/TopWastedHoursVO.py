@@ -75,12 +75,12 @@ class User:
             rawattr = datadict['Status'].lower()
             selfrawattr = getattr(self, rawattr)
             del datadict['Status']
-            for key in datadict:
-                selfrawattr[key] = datadict[key]
+            for key, item in datadict.iteritems():
+                selfrawattr[key] = item
 
                 # Update the appropriate total
                 totalkey = 'total_{0}'.format(key)
-                setattr(self, totalkey, getattr(self, totalkey) + datadict[key])
+                setattr(self, totalkey, getattr(self, totalkey) + item)
         else:
             raise ValueError("Improper format for data passing.  "
                              "Must be a dict with keys Status, and (Njobs or CoreHours)")
@@ -281,7 +281,7 @@ class TopWastedHoursReport(Reporter):
         """
         # Organize raw data into lines for HTML processing
         # All of self.users sorted
-        sorteduserlist = sorted(self.users.values(),
+        sorteduserlist = sorted(self.users.itervalues(),
                                 key=lambda user: user.get_wasted_hours_percent(),
                                 reverse=True)
 
