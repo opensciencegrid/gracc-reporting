@@ -69,8 +69,6 @@ class Reporter(TimeUtils):
         TimeUtils.__init__(self)
         self.configfile = config
         self.config = self._parse_config(config)
-        # if config:
-        #     self.config = config.config
         self.header = []
         self.althost = althost
         self.start_time = self.parse_datetime(start)
