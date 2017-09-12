@@ -3,11 +3,11 @@ import re
 from time import sleep
 import traceback
 import datetime
+from collections import defaultdict
 
 from elasticsearch_dsl import Search
 
 from . import Reporter, runerror, get_configfile, get_template
-from . import TextUtils
 
 # Various config values and their default values
 config_vals = {'num_clusters': 100, 'jobs_per_cluster': 1e6,
@@ -45,9 +45,10 @@ def sum_errors(dic):
 class Jobs:
     """Class to assign jobs to sites"""
     def __init__(self):
-        self.jobs = {}
+        self.jobs = defaultdict(list)
 
-    def add_job(self, site, job):
+    def add_job(self, job):
+
         """
         Adds job to self.jobs dict
 
@@ -55,9 +56,6 @@ class Jobs:
         :param job: Job object that contains info about a job
         :return: None
         """
-        if site not in self.jobs:
-            self.jobs[site] = []
-
         self.jobs[job.site].append(job)
 
 
@@ -111,7 +109,7 @@ class JobSuccessRateReporter(Reporter):
                           check_vo=True)
         self.template = template
         self.run = Jobs()
-        self.clusters = {}
+        self.clusters = defaultdict(lambda: {'userid': None, 'jobs': []})
         self.connectStr = None
 
         # Patch while we fix gratia probes to include CommonName Field
@@ -177,18 +175,14 @@ class JobSuccessRateReporter(Reporter):
         resultset = self.run_query()
 
         # Add all of our results to the clusters dictionary
-        resultscount = 0
         add_clusters = self._add_to_clusters()
         add_clusters.send(None)
-        for line in self._generate_result_array(resultset):
-            if resultscount == 0:
-                if len(line.strip()) == 0:
+        for resultscount, line in enumerate(self._generate_result_array(resultset)):
+            if resultscount == 0 and len(line) == 0:
                     self.logger.info("Nothing to report")
-                    break
-            add_clusters.send(line)
-            resultscount += 1
-
-        return
+                    return
+            else:
+                add_clusters.send(line)
 
     def _add_to_clusters(self):
         """Coroutine: For each line fed in, will
@@ -196,19 +190,21 @@ class JobSuccessRateReporter(Reporter):
         and add to clusters.  Then waits for next line"""
         while True:
             line = yield
-            tmp = line.split('\t')
-            start_time, end_time, userid, jobid, site = (item.strip() for item in tmp[:5])
-            start_time, end_time = (t.replace('T', ' ').replace('Z', '') for t in (start_time, end_time))
-            if site == "NULL":
-                pass
-            else:
-                host = tmp[5].strip()
-                status = int(tmp[6].strip())
-                job = Job(end_time, start_time, jobid, site, host, status)
-                self.run.add_job(site, job)
-                clusterid = jobid.split(".")[0]
-                if clusterid not in self.clusters:
-                    self.clusters[clusterid] = {'userid': userid, 'jobs': []}
+
+            for key in ('starttime', 'endtime'):
+                line[key].replace('T', ' ').replace('Z', '')
+
+            if line['hostdescription'] != "NULL":  # Not NULL site
+                line['exitcode'] = int(line['exitcode'])
+                job = Job(line['endtime'],
+                          line['starttime'],
+                          line['jobid'],
+                          line['hostdescription'],
+                          line['host'],
+                          line['exitcode'])
+                self.run.add_job(job)
+                clusterid = line['jobid'].split(".")[0]
+                self.clusters[clusterid]['userid'] = line['userid']
                 self.clusters[clusterid]['jobs'].append(job)
 
     def _generate_result_array(self, resultset):
@@ -265,22 +261,26 @@ class JobSuccessRateReporter(Reporter):
                                                 # just keep going
                 realhost = self.realhost_pattern.sub('', hit['Host'])  # Parse to get the real hostname
 
-                outstr = '{starttime}\t{endtime}\t{CN}\t{JobID}\t{hostdescription}\t{host}\t{exitcode}'.format(
-                    starttime=hit['StartTime'],
-                    endtime=hit['EndTime'],
-                    CN=userid,
-                    JobID=jobid,
-                    hostdescription=hit['Host_description'],
-                    host=realhost,
-                    exitcode=hit['Resource_ExitCode']
-                )
+                line = dict((
+                    ('starttime', hit['StartTime']),
+                    ('endtime', hit['EndTime']),
+                    ('userid', userid),
+                    ('jobid', jobid),
+                    ('hostdescription', hit['Host_description']),
+                    ('host', realhost),
+                    ('exitcode', hit['Resource_ExitCode'])
+                                    ))
+
+                for key in line.iterkeys():
+                    line[key] = line[key].strip()
+
                 if self.verbose:
-                    print >> sys.stdout, outstr
-                yield outstr
+                    print '\t'.join(line.itervalues())
+                yield line
             except KeyError:
-                # We want to ignore records where one of the above keys isn't
-                # listed in the ES document.  This is consistent with how the
-                # old MySQL report behaved.
+                """ We want to ignore records where one of the above keys isn't
+                 listed in the ES document.  This is consistent with how the
+                 old MySQL report behaved."""
                 pass
 
     def generate_report_file(self):
@@ -375,23 +375,20 @@ class JobSuccessRateReporter(Reporter):
 
         total_jobs = 0
 
-        site_failed_dict = {}
+        site_failed_dict = defaultdict(dict)
         # Compile count of failed jobs, calculate job success rate
         for site, jobs in self.run.jobs.iteritems():
             failed = 0
             total = len(jobs)
-            failures = {}
+            failures = defaultdict(lambda: defaultdict(int))
             # failures structure:
             # {host: {exit_code1:count, exit_code2:count},
             # host2: {exit_code1:count, exit_code2: count}, etc.}
             for job in jobs:
                 if job.exit_code != 0:
                     failed += 1
-                    if job.host not in failures:
-                        failures[job.host] = {}
-                    if job.exit_code not in failures[job.host]:
-                        failures[job.host][job.exit_code] = 0
                     failures[job.host][job.exit_code] += 1
+
             total_jobs += total
             total_failed += failed
             table_summary += '\n<tr><td align = "left">{0}</td>' \
@@ -402,19 +399,17 @@ class JobSuccessRateReporter(Reporter):
                                                                     total,
                                                                     failed,
                                                                     round((total - failed) * 100. / total, 1))
-            site_failed_dict[site] = {}
             site_failed_dict[site]['FailedJobs'] = failed
-            if 'HTMLLines' not in site_failed_dict[site]:
-                site_failed_dict[site]['HTMLLines'] = \
-                    '\n<tr><td align = "left">{0}</td>' \
-                    '<td align = "right">{1}</td>' \
-                    '<td align = "right">{2}</td>'\
-                    '<td align = "right">{3}</td>' \
-                    '<td></td><td></td><td></td></tr>'.format(
-                        site,
-                        total,
-                        failed,
-                        round((total - failed) * 100. / total, 1))
+            site_failed_dict[site]['HTMLLines'] = \
+                '\n<tr><td align = "left">{0}</td>' \
+                '<td align = "right">{1}</td>' \
+                '<td align = "right">{2}</td>' \
+                '<td align = "right">{3}</td>' \
+                '<td></td><td></td><td></td></tr>'.format(
+                    site,
+                    total,
+                    failed,
+                    round((total - failed) * 100. / total, 1))
 
             hostcount = 0
 
