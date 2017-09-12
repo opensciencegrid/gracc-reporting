@@ -1,6 +1,7 @@
 import datetime
 import traceback
 import sys
+from collections import defaultdict
 
 from elasticsearch_dsl import Search
 
@@ -118,11 +119,7 @@ class FlockingReport(Reporter):
 
         :return dict: Constructed dict of report information for
         Reporter.send_report to send report from"""
-        report = {}
-
-        for name in self.header:
-            if name not in report:
-                report[name] = []
+        report = defaultdict(list)
 
         for result_tuple in self.generate():
             if self.verbose:
