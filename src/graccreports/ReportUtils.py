@@ -409,8 +409,6 @@ class Reporter(TimeUtils):
         only applies to fife_reports package).  If not, raise KeyError
         :return None: 
         """
-        # Put check in for SECTION
-
         if not self.vo or \
                 (self.vo
                     and self.vo.lower() not in self.config['configured_vos']
@@ -422,7 +420,9 @@ class Reporter(TimeUtils):
                             " Please review the config file to see if changes"
                             " need to be made and try again.  The config file"
                            " used was {1}".format(self.vo.lower(), self.configfile))
-        return
+        else:
+            self.vo_list = self.config[self.vo.lower()]['valid_vos'] \
+                if self.vo.lower() in self.config else [self.vo.lower(), ]
 
     def __establish_client(self):
         """Initialize and return the elasticsearch client

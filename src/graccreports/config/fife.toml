@@ -22,6 +22,14 @@ configured_vos = ['cdf', 'cdms', 'darkside', 'dune', 'gm2', 'mars', 'minerva', '
         names = ['Test Recipient', ]
         emails = ['nobody@example.com', ]
 
+# VO substitutions
+# For VOs such as uboone, where we might expect to see uboone in raw records
+# and microboone in the summary records due to name correction, make sure we
+# have a list for each VO of the "valid_vos".
+
+[uboone]
+    valid_vos = ['uboone', 'microboone']
+
 # Report-specific parameters
 # Note that in TOML, True and False must be all lowercase.  Seems weird, but there you go.
 
@@ -161,3 +169,5 @@ configured_vos = ['cdf', 'cdms', 'darkside', 'dune', 'gm2', 'mars', 'minerva', '
         perc_cutoff = 0
         hours_cutoff = 0
         to_emails = ['nobody@example.com', ]
+
+

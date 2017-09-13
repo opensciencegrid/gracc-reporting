@@ -181,6 +181,7 @@ class TopWastedHoursReport(Reporter):
         :return elasticsearch_dsl.Search: Search object containing ES query
         """
         wildcardProbeNameq = 'condor:fifebatch?.fnal.gov'
+        # volist = self.config[self.vo.lower()]['valid_vos']
 
         starttimeq = self.start_time.isoformat()
         endtimeq = self.end_time.isoformat()
@@ -189,7 +190,7 @@ class TopWastedHoursReport(Reporter):
             .filter("wildcard", ProbeName=wildcardProbeNameq) \
             .filter("range", EndTime={"gte": starttimeq, "lt": endtimeq}) \
             .filter("term", Host_description=self.facility) \
-            .filter("term", VOName=self.vo.lower()) \
+            .filter("terms", VOName=self.vo_list) \
             .filter("term", ResourceType="Payload") \
             [0:0]   # Only print aggregations
 
@@ -356,7 +357,7 @@ def main():
     args = parse_opts()
 
     # Set up the configuration
-    config = get_configfile(override=args.config)
+    config = get_configfile(flag='fife', override=args.config)
 
     templatefile = get_template(override=args.template, deffile=default_templatefile)
 
