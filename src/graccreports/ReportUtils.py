@@ -81,17 +81,15 @@ class Reporter(TimeUtils):
         self.indexpattern = self.indexpattern_generate(raw, allraw)
         self.report_type = report
 
-        if logfile:
-            self.logfile = self.get_logfile_path(logfile,
-                                                 override=logfile_override)
-        else:
-            self.logfile = 'reports.log'
+        self.logfile = self.get_logfile_path(logfile, override=logfile_override) if logfile \
+            else 'reports.log'
+
+        self.logger = self.__setupgenLogger()
 
         if check_vo:
             self.__check_vo()
 
         self.email_info = self.__get_email_info()
-        self.logger = self.__setupgenLogger()
         self.client = self.__establish_client()
 
     # Report methods that must or should be implemented
