@@ -2,6 +2,7 @@ import re
 import traceback
 import sys
 import copy
+from collections import defaultdict
 
 from elasticsearch_dsl import Search
 
@@ -150,10 +151,7 @@ class OSGReporter(Reporter):
 
         :return dict: Constructed dict of report information for
         Reporter.send_report to send report from"""
-        report = {}
-        for name in self.header:
-            if name not in report:
-                report[name] = []
+        report = defaultdict(list)
 
         for result_list in self.generate_report_file():
             if not self._validate_type_results(result_list[0]):
