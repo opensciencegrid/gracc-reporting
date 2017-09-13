@@ -67,28 +67,23 @@ class Reporter(TimeUtils):
                  title=None, logfile=None, logfile_override=False, check_vo=False,
                  althost=None):
         TimeUtils.__init__(self)
+        self.verbose = verbose
         self.configfile = config
         self.config = self._parse_config(config)
-        self.header = []
+        self.is_test = is_test
+        self.no_email = no_email
+        self.report_type = report
+        self.logfile = self.get_logfile_path(logfile, override=logfile_override) if logfile \
+            else 'reports.log'
+        self.logger = self.__setupgenLogger()
         self.althost = althost
         self.start_time = self.parse_datetime(start)
         self.end_time = self.parse_datetime(end)
-        self.verbose = verbose
-        self.no_email = no_email
-        self.is_test = is_test
         self.template = template
         self.epochrange = None
         self.indexpattern = self.indexpattern_generate(raw, allraw)
-        self.report_type = report
-
-        self.logfile = self.get_logfile_path(logfile, override=logfile_override) if logfile \
-            else 'reports.log'
-
-        self.logger = self.__setupgenLogger()
-
-        if check_vo:
-            self.__check_vo()
-
+        self.header = []
+        if check_vo: self.__check_vo()
         self.email_info = self.__get_email_info()
         self.client = self.__establish_client()
 
@@ -152,7 +147,6 @@ class Reporter(TimeUtils):
 
         :param str title: Title of report
         """
-
         successmessage = successmessage if successmessage is not None \
             else "Report sent successfully."
 
@@ -214,8 +208,7 @@ class Reporter(TimeUtils):
             text["html"] = htmltext
 
         else:
-            text[
-                "html"] = u"<html><body><h2>{0}</h2><table border=1>{1}</table></body></html>".format(
+            text["html"] = u"<html><body><h2>{0}</h2><table border=1>{1}</table></body></html>".format(
                 use_title, htmldata)
 
         TextUtils.sendEmail((self.email_info['to']['name'],
