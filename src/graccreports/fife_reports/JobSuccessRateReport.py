@@ -126,7 +126,6 @@ class JobSuccessRateReporter(Reporter):
         self.text = ''
         self.limit_sites = self._limit_site_check()
 
-
     def run_report(self):
         """Method that runs all of the applicable actions in this class."""
         self.generate()
@@ -470,6 +469,13 @@ class JobSuccessRateReporter(Reporter):
         return
 
     def _generate_job_linemap(self, job):
+        """
+        Generates the HTML alignment "linemap" for the generate_report_file
+        method to create an HTML line
+
+        :param job: Instance of Job class
+        :return tuple: Line Map (tuple) of (item, alignment) tuples
+        """
         try:
             job_link_parts = \
                 [elt for elt in
@@ -497,9 +503,8 @@ class JobSuccessRateReporter(Reporter):
         job_html = '<a href="{0}">{1}</a>'.format(job_link,
                                                   job.jobid)
 
-        j_out = jobtimes(
-            *(datetime.datetime.strftime(t, "%Y-%m-%d %H:%M:%S")
-              for t in jt))
+        j_out = jobtimes(*(datetime.datetime.strftime(t, "%Y-%m-%d %H:%M:%S")
+                           for t in jt))
 
         linemap = ((job_html, 'left'), (j_out.start, 'left'),
                    (j_out.end, 'left'), (job.site, 'right'),
@@ -509,6 +514,15 @@ class JobSuccessRateReporter(Reporter):
 
     @staticmethod
     def _new_table_summary_line(site, total, failed, jsrate):
+        """
+        Creates HTML line that's formed for the Summary Table
+
+        :param str site: Site where jobs ran
+        :param int total: Total number of jobs
+        :param int failed: Total number of failed jobs
+        :param float jsrate: Job success rate for the site
+        :return str: HTML line for Summary Table
+        """
         return '\n<tr><td align = "left">{0}</td>' \
                              '<td align = "right">{1}</td>' \
                              '<td align = "right">{2}</td>'\
@@ -517,6 +531,17 @@ class JobSuccessRateReporter(Reporter):
 
     @staticmethod
     def _init_site_failed_dict(site, total, failed, jsrate):
+        """
+        Puts the already-generated data into dict form for insertion into
+        site_failed_dict
+
+        :param str site: Site where jobs ran
+        :param int total: Total number of jobs
+        :param int failed: Total number of failed jobs
+        :param float jsrate: Job success rate for the site
+        :return dict: Dictionary with keys 'FailedJobs', 'HTMLLines'.  The
+        latter is an HTML line that will get read out later
+        """
         return {'FailedJobs': failed,
                 'HTMLLines':
                     '\n<tr><td align = "left">{0}</td>'
@@ -529,13 +554,21 @@ class JobSuccessRateReporter(Reporter):
 
     @staticmethod
     def _generate_site_detail_line(host, code, count):
+        """
+        Creates HTML line representing a site detail line
+
+        :param str host: Which host failed jobs ran on
+        :param int code: What the error code was
+        :param int count: How many jobs failed with this error code
+        :return str: HTML line summarizing this info
+        """
         return '\n<tr><td></td><td></td><td></td><td></td>' \
         '<td align = "left">{0}</td>' \
         '<td align = "right">{1}</td>' \
         '<td align = "right">{2}</td></tr>'.format(host, code, count)
 
     def _generate_fifemon_link(self):
-        # Generate Grafana link for User Batch Details
+        """Generate fifemon link for User Batch Details page"""
         epoch_stamps = self.get_epoch_stamps_for_grafana()
         elist = [elt for elt in epoch_stamps]
         elist.append('{0}pro'.format(self.vo.lower()))
