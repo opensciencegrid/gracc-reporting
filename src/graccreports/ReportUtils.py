@@ -548,12 +548,10 @@ class Reporter(TimeUtils):
         logger.addHandler(fh)
 
         # We only want one Stream Handler
-        exists_ch = False
         for handler in logger.handlers:
             if handler.__class__.__name__ == "StreamHandler":
-                exists_ch = True
                 break
-        if not exists_ch:
+        else:
             logger.addHandler(ch)
 
         if self.is_test:
