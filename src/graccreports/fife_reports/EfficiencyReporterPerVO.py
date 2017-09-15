@@ -2,7 +2,7 @@ import sys
 import re
 import datetime
 
-from elasticsearch_dsl import Search
+from elasticsearch_dsl import Search, Q
 
 from . import Reporter, runerror, get_configfile, get_template, coroutine
 from . import TextUtils, NiceNum
@@ -117,7 +117,6 @@ class Efficiency(Reporter):
         # Gather parameters, format them for the query
         starttimeq = self.start_time.isoformat()
         endtimeq = self.end_time.isoformat()
-        wildcardVOq = '*' + self.vo.lower() + '*'
         wildcardProbeNameq = 'condor:fifebatch?.fnal.gov'
 
         if self.verbose:
@@ -125,7 +124,6 @@ class Efficiency(Reporter):
 
         # Elasticsearch query and aggregations
         s = Search(using=self.client, index=self.indexpattern) \
-            .filter("wildcard", VOName=wildcardVOq) \
             .filter("wildcard", ProbeName=wildcardProbeNameq) \
             .filter("range", EndTime={"gte": starttimeq, "lt": endtimeq}) \
             .filter("range", WallDuration={"gt": 0}) \
@@ -133,11 +131,22 @@ class Efficiency(Reporter):
             .filter("term", ResourceType="Payload")[0:0]
         # Size 0 to return only aggregations
 
+        qlist = (Q("wildcard", VOName='*{0}*'.format(votest))
+                 for votest in self.vo_list
+                 if votest != self.vo.lower())
+
+        # Initialize OR chain
+        q = Q("wildcard", VOName='*{0}*'.format(self.vo.lower()))
+
+        for query in qlist:     # Build OR chain to check all VOs in volist
+            q = q | query
+
+        s = s.query(q)[0:0]
+
         # Bucket aggs
         Bucket = s.aggs.bucket('group_VOName', 'terms', field='ReportableVOName') \
             .bucket('group_HostDescription', 'terms', field='Host_description') \
             .bucket('group_DN', 'terms', field='DN')   # Patch while we fix gratia probes to include CommonName Field
-
 
             # .bucket('group_CommonName', 'terms', field='CommonName')     # Original
             # End patch
