@@ -406,7 +406,10 @@ class Reporter(TimeUtils):
     def __check_vo(self):
         """
         Check to see if the vo is a section in config file (as of this writing,
-        only applies to fife_reports package).  If not, raise KeyError
+        only applies to fife_reports package).  If not, raise KeyError.
+
+        If check passes, then we generate the vo_list from the 'valid_vos' key
+        in the config file.  This can be used by inheriting classes or ignored
         :return None: 
         """
         if not self.vo or \

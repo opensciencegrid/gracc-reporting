@@ -142,7 +142,7 @@ class JobSuccessRateReporter(Reporter):
         """
         # Set up our search parameters
         rep_config = self.config[self.report_type.lower()][self.vo.lower()]
-        voq = rep_config['voname']
+        voq = rep_config['voname']  # Using a specific string to check for VO
         productioncheck = '*Role=Production*'
 
         starttimeq = self.start_time.isoformat()
