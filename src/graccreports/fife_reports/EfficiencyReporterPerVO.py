@@ -117,7 +117,7 @@ class Efficiency(Reporter):
         # Gather parameters, format them for the query
         starttimeq = self.start_time.isoformat()
         endtimeq = self.end_time.isoformat()
-        wildcardProbeNameq = 'condor:fifebatch?.fnal.gov'
+        wildcardProbeNameq = 'condor:*.fnal.gov'
 
         if self.verbose:
             self.logger.info(self.indexpattern)
