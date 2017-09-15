@@ -180,7 +180,7 @@ class TopWastedHoursReport(Reporter):
 
         :return elasticsearch_dsl.Search: Search object containing ES query
         """
-        wildcardProbeNameq = 'condor:fifebatch?.fnal.gov'
+        wildcardProbeNameq = 'condor:*.fnal.gov'
         starttimeq = self.start_time.isoformat()
         endtimeq = self.end_time.isoformat()
 
