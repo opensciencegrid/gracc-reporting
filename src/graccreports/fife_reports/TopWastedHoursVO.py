@@ -184,6 +184,9 @@ class TopWastedHoursReport(Reporter):
         starttimeq = self.start_time.isoformat()
         endtimeq = self.end_time.isoformat()
 
+        if self.verbose:
+            self.logger.info(self.indexpattern)
+
         s = Search(using=self.client, index=self.indexpattern) \
             .filter("wildcard", ProbeName=wildcardProbeNameq) \
             .filter("range", EndTime={"gte": starttimeq, "lt": endtimeq}) \

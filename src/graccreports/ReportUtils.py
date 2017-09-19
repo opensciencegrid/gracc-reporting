@@ -265,12 +265,7 @@ class Reporter(TimeUtils):
         except KeyError:
             return 'gracc.osg.summary'
 
-        ip = indexpattern_generate(pattern=pat, **kwargs)
-
-        if self.verbose:
-            self.logger.info("Index Pattern: {0}".format(ip))
-
-        return ip
+        return indexpattern_generate(pattern=pat, **kwargs)
 
     @staticmethod
     def parse_opts():
