@@ -72,7 +72,7 @@ class OSGReporter(Reporter):
 
         if self.verbose:
             self.logger.debug(probes)
-            self.logger.debug(self.indexpattern)
+            self.logger.info(self.indexpattern)
 
         # Elasticsearch query and aggregations
         s = Search(using=self.client, index=self.indexpattern) \

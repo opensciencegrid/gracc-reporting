@@ -74,7 +74,7 @@ class Reporter(TimeUtils):
         self.config = self._parse_config(config)
         self.is_test = is_test
         self.no_email = no_email
-        self.report_type = report.lower()
+        self.report_type = report
         self.logfile = self.get_logfile_path(logfile, override=logfile_override) if logfile \
             else 'reports.log'
         self.logger = self.__setupgenLogger()
@@ -261,7 +261,7 @@ class Reporter(TimeUtils):
         :return str: Index pattern to be used in report
         """
         try:
-            pat = self.config[self.report_type][index_key]
+            pat = self.config[self.report_type.lower()][index_key]
         except KeyError:
             return 'gracc.osg.summary'
 

@@ -351,8 +351,7 @@ class ProbeReport(Reporter):
         Reporter.__init__(self, report, config, start, end=start,
                           logfile=logfile_fname,
                           logfile_override=logfile_override, is_test=is_test,
-                          verbose=verbose,no_email=no_email, raw=True,
-                          allraw=True)
+                          verbose=verbose,no_email=no_email)
         self.probematch = re.compile("(.+):(.+)")
         self.estimeformat = re.compile("(.+)T(.+)\.\d+Z")
         self.emailfile = '/tmp/filetoemail.txt'
@@ -380,6 +379,8 @@ class ProbeReport(Reporter):
         """
         startdateq = self.start_time.isoformat()
 
+        if self.verbose: self.logger.info(self.indexpattern)
+
         s = Search(using=self.client, index=self.indexpattern)\
             .filter(Q({"range": {"@received": {"gte": "{0}".format(startdateq)}}}))\
             .filter("term", ResourceType="Batch")[0:0]
@@ -395,10 +396,6 @@ class ProbeReport(Reporter):
         self.start_time = today.replace(
             day=1) - datetime.timedelta(days=1)
         self.end_time = today
-        self.indexpattern = self.indexpattern_generate(raw=True, allraw=True)
-
-        if self.verbose:
-            print "New index pattern is {0}".format(self.indexpattern)
 
         return
 
