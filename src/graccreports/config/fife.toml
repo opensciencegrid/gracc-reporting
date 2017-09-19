@@ -34,6 +34,7 @@ configured_vos = ['cdf', 'cdms', 'darkside', 'dune', 'gm2', 'mars', 'minerva', '
 # Note that in TOML, True and False must be all lowercase.  Seems weird, but there you go.
 
 [efficiency]
+    index_pattern='gracc.osg.raw-%Y.%m'
 
 	[efficiency.cdf]
 	    min_hours = 1000
@@ -105,6 +106,7 @@ configured_vos = ['cdf', 'cdms', 'darkside', 'dune', 'gm2', 'mars', 'minerva', '
 
 
 [jobsuccessrate]
+    index_pattern='gracc.osg.raw-%Y.%m'
 
 	[jobsuccessrate.darkside]
         voname = '/fermilab/darkside/Role=*'
@@ -139,6 +141,7 @@ configured_vos = ['cdf', 'cdms', 'darkside', 'dune', 'gm2', 'mars', 'minerva', '
 
 
 [topwastedhoursvo]
+    index_pattern='gracc.osg.summary'
 
 	[topwastedhoursvo.darkside]
         perc_cutoff = 0

@@ -106,7 +106,7 @@ class JobSuccessRateReporter(Reporter):
         Reporter.__init__(self, report, config, start, end, verbose,
                           is_test=is_test, no_email=no_email,
                           logfile=logfile_fname,
-                          logfile_override=logfile_override, raw=True,
+                          logfile_override=logfile_override,
                           check_vo=True)
         self.template = template
         self.run = Jobs()

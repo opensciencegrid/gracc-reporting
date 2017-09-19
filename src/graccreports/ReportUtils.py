@@ -63,7 +63,9 @@ class Reporter(TimeUtils):
     __metaclass__ = abc.ABCMeta
 
     def __init__(self, report, config, start, end=None, verbose=False,
-                 raw=False, allraw=False, template=None, is_test=False, no_email=False,
+                 index_key='index_pattern', all=False,
+                 raw=False, allraw=False,
+                 template=None, is_test=False, no_email=False,
                  title=None, logfile=None, logfile_override=False, check_vo=False,
                  althost=None):
         TimeUtils.__init__(self)
@@ -72,7 +74,7 @@ class Reporter(TimeUtils):
         self.config = self._parse_config(config)
         self.is_test = is_test
         self.no_email = no_email
-        self.report_type = report
+        self.report_type = report.lower()
         self.logfile = self.get_logfile_path(logfile, override=logfile_override) if logfile \
             else 'reports.log'
         self.logger = self.__setupgenLogger()
@@ -81,9 +83,11 @@ class Reporter(TimeUtils):
         self.end_time = self.parse_datetime(end)
         self.template = template
         self.epochrange = None
-        self.indexpattern = self.indexpattern_generate(raw, allraw)
         self.header = []
         if check_vo: self.__check_vo()
+        self.indexpattern = self.indexpattern_generate(index_key,
+                                                       start=self.start_time,
+                                                       end=self.end_time)
         self.email_info = self.__get_email_info()
         self.client = self.__establish_client()
 
@@ -248,19 +252,25 @@ class Reporter(TimeUtils):
             return parser.parse_args()
         return wrapper
 
-    def indexpattern_generate(self, raw=False, allraw=False):
+    def indexpattern_generate(self, index_key, **kwargs):
         """Returns the Elasticsearch index pattern based on the class
-        variables of start time and end time, and the flags raw and allraw.
-        Note that this doesn't inherit raw and allraw from the instance
-        attributes in case we want to switch these flags without creating a
-        new instance of this class.
+        variables of start time and end time, and the index pattern fed in.
 
-        :param bool raw:  Query GRACC raw records (False = query Summary records)
-        :param bool allraw: Short-circuit indexpattern_generate and simply look
-            at all raw records
+        :param str index_key: Config file key name under report section that
+            points to the index pattern to be passed in
+        :return str: Index pattern to be used in report
         """
-        return indexpattern_generate(self.start_time, self.end_time, raw,
-                                     allraw)
+        try:
+            pat = self.config[self.report_type][index_key]
+        except KeyError:
+            return 'gracc.osg.summary'
+
+        ip = indexpattern_generate(pattern=pat, **kwargs)
+
+        if self.verbose:
+            self.logger.info("Index Pattern: {0}".format(ip))
+
+        return ip
 
     @staticmethod
     def parse_opts():

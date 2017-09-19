@@ -59,7 +59,7 @@ class Efficiency(Reporter):
         Reporter.__init__(self, report, config, start, end, verbose=verbose,
                           logfile=logfile_fname,
                           logfile_override=logfile_override, no_email=no_email,
-                          is_test=is_test, raw=True, check_vo=True)
+                          is_test=is_test, check_vo=True)
         self.hour_limit, self.eff_limit = self.__get_limits()
         self.facility = facility
         self.template = template
