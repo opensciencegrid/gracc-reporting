@@ -9,7 +9,7 @@ if sys.version_info < version_tuple:
     exit(1)
 
 setup(name='gracc-reporting',
-      version='1.0.dev0',
+      version='1.0',
       description='GRACC Email Reports',
       author_email='sbhat@fnal.gov',
       author='Shreyas Bhat',
@@ -21,7 +21,6 @@ setup(name='gracc-reporting',
           'console_scripts': [
               'efficiencyreport = graccreports.fife_reports.EfficiencyReporterPerVO:main',
               'jobsuccessratereport = graccreports.fife_reports.JobSuccessRateReport:main',
-              'wastedhoursreport = graccreports.fife_reports.WastedHoursReport:main',
               'osgflockingreport = graccreports.osg_reports.OSGFlockingReporter:main',
               'osgreport = graccreports.osg_reports.OSGReporter:main',
               'osgpersitereport = graccreports.osg_reports.OSGPerSiteReporter:main',
