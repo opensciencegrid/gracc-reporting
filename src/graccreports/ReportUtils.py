@@ -63,10 +63,9 @@ class Reporter(TimeUtils):
     __metaclass__ = abc.ABCMeta
 
     def __init__(self, report, config, start, end=None, verbose=False,
-                 index_key='index_pattern', all=False,
-                 raw=False, allraw=False,
+                 index_key='index_pattern',
                  template=None, is_test=False, no_email=False,
-                 title=None, logfile=None, logfile_override=False, check_vo=False,
+                 logfile=None, logfile_override=False, check_vo=False,
                  althost=None):
         TimeUtils.__init__(self)
         self.verbose = verbose
@@ -149,7 +148,7 @@ class Reporter(TimeUtils):
     def send_report(self, title=None, successmessage=None):
         """Send reports as ascii, csv, html attachments.
 
-        :param str title: Title of report
+        :param str title: Title of report, overrides self.title
         """
         successmessage = successmessage if successmessage is not None \
             else "Report sent successfully."
@@ -160,7 +159,12 @@ class Reporter(TimeUtils):
         if self.test_no_email(self.email_info['to']['email']):
             return
 
-        if content is None:  # self.format_report() does nothing.
+        if title is not None: self.title = title
+        if self.title is None: self.title = u"GRACC Report"
+
+        if self.verbose: print self.title
+
+        if content is None:  # self.format_report() does nothing in this case.
             # Assume all necessary operations are handled elsewhere, and all we
             # need to do is send the email.  Need self.title, self.text to be
             # set prior to calling this
@@ -186,11 +190,6 @@ class Reporter(TimeUtils):
                               "report file")
             sys.exit(1)
 
-        try:
-            use_title = self.title
-        except NameError:
-            use_title = title if title else u"GRACC Report"
-
         emailReport = TextUtils.TextUtils(self.header)
         text["text"] = emailReport.printAsTextTable("text", content)
         text["csv"] = emailReport.printAsTextTable("csv", content)
@@ -207,17 +206,17 @@ class Reporter(TimeUtils):
                 htmltext = unicode("".join(t.readlines()), 'utf-8')
 
             # Build the HTML file from the template
-            htmldict = dict(title=use_title, header=htmlheader, table=htmldata)
+            htmldict = dict(title=self.title, header=htmlheader, table=htmldata)
             htmltext = htmltext.format(**htmldict)
             text["html"] = htmltext
 
         else:
             text["html"] = u"<html><body><h2>{0}</h2><table border=1>{1}</table></body></html>".format(
-                use_title, htmldata)
+                self.title, htmldata)
 
         TextUtils.sendEmail((self.email_info['to']['name'],
                              self.email_info['to']['email']),
-                            use_title, text,
+                            self.title, text,
                             (self.email_info['from']['name'],
                              self.email_info['from']['email']),
                             self.email_info['smtphost'],
