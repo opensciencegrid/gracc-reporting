@@ -164,10 +164,11 @@ class OSGPerSiteReporter(Reporter):
         logfile_fname = ov_logfile if ov_logfile is not None else logfile
         logfile_override = True if ov_logfile is not None else False
 
-        Reporter.__init__(self, report, config, start, end=end,
+        super(OSGPerSiteReporter, self).__init__(report, config, start, end=end,
                           verbose=verbose, is_test=is_test, no_email=no_email,
                           template=template, logfile=logfile_fname,
                           logfile_override=logfile_override)
+
         self.header = ["Site", "Total", "Opportunistic Total",
                        "Percent Opportunistic", "Prev. Month Opp. Total",
                        "Percentage Change Month-Month"]

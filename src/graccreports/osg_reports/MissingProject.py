@@ -39,10 +39,13 @@ class MissingProjectReport(Reporter):
         logfile_fname = ov_logfile if ov_logfile is not None else self.logfile
         logfile_override = True if ov_logfile is not None else False
 
-        Reporter.__init__(self, report_type, config, start, end, verbose,
-                          no_email=no_email, is_test=is_test,
-                          logfile=logfile_fname,
-                          logfile_override=logfile_override)
+        super(MissingProjectReport, self).__init__(report_type, config, start,
+                                                   end, verbose,
+                                                   no_email=no_email,
+                                                   is_test=is_test,
+                                                   logfile=logfile_fname,
+                                                   logfile_override=logfile_override)
+
         self.report_type = self._validate_report_type(report_type)
         self.logger.info("Report Type: {0}".format(self.report_type))
         

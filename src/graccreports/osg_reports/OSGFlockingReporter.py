@@ -46,10 +46,12 @@ class FlockingReport(Reporter):
 
         self.title = "OSG Flocking: Usage of OSG Sites for {0} - {1}".format(start, end)
 
-        Reporter.__init__(self, report, config, start, end=end,
-                          template=template, verbose=verbose,
-                          no_email=no_email, is_test=is_test,
-                          logfile=rlogfile, logfile_override=logfile_override)
+        super(FlockingReport, self).__init__(report, config, start, end=end,
+                                             template=template, verbose=verbose,
+                                             no_email=no_email, is_test=is_test,
+                                             logfile=rlogfile,
+                                             logfile_override=logfile_override)
+
         self.verbose = verbose
         self.no_email = no_email
         self.is_test = is_test

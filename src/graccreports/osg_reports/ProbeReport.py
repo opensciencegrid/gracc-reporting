@@ -348,10 +348,11 @@ class ProbeReport(Reporter):
         logfile_fname = ov_logfile if ov_logfile is not None else logfile
         logfile_override = True if ov_logfile is not None else False
 
-        Reporter.__init__(self, report, config, start, end=start,
+        super(ProbeReport, self).__init__(report, config, start, end=start,
                           logfile=logfile_fname,
                           logfile_override=logfile_override, is_test=is_test,
                           verbose=verbose,no_email=no_email)
+
         self.probematch = re.compile("(.+):(.+)")
         self.estimeformat = re.compile("(.+)T(.+)\.\d+Z")
         self.emailfile = '/tmp/filetoemail.txt'

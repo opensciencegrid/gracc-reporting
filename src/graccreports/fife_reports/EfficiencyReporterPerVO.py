@@ -56,10 +56,13 @@ class Efficiency(Reporter):
         logfile_fname = ov_logfile if ov_logfile is not None else logfile
         logfile_override = True if ov_logfile is not None else False
 
-        Reporter.__init__(self, report, config, start, end, verbose=verbose,
-                          logfile=logfile_fname,
-                          logfile_override=logfile_override, no_email=no_email,
-                          is_test=is_test, check_vo=True)
+        super(Efficiency, self).__init__(report, config, start, end=end,
+                                         verbose=verbose,
+                                         logfile=logfile_fname,
+                                         logfile_override=logfile_override,
+                                         no_email=no_email, is_test=is_test,
+                                         check_vo=True)
+
         self.hour_limit, self.eff_limit = self.__get_limits()
         self.facility = facility
         self.template = template

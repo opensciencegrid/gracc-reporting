@@ -103,11 +103,13 @@ class JobSuccessRateReporter(Reporter):
         self.title = "{0} Production Jobs Success Rate on the OSG Sites " \
                      "({1} - {2})".format(self.vo, start, end)
 
-        Reporter.__init__(self, report, config, start, end, verbose,
-                          is_test=is_test, no_email=no_email,
-                          logfile=logfile_fname,
-                          logfile_override=logfile_override,
-                          check_vo=True)
+        super(JobSuccessRateReporter, self).__init__(report, config, start,
+                                                     end, verbose,
+                                                     is_test=is_test,
+                                                     no_email=no_email,
+                                                     logfile=logfile_fname,
+                                                     logfile_override=logfile_override,
+                                                     check_vo=True)
         self.template = template
         self.run = Jobs()
         self.clusters = defaultdict(lambda: {'userid': None, 'jobs': []})

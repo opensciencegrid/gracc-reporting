@@ -42,10 +42,11 @@ class OSGReporter(Reporter):
         logfile_fname = ov_logfile if ov_logfile is not None else logfile
         logfile_override = True if ov_logfile is not None else False
 
-        Reporter.__init__(self, report_type, config, start, end, verbose,
+        super(OSGReporter, self).__init__(report_type, config, start, end, verbose,
                           no_email=no_email, is_test=is_test,
                           template=template, logfile=logfile_fname,
                           logfile_override=logfile_override)
+
         self.isSum = isSum
         self.report_type = self._validate_report_type(report_type)
         self.header = ["Project Name", "PI", "Institution", "Field of Science",

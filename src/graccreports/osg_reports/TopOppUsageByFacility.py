@@ -151,10 +151,11 @@ class TopOppUsageByFacility(Reporter):
         logfile_fname = ov_logfile if ov_logfile is not None else logfile
         logfile_override = True if ov_logfile is not None else False
 
-        Reporter.__init__(self, report, config, start, end, verbose=verbose,
-                          no_email=no_email, is_test=is_test,
-                          logfile=logfile_fname,
-                          logfile_override=logfile_override)
+        super(TopOppUsageByFacility, self).__init__(report, config, start, end,
+                                                    verbose=verbose, no_email=no_email,
+                                                    is_test=is_test, logfile=logfile_fname,
+                                                    logfile_override=logfile_override)
+
         self.numrank = numrank
         self.template = template
         self.text = ''
