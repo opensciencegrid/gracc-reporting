@@ -122,9 +122,9 @@ class JobSuccessRateReporter(Reporter):
 
         self.usermatch_CILogon = re.compile('.+CN=UID:(\w+)')
         self.usermatch_FNAL = re.compile('.+/(\w+\.fnal\.gov)')
-        self.globaljobparts = re.compile('\w+\.(fifebatch\d\.fnal\.gov)#(\d+\.\d+)#.+')
+        self.globaljobparts = re.compile('\w+\.(.+\.fnal\.gov)#(\d+\.\d+)#.+')
         self.realhost_pattern = re.compile('\s\(primary\)')
-        self.jobpattern = re.compile('(\d+).\d+@(fifebatch\d\.fnal\.gov)')
+        self.jobpattern = re.compile('(\d+).\d+@(.+\.fnal\.gov)')
         self.text = ''
         self.limit_sites = self._limit_site_check()
 
@@ -478,12 +478,12 @@ class JobSuccessRateReporter(Reporter):
         :param job: Instance of Job class
         :return tuple: Line Map (tuple) of (item, alignment) tuples
         """
+        jobtimes = namedtuple('jobtimes', ['start', 'end'])
+
         try:
             job_link_parts = \
                 [elt for elt in
                  self._get_job_parts_from_jobid(job.jobid)]
-            jobtimes = namedtuple('jobtimes', ['start', 'end'])
-
             jt = jobtimes(*(self.parse_datetime(dt, utc=True)
                             for dt in
                             (job.start_time, job.end_time)))
@@ -505,7 +505,14 @@ class JobSuccessRateReporter(Reporter):
         job_html = '<a href="{0}">{1}</a>'.format(job_link,
                                                   job.jobid)
 
-        j_out = jobtimes(*(datetime.datetime.strftime(t, "%Y-%m-%d %H:%M:%S")
+        try:
+            j_out = jobtimes(*(datetime.datetime.strftime(t, "%Y-%m-%d %H:%M:%S")
+                           for t in jt))
+        except NameError:
+            jt = jobtimes(*(self.parse_datetime(dt, utc=True)
+                       for dt in
+                       (job.start_time, job.end_time)))
+            j_out = jobtimes(*(datetime.datetime.strftime(t, "%Y-%m-%d %H:%M:%S")
                            for t in jt))
 
         linemap = ((job_html, 'left'), (j_out.start, 'left'),
