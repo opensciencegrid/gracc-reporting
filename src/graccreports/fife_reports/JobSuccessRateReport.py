@@ -186,26 +186,6 @@ class JobSuccessRateReporter(Reporter):
             else:
                 add_clusters.send(line)
 
-    def _add_to_clusters(self):
-        """Coroutine: For each line fed in, will
-        instantiate Job class for each one, add to Jobs class dictionary,
-        and add to clusters.  Then waits for next line"""
-        while True:
-            line = yield
-
-            if line['hostdescription'] != "NULL":  # Not NULL site
-                line['exitcode'] = int(line['exitcode'])
-                job = Job(line['endtime'],
-                          line['starttime'],
-                          line['jobid'],
-                          line['hostdescription'],
-                          line['host'],
-                          line['exitcode'])
-                self.run.add_job(job)
-                clusterid = line['jobid'].split(".")[0]
-                self.clusters[clusterid]['userid'] = line['userid']
-                self.clusters[clusterid]['jobs'].append(job)
-
     def _generate_result_array(self, resultset):
         """Generator.  Compiles results from resultset into array.  Yields each
         line.
@@ -273,7 +253,7 @@ class JobSuccessRateReporter(Reporter):
                 for key in line.iterkeys():
                     line[key] = line[key].strip()
 
-                if self.verbose:
+                if self.verbose and line['exitcode'] != '0':
                     print '\t'.join(line.itervalues())
                 yield line
             except KeyError:
@@ -281,6 +261,25 @@ class JobSuccessRateReporter(Reporter):
                  listed in the ES document.  This is consistent with how the
                  old MySQL report behaved."""
                 pass
+
+    def _add_to_clusters(self):
+        """Coroutine: For each line fed in, will
+        instantiate Job class for each one, add to Jobs class dictionary,
+        and add to clusters.  Then waits for next line"""
+        while True:
+            line = yield
+
+            if line['hostdescription'] != "NULL":  # Not NULL site
+                job = Job(line['endtime'],
+                          line['starttime'],
+                          line['jobid'],
+                          line['hostdescription'],
+                          line['host'],
+                          int(line['exitcode']))
+                self.run.add_job(job)
+                clusterid = line['jobid'].split(".")[0]
+                self.clusters[clusterid]['userid'] = line['userid']
+                self.clusters[clusterid]['jobs'].append(job)
 
     def generate_report_file(self):
         """This is the function that parses the clusters data and
@@ -309,15 +308,15 @@ class JobSuccessRateReporter(Reporter):
         # Look in clusters, figure out whether job failed or succeeded,
         # categorize appropriately, and generate HTML line for total jobs
         # failed by cluster (Job Details table)
-        for job_table_cl_count, (cid, cdict) in enumerate(
-                self.clusters.iteritems()):
+        failed_cluster_count = 0
+        for cid, cdict in self.clusters.iteritems():
             total_jobs = len(cdict['jobs'])
-
             failures = [job for job in cdict['jobs'] if job.exit_code != 0]
+
             if len(failures) == 0: continue
 
             # Generate HTML lines for each cluster
-            if job_table_cl_count < config_vals['num_clusters']:  # Limit number of clusters
+            if failed_cluster_count < config_vals['num_clusters']:  # Limit number of clusters
                                                    # shown in report based on config file
 
                 linemap = ((cid, 'left'), (cdict['userid'], 'right'),
@@ -335,6 +334,7 @@ class JobSuccessRateReporter(Reporter):
                                      '</tr>'
                     else:
                         break
+            failed_cluster_count += 1
 
         total_jobs = 0
 
