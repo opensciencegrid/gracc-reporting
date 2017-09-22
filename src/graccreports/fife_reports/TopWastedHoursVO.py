@@ -11,6 +11,7 @@ default_templatefile = 'template_topwastedhoursvo.html'
 logfile = 'topwastedhoursvo.log'
 perc_cutoff = 0.5
 hours_cutoff = 1000
+numrank = 100
 
 
 @Reporter.init_reporter_parser
@@ -30,7 +31,7 @@ def parse_opts(parser):
                         required=True)
     parser.add_argument("-N", "--numrank", dest="numrank",
                         help="Number of Users to rank",
-                        default=100, type=int)
+                        type=int)
 
 
 class User:
@@ -122,14 +123,13 @@ class TopWastedHoursReport(Reporter):
     :param str ov_logfile: Path to override logfile
     """
     def __init__(self, config, start, end, template, vo,
-                 numrank=100, facility=None, is_test=True,
+                 numrank=None, facility=None, is_test=True,
                  verbose=False, no_email=False, ov_logfile=None):
         report = 'TopWastedHoursVO'
         self.vo = vo
 
         logfile_fname = ov_logfile if ov_logfile is not None else logfile
         logfile_override = True if ov_logfile is not None else False
-
 
         super(TopWastedHoursReport, self).__init__(report, config, start,
                                                    end=end, verbose=verbose,
@@ -166,17 +166,29 @@ class TopWastedHoursReport(Reporter):
         return
 
     def _get_configfile_limits(self):
-        """Get limits from config file"""
-        for attr in ('hours_cutoff', 'perc_cutoff'):
+        """Get limits from config file, if they exist"""
+        for attr in ('hours_cutoff', 'perc_cutoff', 'numrank'):
             try:
-                value = self.config[self.report_type.lower()][self.vo.lower()][attr]
-            except KeyError:
-                value = globals()[attr]
-                self.logger.warning('Could not find value for attribute {0}'
-                                    ' in config file.  Will use module '
-                                    'default of {1}'.format(attr, value))
+                # If value was passed in and is already set in class instance,
+                # say through an argument, use that
+                assert getattr(self, attr) is not None
+                print attr, getattr(self, attr)
+                continue
+            except (AttributeError, AssertionError):
+                try:
+                    # Now try the config file
+                    value = self.config[self.report_type.lower()][self.vo.lower()][attr]
+                except KeyError:
+                    # Use module default
+                    value = globals()[attr]
+                    self.logger.warning('Could not find value for attribute {0}'
+                                        ' in config file.  Will use module '
+                                        'default of {1}'.format(attr, value))
+                finally:
+                    # If self.attr wasn't already set to value, do it now.
+                    setattr(self, attr, value)
             finally:
-                setattr(self, attr, value)
+                self.logger.info("{0}{1}".format(attr, getattr(self, attr)))
 
     def query(self):
         """

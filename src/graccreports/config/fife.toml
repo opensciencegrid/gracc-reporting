@@ -146,6 +146,7 @@ configured_vos = ['cdf', 'cdms', 'darkside', 'dune', 'gm2', 'mars', 'minerva', '
 	[topwastedhoursvo.darkside]
         perc_cutoff = 0
         hours_cutoff = 0
+        #numrank = 100
         to_emails = ['nobody@example.com', ]
 
 	[topwastedhoursvo.dune]
@@ -161,6 +162,7 @@ configured_vos = ['cdf', 'cdms', 'darkside', 'dune', 'gm2', 'mars', 'minerva', '
 	[topwastedhoursvo.nova]
         perc_cutoff = 0
         hours_cutoff = 0
+        #numrank = 10
         to_emails = ['nobody@example.com', ]
 
 	[topwastedhoursvo.seaquest]
