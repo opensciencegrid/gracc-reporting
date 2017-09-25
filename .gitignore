@@ -4,4 +4,4 @@ __pycache__/
 *.log
 
 # Special scripts
-Docker/*.sh
+Docker/*.py
