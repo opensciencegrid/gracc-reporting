@@ -1,6 +1,7 @@
 import traceback
 import sys
 import datetime
+from collections import defaultdict
 
 from elasticsearch_dsl import Search
 
@@ -22,8 +23,6 @@ def monthrange(date):
     :return tuple:datetime.datetime objects that span the month
     (2016-12-05 --> 2016-12-01, 2016-12-31)
     """
-    # if isinstance(date, list):
-    #     startdate = datetime.datetime(*date)
     if isinstance(date, datetime.datetime) or \
             isinstance(date, datetime.date):
         startdate = date
@@ -99,56 +98,51 @@ class VO(object):
     def __init__(self, voname):
         self.name = voname
         self.sites = {}
-        self.current = True
+        self.sites = defaultdict(lambda: defaultdict(int))
         self.pos = 0
-        self.total = [0,0]  # Position 0 = Current, Position 1 = Past
+        self.total = defaultdict(int)
         self.totalcalc = self.running_totalhours()
 
-    def add_site(self, sitename, corehours):
+    @staticmethod
+    def __key_lookup(current):
+        return 'current' if current else 'past'
+
+    def add_site(self, sitename, corehours, current=True):
         """Add a new site data to the VO.  Also updates the core hours of
          sitename and the total for the VO
 
          :param str sitename: Name of site a VO's job set ran on
          :param float corehours: Core hours in the summary record
          """
-        if not self.current: self.pos = 1
-
-        if sitename in self.sites:
-            self.sites[sitename][self.pos] += corehours
-        else:   # Initialize the site
-            self.sites[sitename] = [0, 0]
-            self.sites[sitename][self.pos] = corehours
-
-        self.totalcalc.send(corehours)
+        key = self.__key_lookup(current)
+        self.sites[sitename][key] += corehours
+        self.totalcalc.send((corehours, key))
         return
 
     def get_cur_sitehours(self, sitename):
         """Get the current value of core hours for a particular sitename for
         the VO"""
-        return self.sites[sitename][0]
+        return self.sites[sitename]['current']
 
     def get_cur_totalhours(self):
         """Get the current value of total core hours for the VO"""
-        return self.total[0]
+        return self.total['current']
 
     def get_old_sitehours(self, sitename):
         """Get the previous month's value of core hours for a particular
         sitename for the VO"""
-        if sitename in self.sites:
-            return self.sites[sitename][1]
-        else:
-            return 0
+        return self.sites[sitename]['past'] if sitename in self.sites else 0
 
     def get_old_totalhours(self):
         """Get the previous month's value of total core hours for the VO"""
-        return self.total[1]
+        return self.total['past']
 
     @coroutine
     def running_totalhours(self):
         """Keeps running total of core hours for the VO"""
         while True:
-            newhrs = yield
-            self.total[self.pos] += newhrs
+            newhrs, key = yield
+            self.total[key] += newhrs
 
 
 class OSGPerSiteReporter(Reporter):
@@ -167,17 +161,14 @@ class OSGPerSiteReporter(Reporter):
                  is_test=False, no_email=False, ov_logfile=None):
         report = 'siteusage'
 
-        if ov_logfile:
-            rlogfile = ov_logfile
-            logfile_override = True
-        else:
-            rlogfile = logfile
-            logfile_override = False
+        logfile_fname = ov_logfile if ov_logfile is not None else logfile
+        logfile_override = True if ov_logfile is not None else False
 
-        Reporter.__init__(self, report, config, start, end=end,
+        super(OSGPerSiteReporter, self).__init__(report, config, start, end=end,
                           verbose=verbose, is_test=is_test, no_email=no_email,
-                          template=template, logfile=rlogfile,
+                          template=template, logfile=logfile_fname,
                           logfile_override=logfile_override)
+
         self.header = ["Site", "Total", "Opportunistic Total",
                        "Percent Opportunistic", "Prev. Month Opp. Total",
                        "Percentage Change Month-Month"]
@@ -193,7 +184,7 @@ class OSGPerSiteReporter(Reporter):
     def run_report(self):
         """Method to run the OSG per site report"""
         self.generate()
-        self.send_report(title=self.title)
+        self.send_report()
         return
 
     def query(self):
@@ -243,21 +234,17 @@ class OSGPerSiteReporter(Reporter):
         in them"""
         while True:
             vo, site, wallhrs = yield
-            if self.current:
-                if vo not in self.vodict:
+
+            if not self.current \
+                    and (vo not in self.vodict or site not in self.sitelist):
+                continue
+            elif self.current and vo not in self.vodict:
                     V = VO(vo)
                     self.vodict[vo] = V
-                V.add_site(site, wallhrs)
+            self.vodict[vo].add_site(site, wallhrs, current=self.current)
 
-                if site not in self.sitelist:
-                    self.sitelist.append(site)
-            else:
-                if vo not in self.vodict or site not in self.sitelist:
-                    continue
-
-                V = self.vodict[vo]
-                V.current = self.current
-                V.add_site(site, wallhrs)
+            if site not in self.sitelist:
+                self.sitelist.append(site)
 
     @staticmethod
     def _parse_results(results, consumer):

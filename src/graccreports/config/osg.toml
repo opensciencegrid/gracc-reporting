@@ -22,6 +22,7 @@ default_logdir = '/var/log'
 
 # Report-specific parameters
 [flocking]
+    index_pattern='gracc.osg.summary'
     probe_list = ['condor:amundsen.grid.uchicago.edu',
         'condor:csiu.grid.iu.edu', 'condor:glide.bakerlab.org',
         'condor:gw68.quarry.iu.teragrid.org', 'condor:iplant-condor-iu.tacc.utexas.edu',
@@ -32,6 +33,7 @@ default_logdir = '/var/log'
     to_names = ['Recipient Name', ]
 
 [news]
+    index_pattern='gracc.osg.summary'
     OSG_flocking_probe_list = ['condor:osg-xsede.grid.iu.edu', 'condor:gw68.quarry.iu.teragrid.org',
         'condor:xd-login.opensciencegrid.org', 'condor:csiu.grid.iu.edu',
         'condor:submit1.bioinformatics.vt.edu', 'condor:iplant-condor.tacc.utexas.edu',
@@ -46,6 +48,7 @@ default_logdir = '/var/log'
     to_names = ['Recipient Name', ]
 
 [probe]
+    index_pattern='gracc.osg.raw-*'
     to_emails = ['nobody@example.com', ]
     to_names = ['Recipient Name', ]
 
@@ -68,6 +71,7 @@ default_logdir = '/var/log'
 
 # For project and missing project reports
 [project]
+    index_pattern='gracc.osg.summary'
     [project.xd]
         probe_list = ['condor:osg-xsede.grid.iu.edu', 'condor:gw68.quarry.iu.teragrid.org', 'condor:xd-login.opensciencegrid.org']
         admins_to_emails = ['nobody@example.com', ]
@@ -86,10 +90,7 @@ default_logdir = '/var/log'
         to_names = ['Recipient Name',]
 
 [siteusage]
-    to_emails = ['nobody@example.com', ]
-    to_names = ['Recipient Name', ]
-
-[wastedhours]
+    index_pattern='gracc.osg.summary'
     to_emails = ['nobody@example.com', ]
     to_names = ['Recipient Name', ]
 

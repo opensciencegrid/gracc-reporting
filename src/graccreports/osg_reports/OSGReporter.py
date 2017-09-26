@@ -2,6 +2,7 @@ import re
 import traceback
 import sys
 import copy
+from collections import defaultdict
 
 from elasticsearch_dsl import Search
 
@@ -28,7 +29,7 @@ def parse_opts(parser):
     """
     # Report-specific args
     parser.add_argument("-r", "--report-type", dest="report_type",
-                        help="Report type (OSG, XD. or OSG-Connect")
+                        type=unicode, help="Report type (OSG, XD. or OSG-Connect")
     parser.add_argument('--nosum', dest="isSum", action='store_false',
                         help="Do not show a total line")
 
@@ -38,17 +39,14 @@ class OSGReporter(Reporter):
                  verbose=False, no_email=False, is_test=False, template=None,
                  ov_logfile=None):
 
-        if ov_logfile:
-            rlogfile = ov_logfile
-            logfile_override = True
-        else:
-            rlogfile = logfile
-            logfile_override = False
+        logfile_fname = ov_logfile if ov_logfile is not None else logfile
+        logfile_override = True if ov_logfile is not None else False
 
-        Reporter.__init__(self, report_type, config, start, end, verbose,
+        super(OSGReporter, self).__init__(report_type, config, start, end, verbose,
                           no_email=no_email, is_test=is_test,
-                          template=template, logfile=rlogfile,
+                          template=template, logfile=logfile_fname,
                           logfile_override=logfile_override)
+
         self.isSum = isSum
         self.report_type = self._validate_report_type(report_type)
         self.header = ["Project Name", "PI", "Institution", "Field of Science",
@@ -60,7 +58,7 @@ class OSGReporter(Reporter):
     def run_report(self):
         """Higher level method to handle the process flow of the report
         being run"""
-        self.send_report(title=self.title)
+        self.send_report()
 
     def query(self):
         """Method to query Elasticsearch cluster for OSGReporter information
@@ -75,7 +73,7 @@ class OSGReporter(Reporter):
 
         if self.verbose:
             self.logger.debug(probes)
-            self.logger.debug(self.indexpattern)
+            self.logger.info(self.indexpattern)
 
         # Elasticsearch query and aggregations
         s = Search(using=self.client, index=self.indexpattern) \
@@ -154,10 +152,7 @@ class OSGReporter(Reporter):
 
         :return dict: Constructed dict of report information for
         Reporter.send_report to send report from"""
-        report = {}
-        for name in self.header:
-            if name not in report:
-                report[name] = []
+        report = defaultdict(list)
 
         for result_list in self.generate_report_file():
             if not self._validate_type_results(result_list[0]):
@@ -213,12 +208,10 @@ class OSGReporter(Reporter):
         :param pname:
         :return:
         """
-        if self.report_type == 'XD' and self.tgmatch.match(pname):
-            return True
-        elif self.report_type <> 'XD' and not self.tgmatch.match(pname):
-            return True
-        else:
-            return False
+        return True if \
+            (self.report_type == 'XD' and self.tgmatch.match(pname) or
+             self.report_type != 'XD' and not self.tgmatch.match(pname)) \
+            else False
 
 
 def main():

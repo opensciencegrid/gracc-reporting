@@ -2,4 +2,4 @@
 FROM shreyb/gracc-reporting:fife_1.0
 
 # Run executable 
-ENTRYPOINT ["jobsuccessratereport"]
+ENTRYPOINT ["topwastedhoursvoreport"]

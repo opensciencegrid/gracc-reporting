@@ -2,7 +2,7 @@ import sys
 import re
 import datetime
 
-from elasticsearch_dsl import Search
+from elasticsearch_dsl import Search, Q
 
 from . import Reporter, runerror, get_configfile, get_template, coroutine
 from . import TextUtils, NiceNum
@@ -25,9 +25,9 @@ def parse_opts(parser):
     """
     # Report-specific args
     parser.add_argument("-E", "--experiment", dest="vo",
-                        help="experiment name", default=None, required=True)
+                        help="experiment name", type=unicode, required=True)
     parser.add_argument("-F", "--facility", dest="facility",
-                        help="facility name", default=None, required=True)
+                        help="facility name", type=unicode, required=True)
 
 
 class Efficiency(Reporter):
@@ -53,15 +53,16 @@ class Efficiency(Reporter):
         report = 'Efficiency'
         self.vo = vo
 
-        if ov_logfile:
-            rlogfile = ov_logfile
-            logfile_override = True
-        else:
-            rlogfile = logfile
-            logfile_override = False
-        Reporter.__init__(self, report, config, start, end, verbose=verbose,
-                          logfile=rlogfile, no_email=no_email, is_test=is_test,
-                          logfile_override=logfile_override, raw=True, check_vo=True)
+        logfile_fname = ov_logfile if ov_logfile is not None else logfile
+        logfile_override = True if ov_logfile is not None else False
+
+        super(Efficiency, self).__init__(report, config, start, end=end,
+                                         verbose=verbose,
+                                         logfile=logfile_fname,
+                                         logfile_override=logfile_override,
+                                         no_email=no_email, is_test=is_test,
+                                         check_vo=True)
+
         self.hour_limit, self.eff_limit = self.__get_limits()
         self.facility = facility
         self.template = template
@@ -82,7 +83,7 @@ class Efficiency(Reporter):
         :return: Grab the min-hours and min-efficiency limits from config dict
         """
         try:
-            return (self.config[self.vo.lower()][self.report_type.lower()]['min_{0:s}'.format(tag)]
+            return (self.config[self.report_type.lower()][self.vo.lower()]['min_{0:s}'.format(tag)]
                     for tag in ('hours', 'efficiency'))
         except KeyError as err:
             err.message += "\n The VO {0:s} was not found in the config file, " \
@@ -105,7 +106,9 @@ class Efficiency(Reporter):
             return
 
         self.generate_report_file()
-        self.send_report()
+        smsg = "Report sent for {0} to {1}".format(
+            self.vo, ", ".join(self.email_info['to']['email']))
+        self.send_report(successmessage=smsg)
         return
 
     def query(self):
@@ -117,27 +120,36 @@ class Efficiency(Reporter):
         # Gather parameters, format them for the query
         starttimeq = self.start_time.isoformat()
         endtimeq = self.end_time.isoformat()
-        wildcardVOq = '*' + self.vo.lower() + '*'
-        wildcardProbeNameq = 'condor:fifebatch?.fnal.gov'
+        wildcardProbeNameq = 'condor:*.fnal.gov'
 
         if self.verbose:
             self.logger.info(self.indexpattern)
 
         # Elasticsearch query and aggregations
         s = Search(using=self.client, index=self.indexpattern) \
-            .filter("wildcard", VOName=wildcardVOq) \
             .filter("wildcard", ProbeName=wildcardProbeNameq) \
             .filter("range", EndTime={"gte": starttimeq, "lt": endtimeq}) \
             .filter("range", WallDuration={"gt": 0}) \
-            .filter("term", Host_description="GPGrid") \
+            .filter("term", Host_description=self.facility) \
             .filter("term", ResourceType="Payload")[0:0]
         # Size 0 to return only aggregations
+
+        qlist = (Q("wildcard", VOName='*{0}*'.format(votest))
+                 for votest in self.vo_list
+                 if votest != self.vo.lower())
+
+        # Initialize OR chain
+        q = Q("wildcard", VOName='*{0}*'.format(self.vo.lower()))
+
+        for query in qlist:     # Build OR chain to check all VOs in volist
+            q = q | query
+
+        s = s.query(q)[0:0]
 
         # Bucket aggs
         Bucket = s.aggs.bucket('group_VOName', 'terms', field='ReportableVOName') \
             .bucket('group_HostDescription', 'terms', field='Host_description') \
             .bucket('group_DN', 'terms', field='DN')   # Patch while we fix gratia probes to include CommonName Field
-
 
             # .bucket('group_CommonName', 'terms', field='CommonName')     # Original
             # End patch
@@ -244,7 +256,7 @@ class Efficiency(Reporter):
         :param float cpusec: CPU time (in seconds) of a bucket
         :return float: Efficiency of that bucket
         """
-        return (cpusec / 3600) / wallhours
+        return (cpusec / 3600) / wallhours if wallhours > 0 else 0.
 
     def _parseCN(self, cn):
         """Parse the CN to grab the username
@@ -276,30 +288,6 @@ class Efficiency(Reporter):
             self.text = f.read()
 
         self.text = self.text.format(**htmldict)
-        return
-
-    def send_report(self):
-        """
-        Sends the HTML report file in an email (or doesn't if self.no_email
-        is set to True)
-
-        :return: None
-        """
-        if self.test_no_email(self.email_info['to']['email']):
-            return
-
-        TextUtils.sendEmail(
-                            (self.email_info['to']['name'],
-                             self.email_info['to']['email']),
-                            self.title,
-                            {"html": self.text},
-                            (self.email_info['from']['name'],
-                             self.email_info['from']['email']),
-                            self.email_info['smtphost'])
-
-        self.logger.info("Report sent for {0} to {1}".format(self.vo,
-                                                             ", ".join(self.email_info['to']['email'])))
-
         return
 
 

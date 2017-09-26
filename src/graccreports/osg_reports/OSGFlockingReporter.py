@@ -1,6 +1,7 @@
 import datetime
 import traceback
 import sys
+from collections import defaultdict
 
 from elasticsearch_dsl import Search
 
@@ -45,10 +46,12 @@ class FlockingReport(Reporter):
 
         self.title = "OSG Flocking: Usage of OSG Sites for {0} - {1}".format(start, end)
 
-        Reporter.__init__(self, report, config, start, end=end,
-                          template=template, verbose=verbose,
-                          no_email=no_email, is_test=is_test,
-                          logfile=rlogfile, logfile_override=logfile_override)
+        super(FlockingReport, self).__init__(report, config, start, end=end,
+                                             template=template, verbose=verbose,
+                                             no_email=no_email, is_test=is_test,
+                                             logfile=rlogfile,
+                                             logfile_override=logfile_override)
+
         self.verbose = verbose
         self.no_email = no_email
         self.is_test = is_test
@@ -58,7 +61,7 @@ class FlockingReport(Reporter):
     def run_report(self):
         """Higher level method to handle the process flow of the report
         being run"""
-        self.send_report(title=self.title)
+        self.send_report()
 
     def query(self):
         """Method to query Elasticsearch cluster for Flocking Report
@@ -118,11 +121,7 @@ class FlockingReport(Reporter):
 
         :return dict: Constructed dict of report information for
         Reporter.send_report to send report from"""
-        report = {}
-
-        for name in self.header:
-            if name not in report:
-                report[name] = []
+        report = defaultdict(list)
 
         for result_tuple in self.generate():
             if self.verbose:

@@ -1,13 +1,14 @@
 import sys
 import re
 from time import sleep
+
 import traceback
 import datetime
+from collections import defaultdict, namedtuple
 
 from elasticsearch_dsl import Search
 
 from . import Reporter, runerror, get_configfile, get_template
-from . import TextUtils
 
 # Various config values and their default values
 config_vals = {'num_clusters': 100, 'jobs_per_cluster': 1e6,
@@ -29,7 +30,7 @@ def parse_opts(parser):
     """
     # Report-specific args
     parser.add_argument("-E", "--experiment", dest="vo",
-                        help="experiment name", default=None, required=True)
+                        help="experiment name", type=unicode, required=True)
 
 
 def sum_errors(dic):
@@ -45,9 +46,10 @@ def sum_errors(dic):
 class Jobs:
     """Class to assign jobs to sites"""
     def __init__(self):
-        self.jobs = {}
+        self.jobs = defaultdict(list)
 
-    def add_job(self, site, job):
+    def add_job(self, job):
+
         """
         Adds job to self.jobs dict
 
@@ -55,9 +57,6 @@ class Jobs:
         :param job: Job object that contains info about a job
         :return: None
         """
-        if site not in self.jobs:
-            self.jobs[site] = []
-
         self.jobs[job.site].append(job)
 
 
@@ -98,23 +97,22 @@ class JobSuccessRateReporter(Reporter):
         report = 'JobSuccessRate'
         self.vo = vo
 
-        if ov_logfile:
-            rlogfile = ov_logfile
-            logfile_override = True
-        else:
-            rlogfile = logfile
-            logfile_override = False
+        logfile_fname = ov_logfile if ov_logfile is not None else logfile
+        logfile_override = True if ov_logfile is not None else False
 
         self.title = "{0} Production Jobs Success Rate on the OSG Sites " \
                      "({1} - {2})".format(self.vo, start, end)
 
-        Reporter.__init__(self, report, config, start, end, verbose,
-                          is_test=is_test, no_email=no_email, logfile=rlogfile,
-                          logfile_override=logfile_override, raw=True,
-                          check_vo=True)
+        super(JobSuccessRateReporter, self).__init__(report, config, start,
+                                                     end, verbose,
+                                                     is_test=is_test,
+                                                     no_email=no_email,
+                                                     logfile=logfile_fname,
+                                                     logfile_override=logfile_override,
+                                                     check_vo=True)
         self.template = template
         self.run = Jobs()
-        self.clusters = {}
+        self.clusters = defaultdict(lambda: {'userid': None, 'jobs': []})
         self.connectStr = None
 
         # Patch while we fix gratia probes to include CommonName Field
@@ -124,18 +122,19 @@ class JobSuccessRateReporter(Reporter):
 
         self.usermatch_CILogon = re.compile('.+CN=UID:(\w+)')
         self.usermatch_FNAL = re.compile('.+/(\w+\.fnal\.gov)')
-        self.globaljobparts = re.compile('\w+\.(fifebatch\d\.fnal\.gov)#(\d+\.\d+)#.+')
+        self.globaljobparts = re.compile('\w+\.(.+\.fnal\.gov)#(\d+\.\d+)#.+')
         self.realhost_pattern = re.compile('\s\(primary\)')
-        self.jobpattern = re.compile('(\d+).\d+@(fifebatch\d\.fnal\.gov)')
+        self.jobpattern = re.compile('(\d+).\d+@(.+\.fnal\.gov)')
         self.text = ''
         self.limit_sites = self._limit_site_check()
-
 
     def run_report(self):
         """Method that runs all of the applicable actions in this class."""
         self.generate()
         self.generate_report_file()
-        self.send_report()
+        smsg = "Report sent for {0} to {1}".format(
+            self.vo,", ".join(self.email_info['to']['email']))
+        self.send_report(successmessage=smsg)
 
     def query(self):
         """
@@ -144,8 +143,8 @@ class JobSuccessRateReporter(Reporter):
         :return elasticsearch_dsl.Search: Search object containing ES query
         """
         # Set up our search parameters
-        rep_config = self.config[self.vo.lower()][self.report_type.lower()]
-        voq = rep_config['voname']
+        rep_config = self.config[self.report_type.lower()][self.vo.lower()]
+        voq = rep_config['voname']  # Using a specific string to check for VO
         productioncheck = '*Role=Production*'
 
         starttimeq = self.start_time.isoformat()
@@ -178,39 +177,14 @@ class JobSuccessRateReporter(Reporter):
         resultset = self.run_query()
 
         # Add all of our results to the clusters dictionary
-        resultscount = 0
         add_clusters = self._add_to_clusters()
         add_clusters.send(None)
-        for line in self._generate_result_array(resultset):
-            if resultscount == 0:
-                if len(line.strip()) == 0:
+        for resultscount, line in enumerate(self._generate_result_array(resultset)):
+            if resultscount == 0 and len(line) == 0:
                     self.logger.info("Nothing to report")
-                    break
-            add_clusters.send(line)
-            resultscount += 1
-
-        return
-
-    def _add_to_clusters(self):
-        """Coroutine: For each line fed in, will
-        instantiate Job class for each one, add to Jobs class dictionary,
-        and add to clusters.  Then waits for next line"""
-        while True:
-            line = yield
-            tmp = line.split('\t')
-            start_time, end_time, userid, jobid, site = (item.strip() for item in tmp[:5])
-            start_time, end_time = (t.replace('T', ' ').replace('Z', '') for t in (start_time, end_time))
-            if site == "NULL":
-                pass
+                    return
             else:
-                host = tmp[5].strip()
-                status = int(tmp[6].strip())
-                job = Job(end_time, start_time, jobid, site, host, status)
-                self.run.add_job(site, job)
-                clusterid = jobid.split(".")[0]
-                if clusterid not in self.clusters:
-                    self.clusters[clusterid] = {'userid': userid, 'jobs': []}
-                self.clusters[clusterid]['jobs'].append(job)
+                add_clusters.send(line)
 
     def _generate_result_array(self, resultset):
         """Generator.  Compiles results from resultset into array.  Yields each
@@ -266,23 +240,46 @@ class JobSuccessRateReporter(Reporter):
                                                 # just keep going
                 realhost = self.realhost_pattern.sub('', hit['Host'])  # Parse to get the real hostname
 
-                outstr = '{starttime}\t{endtime}\t{CN}\t{JobID}\t{hostdescription}\t{host}\t{exitcode}'.format(
-                    starttime=hit['StartTime'],
-                    endtime=hit['EndTime'],
-                    CN=userid,
-                    JobID=jobid,
-                    hostdescription=hit['Host_description'],
-                    host=realhost,
-                    exitcode=hit['Resource_ExitCode']
-                )
-                if self.verbose:
-                    print >> sys.stdout, outstr
-                yield outstr
+                line = dict((
+                    ('starttime', hit['StartTime']),
+                    ('endtime', hit['EndTime']),
+                    ('userid', userid),
+                    ('jobid', jobid),
+                    ('hostdescription', hit['Host_description']),
+                    ('host', realhost),
+                    ('exitcode', hit['Resource_ExitCode'])
+                                    ))
+
+                for key in line.iterkeys():
+                    line[key] = line[key].strip()
+
+                if self.verbose and line['exitcode'] != '0':
+                    print '\t'.join(line.itervalues())
+                yield line
             except KeyError:
-                # We want to ignore records where one of the above keys isn't
-                # listed in the ES document.  This is consistent with how the
-                # old MySQL report behaved.
+                """ We want to ignore records where one of the above keys isn't
+                 listed in the ES document.  This is consistent with how the
+                 old MySQL report behaved."""
                 pass
+
+    def _add_to_clusters(self):
+        """Coroutine: For each line fed in, will
+        instantiate Job class for each one, add to Jobs class dictionary,
+        and add to clusters.  Then waits for next line"""
+        while True:
+            line = yield
+
+            if line['hostdescription'] != "NULL":  # Not NULL site
+                job = Job(line['endtime'],
+                          line['starttime'],
+                          line['jobid'],
+                          line['hostdescription'],
+                          line['host'],
+                          int(line['exitcode']))
+                self.run.add_job(job)
+                clusterid = line['jobid'].split(".")[0]
+                self.clusters[clusterid]['userid'] = line['userid']
+                self.clusters[clusterid]['jobs'].append(job)
 
     def generate_report_file(self):
         """This is the function that parses the clusters data and
@@ -296,13 +293,13 @@ class JobSuccessRateReporter(Reporter):
         # Grab config values.  If they don't exist, keep defaults
         for key in config_vals:
             try:
-                config_vals[key] = int(self.config[self.vo.lower()][self.report_type.lower()][key])
+                config_vals[key] = int(self.config[self.report_type.lower()]
+                                       [self.vo.lower()][key])
             except KeyError:
                 pass
 
         table_summary = ""
         job_table = ""
-        job_table_cl_count = 0
 
         def tdalign(info, align):
             """HTML generator to wrap a table cell with alignment"""
@@ -310,138 +307,79 @@ class JobSuccessRateReporter(Reporter):
 
         # Look in clusters, figure out whether job failed or succeeded,
         # categorize appropriately, and generate HTML line for total jobs
-        # failed by cluster
+        # failed by cluster (Job Details table)
+        failed_cluster_count = 0
         for cid, cdict in self.clusters.iteritems():
             total_jobs = len(cdict['jobs'])
-            failures = []
-            total_jobs_failed = 0
-            for job in cdict['jobs']:
-                if job.exit_code == 0:
-                    continue
-                total_jobs_failed += 1
-                failures.append(job)
-            if total_jobs_failed == 0:
-                continue
-            if job_table_cl_count < config_vals['num_clusters']:  # Limit number of clusters
+            failures = [job for job in cdict['jobs'] if job.exit_code != 0]
+
+            if len(failures) == 0: continue
+
+            # Generate HTML lines for each cluster
+            if failed_cluster_count < config_vals['num_clusters']:  # Limit number of clusters
                                                    # shown in report based on config file
 
                 linemap = ((cid, 'left'), (cdict['userid'], 'right'),
-                           (total_jobs, 'right'), (total_jobs_failed, 'right'))
-
+                           (total_jobs, 'right'), (len(failures), 'right'))
                 job_table += '\n<tr>' + \
                              ''.join((tdalign(key, al) for key, al in linemap)) + \
                              '<td></td>' * 6 + '</tr>'
 
             # Generate HTML line for each failed job
-                jcount = 0
-
-                for job in failures:
+                for jcount, job in enumerate(failures):
                     if jcount < config_vals['jobs_per_cluster']:
-                        # Generate link for each job for certain number of jobs
-                        try:
-                            job_link_parts = \
-                                [elt for elt in
-                                 self._get_job_parts_from_jobid(job.jobid)]
-
-                            jobtimes = (self.parse_datetime(dt, utc=True)
-                                        for dt in (job.start_time, job.end_time))
-
-                            timestamps_exact = self.get_epoch_stamps_for_grafana(*jobtimes)
-                            padding = 300000  # milliseconds
-                            timestamps_padded = (timestamps_exact[0] - padding,
-                                                 timestamps_exact[1] + padding)
-                            job_link_parts.extend(timestamps_padded)
-                            job_link = 'https://fifemon.fnal.gov/monitor/dashboard/db' \
-                                       '/job-cluster-summary?var-cluster={0}' \
-                                       '&var-schedd={1}&from={2}&to={3}'.format(
-                                        *job_link_parts)
-                        except AttributeError:
-                            # If jobID doesn't match the pattern
-                            job_link = 'https://fifemon.fnal.gov/monitor/dashboard/db/' \
-                                        'experiment-overview?var-experiment={0}'.format(self.vo)
-
-                        job_html = '<a href="{0}">{1}</a>'.format(job_link,
-                                                                  job.jobid)
-
-
-                        linemap = ((job_html, 'left'), (job.start_time, 'left'),
-                                   (job.end_time, 'left'), (job.site, 'right'),
-                                   (job.host, 'right'), (job.exit_code, 'right'))
-                        job_table += '\n<tr>' + '<td></td>' * 4 + ''.join((tdalign(key, al) for key, al in linemap)) + '</tr>'
-                        jcount += 1
+                        linemap = self._generate_job_linemap(job)
+                        job_table += '\n<tr>' + '<td></td>' * 4 + \
+                                     ''.join((tdalign(key, al) for key, al in linemap)) + \
+                                     '</tr>'
                     else:
                         break
-                job_table_cl_count += 1
+            failed_cluster_count += 1
 
         total_jobs = 0
 
-        site_failed_dict = {}
+        site_failed_dict = defaultdict(dict)
         # Compile count of failed jobs, calculate job success rate
+        # For Site Details Table and Summary Table
         for site, jobs in self.run.jobs.iteritems():
             failed = 0
             total = len(jobs)
-            failures = {}
+            failures = defaultdict(lambda: defaultdict(int))
             # failures structure:
-            # {host: {exit_code1:count, exit_code2:count},
-            # host2: {exit_code1:count, exit_code2: count}, etc.}
+            # {host1: {exit_code1: count, exit_code2: count},
+            # host2: {exit_code1: count, exit_code2: count}, etc.}
             for job in jobs:
                 if job.exit_code != 0:
                     failed += 1
-                    if job.host not in failures:
-                        failures[job.host] = {}
-                    if job.exit_code not in failures[job.host]:
-                        failures[job.host][job.exit_code] = 0
                     failures[job.host][job.exit_code] += 1
+
             total_jobs += total
             total_failed += failed
-            table_summary += '\n<tr><td align = "left">{0}</td>' \
-                             '<td align = "right">{1}</td>' \
-                             '<td align = "right">{2}</td>'\
-                             '<td align = "right">{3}</td></tr>'.format(
-                                                                    site,
-                                                                    total,
-                                                                    failed,
-                                                                    round((total - failed) * 100. / total, 1))
-            site_failed_dict[site] = {}
-            site_failed_dict[site]['FailedJobs'] = failed
-            if 'HTMLLines' not in site_failed_dict[site]:
-                site_failed_dict[site]['HTMLLines'] = \
-                    '\n<tr><td align = "left">{0}</td>' \
-                    '<td align = "right">{1}</td>' \
-                    '<td align = "right">{2}</td>'\
-                    '<td align = "right">{3}</td>' \
-                    '<td></td><td></td><td></td></tr>'.format(
-                        site,
-                        total,
-                        failed,
-                        round((total - failed) * 100. / total, 1))
 
-            hostcount = 0
+            jsrate = round((total - failed) * 100. / total, 1)
 
-            for host, errors in sorted(failures.iteritems(),
-                                       key=lambda x: sum_errors(x[1]),
-                                       reverse=True):
+            table_summary += self._new_table_summary_line(site, total, failed,
+                                                          jsrate)
+
+            site_failed_dict[site] = self._init_site_failed_dict(site, total,
+                                                                 failed, jsrate)
+
+            for hostcount, (host, errors) in enumerate(
+                    sorted(failures.iteritems(),
+                           key=lambda x: sum_errors(x[1]),
+                           reverse=True)):
                 # Sort hosts by total error count in reverse order
                 if hostcount < config_vals['num_hosts_per_site']:
-                    errcount = 0
-                    for code, count in sorted(errors.iteritems(),
-                                              key=lambda x: x[1],
-                                              reverse=True):
+                    for errcount, (code, count) in enumerate(
+                            sorted(errors.iteritems(),
+                                   key=lambda x: x[1],
+                                   reverse=True)):
                         # Sort error codes for each host by count in
                         # reverse order
                         if errcount < config_vals['errors_per_host']:
-                            site_failed_dict[site]['HTMLLines'] += \
-                                '\n<tr><td></td><td></td><td></td><td></td>' \
-                                '<td align = "left">{0}</td>'\
-                                '<td align = "right">{1}</td>' \
-                                '<td align = "right">{2}</td></tr>'.format(
-                                    host,
-                                    code,
-                                    count)
-                            errcount += 1
+                            site_failed_dict[site]['HTMLLines'] += self._generate_site_detail_line(host, code, count)
                         else:
                             break
-                    hostcount += 1
                 else:
                     break
 
@@ -472,6 +410,7 @@ class JobSuccessRateReporter(Reporter):
 
         sitetabletitle = "Site Details{0}".format(sitetabletitle_add)
 
+        # Generate Total line for Site Details Section
         table = ''.join(str(site_failed_dict[site]['HTMLLines']) for site in failkeys)
 
         linemap = (('Total', 'left'), (total_jobs, 'right'),
@@ -481,28 +420,17 @@ class JobSuccessRateReporter(Reporter):
                  ''.join((tdalign(key, al) for key, al in linemap)) + \
                  '<td></td>' * 3 + '</tr>'
 
-
+        # Generate Total line for Summary Table
         linemap = (('Total', 'left'), (total_jobs, 'right'),
                    (total_failed, 'right'),
                    (round((total_jobs - total_failed) * 100. / total_jobs, 1), 'right'))
         table_summary += '\n<tr>' + ''.join((tdalign(key, al) for key, al in linemap)) + '</tr>'
 
-        # Generate Grafana link for User Batch Details
-        epoch_stamps = self.get_epoch_stamps_for_grafana()
-        elist = [elt for elt in epoch_stamps]
-        elist.append('{0}pro'.format(self.vo.lower()))
-        fifemon_link_raw = 'https://fifemon.fnal.gov/monitor/dashboard/db/' \
-                           'user-batch-history?from={0}&to={1}&' \
-                           'var-user={2}'.format(*elist)
-        fifemon_link = '<a href="{0}">Fifemon</a>'.format(fifemon_link_raw)
-
         # Hide failed jobs table if no failed jobs
-        if total_failed == 0:
-            divopen = '\n<div style="display:none">'
-            divclose = '\n</div>'
-        else:
-            divopen = ''
-            divclose = ''
+        divopen = '\n<div style="display:none">' if total_failed == 0 else ''
+        divclose = '\n</div>' if total_failed == 0 else ''
+
+        fifemon_link = self._generate_fifemon_link()
 
         # Cosmetic reformatting of site failed jobs section
         if config_vals['jobs_per_cluster'] > 1000:
@@ -542,6 +470,122 @@ class JobSuccessRateReporter(Reporter):
 
         return
 
+    def _generate_job_linemap(self, job):
+        """
+        Generates the HTML alignment "linemap" for the generate_report_file
+        method to create an HTML line
+
+        :param job: Instance of Job class
+        :return tuple: Line Map (tuple) of (item, alignment) tuples
+        """
+        jobtimes = namedtuple('jobtimes', ['start', 'end'])
+
+        try:
+            job_link_parts = \
+                [elt for elt in
+                 self._get_job_parts_from_jobid(job.jobid)]
+            jt = jobtimes(*(self.parse_datetime(dt, utc=True)
+                            for dt in
+                            (job.start_time, job.end_time)))
+
+            timestamps_exact = self.get_epoch_stamps_for_grafana(*jt)
+            padding = 300000  # milliseconds
+            timestamps_padded = (timestamps_exact[0] - padding,
+                                 timestamps_exact[1] + padding)
+            job_link_parts.extend(timestamps_padded)
+            job_link = 'https://fifemon.fnal.gov/monitor/dashboard/db' \
+                       '/job-cluster-summary?var-cluster={0}' \
+                       '&var-schedd={1}&from={2}&to={3}'.format(
+                *job_link_parts)
+        except AttributeError:
+            # If jobID doesn't match the pattern
+            job_link = 'https://fifemon.fnal.gov/monitor/dashboard/db/' \
+                       'experiment-overview?var-experiment={0}'.format(self.vo)
+
+        job_html = '<a href="{0}">{1}</a>'.format(job_link,
+                                                  job.jobid)
+
+        try:
+            j_out = jobtimes(*(datetime.datetime.strftime(t, "%Y-%m-%d %H:%M:%S")
+                           for t in jt))
+        except NameError:
+            jt = jobtimes(*(self.parse_datetime(dt, utc=True)
+                       for dt in
+                       (job.start_time, job.end_time)))
+            j_out = jobtimes(*(datetime.datetime.strftime(t, "%Y-%m-%d %H:%M:%S")
+                           for t in jt))
+
+        linemap = ((job_html, 'left'), (j_out.start, 'left'),
+                   (j_out.end, 'left'), (job.site, 'right'),
+                   (job.host, 'right'), (job.exit_code, 'right'))
+
+        return linemap
+
+    @staticmethod
+    def _new_table_summary_line(site, total, failed, jsrate):
+        """
+        Creates HTML line that's formed for the Summary Table
+
+        :param str site: Site where jobs ran
+        :param int total: Total number of jobs
+        :param int failed: Total number of failed jobs
+        :param float jsrate: Job success rate for the site
+        :return str: HTML line for Summary Table
+        """
+        return '\n<tr><td align = "left">{0}</td>' \
+                             '<td align = "right">{1}</td>' \
+                             '<td align = "right">{2}</td>'\
+                             '<td align = "right">{3}</td></tr>'\
+            .format(site, total, failed, jsrate)
+
+    @staticmethod
+    def _init_site_failed_dict(site, total, failed, jsrate):
+        """
+        Puts the already-generated data into dict form for insertion into
+        site_failed_dict
+
+        :param str site: Site where jobs ran
+        :param int total: Total number of jobs
+        :param int failed: Total number of failed jobs
+        :param float jsrate: Job success rate for the site
+        :return dict: Dictionary with keys 'FailedJobs', 'HTMLLines'.  The
+        latter is an HTML line that will get read out later
+        """
+        return {'FailedJobs': failed,
+                'HTMLLines':
+                    '\n<tr><td align = "left">{0}</td>'
+                    '<td align = "right">{1}</td>'
+                    '<td align = "right">{2}</td>'
+                    '<td align = "right">{3}</td>'
+                    '<td></td><td></td><td></td></tr>'
+                        .format(site, total, failed, jsrate)
+                }
+
+    @staticmethod
+    def _generate_site_detail_line(host, code, count):
+        """
+        Creates HTML line representing a site detail line
+
+        :param str host: Which host failed jobs ran on
+        :param int code: What the error code was
+        :param int count: How many jobs failed with this error code
+        :return str: HTML line summarizing this info
+        """
+        return '\n<tr><td></td><td></td><td></td><td></td>' \
+        '<td align = "left">{0}</td>' \
+        '<td align = "right">{1}</td>' \
+        '<td align = "right">{2}</td></tr>'.format(host, code, count)
+
+    def _generate_fifemon_link(self):
+        """Generate fifemon link for User Batch Details page"""
+        epoch_stamps = self.get_epoch_stamps_for_grafana()
+        elist = [elt for elt in epoch_stamps]
+        elist.append('{0}pro'.format(self.vo.lower()))
+        fifemon_link_raw = 'https://fifemon.fnal.gov/monitor/dashboard/db/' \
+                           'user-batch-history?from={0}&to={1}&' \
+                           'var-user={2}'.format(*elist)
+        return '<a href="{0}">Fifemon</a>'.format(fifemon_link_raw)
+
     def _get_job_parts_from_jobid(self, jobid):
         """
         Parses the jobid string and grabs the relevant parts to generate
@@ -559,33 +603,14 @@ class JobSuccessRateReporter(Reporter):
         :param list headerlist: List of header columns
         :return str: HTML for header
         """
-        htmlheader = '<th style="text-align:center">' + \
+        return'<th style="text-align:center">' + \
             '</th><th>'.join(headerlist) + '</th>'
-        return htmlheader
-
-    def send_report(self):
-        """Method to send emails of report file to intended recipients."""
-        if self.test_no_email(self.email_info['to']['email']):
-            return
-
-        TextUtils.sendEmail(
-                            (self.email_info['to']['name'],
-                             self.email_info['to']['email']),
-                            self.title,
-                            {"html": self.text},
-                            (self.email_info['from']['name'],
-                             self.email_info['from']['email']),
-                            self.email_info['smtphost'])
-
-        self.logger.info("Report sent for {0} to {1}".format(self.vo,
-                                                             ", ".join(self.email_info['to']['email'])))
-        return
 
     def _limit_site_check(self):
         """Check to see if the num_failed_sites option is set in the config
         file for the VO"""
         return 'num_failed_sites' in \
-               self.config[self.vo.lower()][self.report_type.lower()]
+               self.config[self.report_type.lower()][self.vo.lower()]
 
 
 def main():

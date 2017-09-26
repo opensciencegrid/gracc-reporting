@@ -9,21 +9,21 @@
 [reconstructed_transfers]
     curl = 'http://samweb.fnal.gov:8480/sam/minerva/samdftsgpvm01.fnal.gov/fts/status?format=json'
 [blue_arc]
-    curl = 'http://fifemon2.fnal.gov:8888/render?target=fs.bluearc.exp.minerva.*-p-g-&from=-10min&until=-5min&format=json'
+    curl = 'https://lsvip.fnal.gov/graphite/render?target=fs.bluearc.exp.minerva.*-p-g-&from=-10min&until=-5min&format=json'
     limit = 95
 [cpn_locks]
-    curl = 'http://fifemon2.fnal.gov:8888/render?target=dh.cpn_count.minerva.act&from=-30min&until=-5min&format=json'
+    curl = 'https://lsvip.fnal.gov/graphite/render?target=dh.cpn_count.minerva.act&from=-30min&until=-5min&format=json'
     limit = 5
 [jobs]
-    current_jobs_curl = 'http://fifemon2.fnal.gov:8888/render?target=fifebatch.jobs.experiments.minerva.totals.running.totals.count&from=-1day&until=-5min&format=json'
-    idle_jobs_curl = 'http://fifemon2.fnal.gov:8888/render?target=fifebatch.jobs.experiments.minerva.totals.idle.totals.count&from=-1day&until=-5min&format=json'
-    held_jobs_curl = 'http://fifemon2.fnal.gov:8888/render?target=fifebatch.jobs.experiments.minerva.totals.held.totals.count&from=-1day&until=-5min&format=json'
+    current_jobs_curl = 'https://lsvip.fnal.gov/graphite/render?target=fifebatch.jobs.experiments.minerva.totals.running.totals.count&from=-1day&until=-5min&format=json'
+    idle_jobs_curl = 'https://lsvip.fnal.gov/graphite/render?target=fifebatch.jobs.experiments.minerva.totals.idle.totals.count&from=-1day&until=-5min&format=json'
+    held_jobs_curl = 'https://lsvip.fnal.gov/graphite/render?target=fifebatch.jobs.experiments.minerva.totals.held.totals.count&from=-1day&until=-5min&format=json'
     slot_quota = 1600
     held_limit = 1000
 [efficiency]
-    curl = 'http://fifemon2.fnal.gov:8888/render?target=fifebatch.jobs.experiments.minerva.users.*.running.totals.efficiency&from=-1d&until=-5min&format=json'
+    curl = 'https://lsvip.fnal.gov/graphite/render?target=fifebatch.jobs.experiments.minerva.users.*.running.totals.efficiency&from=-1d&until=-5min&format=json'
     limit = 50
 [wasted_time]
-    wasted_curl = 'http://fifemon2.fnal.gov:8888/render?target=fifebatch.jobs.experiments.minerva.users.*.running.totals.wastetime_avg&from=-1day&until=-5min&format=json'
-    duration_curl = 'http://fifemon2.fnal.gov:8888/render?target=fifebatch.jobs.users.$USER.running.totals.walltime&from=-1day&until=-5min&format=json'
+    wasted_curl = 'https://lsvip.fnal.gov/graphite/render?target=fifebatch.jobs.experiments.minerva.users.*.running.totals.wastetime_avg&from=-1day&until=-5min&format=json'
+    duration_curl = 'https://lsvip.fnal.gov/graphite/render?target=fifebatch.jobs.users.$USER.running.totals.walltime&from=-1day&until=-5min&format=json'
     limit = 30

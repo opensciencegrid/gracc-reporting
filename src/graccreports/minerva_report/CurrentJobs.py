@@ -61,40 +61,40 @@ class CurrentJobs:
                                               "FIFEMON_ACCESS: %sDOWN%s" % (color_red, end_color) )
         self.template = self.template.replace("$CURRENT_JOBS_LEVEL_1_STARTS", "" if self.access_fifemon else "<!-- ")
         if self.access_fifemon:
-            jobtype_dict = {'current': None, 'idle': None, 'held': None}
+            jobstate_dict = {'current': None, 'idle': None, 'held': None}
 
-            for t in jobtype_dict:
+            for t in jobstate_dict:
                 try:
-                    jobtype_dict[t] = self.jobs[t].get_average_jobs()
+                    jobstate_dict[t] = self.jobs[t].get_average_jobs()
                 except KeyError:
                     pass
 
-            if (jobtype_dict['current'] is not None
-                and jobtype_dict['idle'] is not None) and \
-                    (jobtype_dict['current'] < self.limit*0.75
-                     and jobtype_dict['current'] < jobtype_dict['idle']/2.):
+            if (jobstate_dict['current'] is not None
+                and jobstate_dict['idle'] is not None) and \
+                    (jobstate_dict['current'] < self.limit*0.75
+                     and jobstate_dict['current'] < jobstate_dict['idle']/2.):
                 color_used = color_red
             else:
                 color_used = color_black
 
-            if jobtype_dict['held'] is not None and \
-                            jobtype_dict['held'] > self.held_limit:
+            if jobstate_dict['held'] is not None and \
+                            jobstate_dict['held'] > self.held_limit:
                 color_held = color_red
             else:
                 color_held = color_black
 
             # Any classification of jobs that have "None" in the dict should
             # be changed to 0
-            for key in jobtype_dict:
-                if jobtype_dict[key] is None:
-                    jobtype_dict[key] = 0
+            for key in jobstate_dict:
+                if jobstate_dict[key] is None:
+                    jobstate_dict[key] = 0
 
             table_content = "%s<tr><td align=\"right\">%s%s%s</td><td align=\"right\">" \
                             "%s%s%s</td><td align=\"right\">%s%s%s</td></tr>" % \
                             (table_content, color_used,
-                             jobtype_dict['current'], end_color,
-                             color_used, jobtype_dict['idle'], end_color,
-                             color_held, jobtype_dict['held'], end_color)
+                             jobstate_dict['current'], end_color,
+                             color_used, jobstate_dict['idle'], end_color,
+                             color_held, jobstate_dict['held'], end_color)
             self.template = self.template.replace("$TABLE_CURRENT_JOBS", table_content)
         self.template = self.template.replace("$CURRENT_JOBS_LEVEL_1_ENDS", "" if self.access_fifemon else "-->")
         return self.template

@@ -44,14 +44,11 @@ class OIMInfo(object):
         self.config = Reporter._parse_config(config)
         self.verbose = verbose
 
-        if ov_logfile:
-            rlogfile = ov_logfile
-            logfile_override = True
-        else:
-            rlogfile = logfile
-            logfile_override = False
+        logfile_fname = ov_logfile if ov_logfile is not None else logfile
+        logfile_override = True if ov_logfile is not None else False
 
-        self.logfile = self.get_logfile_path(rlogfile, override=logfile_override)
+        self.logfile = self.get_logfile_path(logfile_fname,
+                                             override=logfile_override)
         self.logger = self.setupgenLogger("ProbeReport-OIM")
         self.root = None
         self.resourcedict = {}
@@ -348,18 +345,14 @@ class ProbeReport(Reporter):
                  no_email=False, ov_logfile=None):
         report = "Probe"
 
-        if ov_logfile:
-            rlogfile = ov_logfile
-            logfile_override = True
-        else:
-            rlogfile = logfile
-            logfile_override = False
+        logfile_fname = ov_logfile if ov_logfile is not None else logfile
+        logfile_override = True if ov_logfile is not None else False
 
-        Reporter.__init__(self, report, config, start, end=start,
-                          logfile=rlogfile, logfile_override=logfile_override,
-                          is_test=is_test, verbose=verbose,
-                          no_email=no_email, raw=True, allraw=True)
-        # self.configuration = config
+        super(ProbeReport, self).__init__(report, config, start, end=start,
+                          logfile=logfile_fname,
+                          logfile_override=logfile_override, is_test=is_test,
+                          verbose=verbose,no_email=no_email)
+
         self.probematch = re.compile("(.+):(.+)")
         self.estimeformat = re.compile("(.+)T(.+)\.\d+Z")
         self.emailfile = '/tmp/filetoemail.txt'
@@ -387,6 +380,8 @@ class ProbeReport(Reporter):
         """
         startdateq = self.start_time.isoformat()
 
+        if self.verbose: self.logger.info(self.indexpattern)
+
         s = Search(using=self.client, index=self.indexpattern)\
             .filter(Q({"range": {"@received": {"gte": "{0}".format(startdateq)}}}))\
             .filter("term", ResourceType="Batch")[0:0]
@@ -402,10 +397,6 @@ class ProbeReport(Reporter):
         self.start_time = today.replace(
             day=1) - datetime.timedelta(days=1)
         self.end_time = today
-        self.indexpattern = self.indexpattern_generate(raw=True, allraw=True)
-
-        if self.verbose:
-            print "New index pattern is {0}".format(self.indexpattern)
 
         return
 
@@ -546,10 +537,7 @@ class ProbeReport(Reporter):
 
     def emailsubject(self):
         """Format the subject for our emails"""
-        if self.reminder:
-            remindertext = 'REMINDER: '
-        else:
-            remindertext = ''
+        remindertext = 'REMINDER: ' if self.reminder else ''
         return "{0}{1} Reporting Account Failure dated {2}"\
             .format(remindertext, self.resource, today.date())
 

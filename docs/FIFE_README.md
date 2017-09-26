@@ -16,9 +16,9 @@ Examples:
     efficiencyreport -E uboone -s 2016/07/04 -e 2016/07/05  -F GPGrid  -n -d -v
 ```
 
-**Wasted Hours by User Report:**
+**Top Wasted Hours by VO Report:**
 ```    
-    wastedhoursreport -s "2016/07/01 00:00:00" -e "2016/07/21 00:00:00" -d -n -v
+    topwastedhoursvoreport -s "2017/08/01 00:00:00" -e "2017/08/31 00:00:00" -E nova -F GPGrid -d -n -v
 ```
 
 Change the date/times, and the VO where applicable.  -v makes it verbose.

@@ -40,7 +40,6 @@ class ContextFilter(logging.Filter):
 class Reporter(TimeUtils):
     """
     Base class for all OSG reports
-
     :param str report: Which report is getting run
     :param str config: Filename of toml configuration file
     :param str start: Start time of report range
@@ -55,38 +54,40 @@ class Reporter(TimeUtils):
     :param bool no_email: If true, don't send any emails
     :param str title: Report title
     :param str logfile: Filename of log file for report
+    :param bool logfile_override: Override default logfile location
+    :param bool check_vo: Should we do VO validation?
+    :param str althost: Alternate Elasticsearch Host key from config file.
+        Must be specified in [elasticsearch] section of
+        config file by name (e.g. my_es_cluster="https://hostname.me")
     """
     __metaclass__ = abc.ABCMeta
 
     def __init__(self, report, config, start, end=None, verbose=False,
-                 raw=False, allraw=False, template=None, is_test=False, no_email=False,
-                 title=None, logfile=None, logfile_override=False, check_vo=False):
+                 index_key='index_pattern',
+                 template=None, is_test=False, no_email=False,
+                 logfile=None, logfile_override=False, check_vo=False,
+                 althost=None):
         TimeUtils.__init__(self)
+        self.verbose = verbose
         self.configfile = config
         self.config = self._parse_config(config)
-        # if config:
-        #     self.config = config.config
-        self.header = []
+        self.is_test = is_test
+        self.no_email = no_email
+        self.report_type = report
+        self.logfile = self.get_logfile_path(logfile, override=logfile_override) if logfile \
+            else 'reports.log'
+        self.logger = self.__setupgenLogger()
+        self.althost = althost
         self.start_time = self.parse_datetime(start)
         self.end_time = self.parse_datetime(end)
-        self.verbose = verbose
-        self.no_email = no_email
-        self.is_test = is_test
         self.template = template
         self.epochrange = None
-        self.indexpattern = self.indexpattern_generate(raw, allraw)
-        self.report_type = report
-
-        if logfile:
-            self.logfile = self.get_logfile_path(logfile, override=logfile_override)
-        else:
-            self.logfile = 'reports.log'
-
-        if check_vo:
-            self.__check_vo()
-
+        self.header = []
+        if check_vo: self.__check_vo()
+        self.indexpattern = self.indexpattern_generate(index_key,
+                                                       start=self.start_time,
+                                                       end=self.end_time)
         self.email_info = self.__get_email_info()
-        self.logger = self.__setupgenLogger()
         self.client = self.__establish_client()
 
     # Report methods that must or should be implemented
@@ -105,10 +106,8 @@ class Reporter(TimeUtils):
         search object itself, so it can be scanned using .scan() (JSR, for
         example)
         """
-        if overridequery:
-            s = overridequery()
-        else:
-            s = self.query()
+
+        s = overridequery() if overridequery is not None else self.query()
 
         t = s.to_dict()
         if self.verbose:
@@ -146,28 +145,50 @@ class Reporter(TimeUtils):
         CSV and HTML generation"""
         pass
 
-    def send_report(self, title=None):
+    def send_report(self, title=None, successmessage=None):
         """Send reports as ascii, csv, html attachments.
 
-        :param str title: Title of report
+        :param str title: Title of report, overrides self.title
         """
+        successmessage = successmessage if successmessage is not None \
+            else "Report sent successfully."
+
         text = {}
         content = self.format_report()
 
-        if not content:
+        if self.test_no_email(self.email_info['to']['email']):
+            return
+
+        if title is not None: self.title = title
+        if self.title is None: self.title = u"GRACC Report"
+
+        if self.verbose: print self.title
+
+        if content is None:  # self.format_report() does nothing in this case.
+            # Assume all necessary operations are handled elsewhere, and all we
+            # need to do is send the email.  Need self.title, self.text to be
+            # set prior to calling this
+            try:
+                TextUtils.sendEmail(
+                    (self.email_info['to']['name'],
+                     self.email_info['to']['email']),
+                    self.title,
+                    {"html": self.text},
+                    (self.email_info['from']['name'],
+                     self.email_info['from']['email']),
+                    self.email_info['smtphost'])
+
+                self.logger.info(successmessage)
+                return
+
+            except Exception as e:
+                self.logger.info(e)
+                raise
+
+        if not content:  # Check for any other falsy values like {}
             self.logger.error("There is no content being passed to generate a "
                               "report file")
             sys.exit(1)
-
-        if title:
-            use_title = title
-        else:
-            use_title = "GRACC Report"
-
-        use_title = unicode(use_title, 'utf-8')
-
-        if self.test_no_email(self.email_info['to']['email']):
-            return
 
         emailReport = TextUtils.TextUtils(self.header)
         text["text"] = emailReport.printAsTextTable("text", content)
@@ -177,28 +198,31 @@ class Reporter(TimeUtils):
 
         if self.header:
             htmlheader = unicode("\n".join(['<th>{0}</th>'.format(headerelt)
-                                    for headerelt in self.header]), 'utf-8')
+                                            for headerelt in self.header]),
+                                 'utf-8')
 
         if self.template:
             with open(self.template, 'r') as t:
                 htmltext = unicode("".join(t.readlines()), 'utf-8')
 
             # Build the HTML file from the template
-            htmldict = dict(title=use_title, header=htmlheader, table=htmldata)
+            htmldict = dict(title=self.title, header=htmlheader, table=htmldata)
             htmltext = htmltext.format(**htmldict)
             text["html"] = htmltext
 
         else:
-            text["html"] = u"<html><body><h2>{0}</h2><table border=1>{1}</table></body></html>".format(use_title, htmldata)
+            text["html"] = u"<html><body><h2>{0}</h2><table border=1>{1}</table></body></html>".format(
+                self.title, htmldata)
 
         TextUtils.sendEmail((self.email_info['to']['name'],
                              self.email_info['to']['email']),
-                            use_title, text,
+                            self.title, text,
                             (self.email_info['from']['name'],
                              self.email_info['from']['email']),
                             self.email_info['smtphost'],
                             html_template=self.template)
-        self.logger.info("Sent reports to {0}".format(", ".join(self.email_info['to']['email'])))
+        self.logger.info("Sent reports to {0}".format(
+            ", ".join(self.email_info['to']['email'])))
         return
 
     @abc.abstractmethod
@@ -227,19 +251,20 @@ class Reporter(TimeUtils):
             return parser.parse_args()
         return wrapper
 
-    def indexpattern_generate(self, raw=False, allraw=False):
+    def indexpattern_generate(self, index_key, **kwargs):
         """Returns the Elasticsearch index pattern based on the class
-        variables of start time and end time, and the flags raw and allraw.
-        Note that this doesn't inherit raw and allraw from the instance
-        attributes in case we want to switch these flags without creating a
-        new instance of this class.
+        variables of start time and end time, and the index pattern fed in.
 
-        :param bool raw:  Query GRACC raw records (False = query Summary records)
-        :param bool allraw: Short-circuit indexpattern_generate and simply look
-            at all raw records
+        :param str index_key: Config file key name under report section that
+            points to the index pattern to be passed in
+        :return str: Index pattern to be used in report
         """
-        return indexpattern_generate(self.start_time, self.end_time, raw,
-                                     allraw)
+        try:
+            pat = self.config[self.report_type.lower()][index_key]
+        except KeyError:
+            return 'gracc.osg.summary'
+
+        return indexpattern_generate(pattern=pat, **kwargs)
 
     @staticmethod
     def parse_opts():
@@ -385,10 +410,16 @@ class Reporter(TimeUtils):
     def __check_vo(self):
         """
         Check to see if the vo is a section in config file (as of this writing,
-        only applies to fife_reports package).  If not, raise NoSectionError
+        only applies to fife_reports package).  If not, raise KeyError.
+
+        If check passes, then we generate the vo_list from the 'valid_vos' key
+        in the config file.  This can be used by inheriting classes or ignored
         :return None: 
         """
-        if self.vo and self.vo.lower() not in self.config:
+        if not self.vo or \
+                (self.vo
+                    and self.vo.lower() not in self.config['configured_vos']
+                    and self.vo.lower() not in self.config[self.report_type.lower()]):
             if self.verbose:
                 self.logger.info(self.configfile)
                 self.logger.info(self.config)
@@ -396,15 +427,21 @@ class Reporter(TimeUtils):
                             " Please review the config file to see if changes"
                             " need to be made and try again.  The config file"
                            " used was {1}".format(self.vo.lower(), self.configfile))
-        return
+        else:
+            self.vo_list = self.config[self.vo.lower()]['valid_vos'] \
+                if self.vo.lower() in self.config else [self.vo.lower(), ]
 
     def __establish_client(self):
         """Initialize and return the elasticsearch client
 
         :return: elasticsearch.Elasticsearch object
         """
-        hostname = self.config['elasticsearch'].get('hostname',
-                                                    'https://gracc.opensciencegrid.org/q')
+        if self.althost is None:
+            hostname = self.config['elasticsearch'].get('hostname',
+                                                        'https://gracc.opensciencegrid.org/q')
+        else:
+            hostname = self.config['elasticsearch'].get(self.althost,
+                                                        'https://gracc.opensciencegrid.org/q')
 
         try:
             client = Elasticsearch(hostname,
@@ -440,7 +477,7 @@ class Reporter(TimeUtils):
             attrs = [self.report_type.lower(), 'to_emails']
             try:
                 vo = self.vo.lower()
-                attrs.insert(0, vo)
+                attrs.insert(1, vo)
                 names = []
             except AttributeError:      # No vo-specific info in config file
                 try:
@@ -511,12 +548,10 @@ class Reporter(TimeUtils):
         logger.addHandler(fh)
 
         # We only want one Stream Handler
-        exists_ch = False
         for handler in logger.handlers:
             if handler.__class__.__name__ == "StreamHandler":
-                exists_ch = True
                 break
-        if not exists_ch:
+        else:
             logger.addHandler(ch)
 
         if self.is_test:
@@ -548,7 +583,6 @@ def runerror(config, error, traceback, logfile):
         c = toml.loads(f.read())
     admin_emails = c['email']['test']['emails']
     from_email = c['email']['from']['email']
-
 
     msg = MIMEText("ERROR: {0}\n\n{1}".format(error, traceback))
     msg['Subject'] = "ERROR PRODUCING REPORT: Date Generated {0}".format(
@@ -648,3 +682,9 @@ def coroutine(func):
         cr.next()
         return cr
     return wrapper
+
+def force_to_unicode(text):
+    """If text is unicode, it is returned as is.
+    If it's str, convert it to Unicode using UTF-8 encoding
+    """
+    return text if isinstance(text, unicode) else text.decode('utf8')
