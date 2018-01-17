@@ -61,7 +61,7 @@ class TimeUtils(object):
         except AssertionError:    # We assume that the epoch time is in ms
             _timestamp = timestamp / 1000
             try:
-                assert _timestamp > now:
+                assert _timestamp > now
             except AssertionError:
                 raise OverflowError("Timestamp {0} is too large to be an epoch time".format(timestamp))
             except Exception as e:
