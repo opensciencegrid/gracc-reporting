@@ -253,7 +253,7 @@ class JobSuccessRateReporter(Reporter):
                 #     jobid = hit['GlobalJobId']  # If for some reason a probe
                 #                                 # gives us a bad jobid string,
                 #                                 # just keep going
-                realhost = self.realhost_pattern.sub('', hit['Host'])  # Parse to get the real hostname
+                # realhost = self.realhost_pattern.sub('', hit['Host'])  # Parse to get the real hostname
                 # LastRemoteHost
 
                 try:
@@ -294,11 +294,12 @@ class JobSuccessRateReporter(Reporter):
         while True:
             line = yield
 
-            if line['hostdescription'] != "NULL":  # Not NULL site
+            if line['host'] != "NULL":  # Not NULL site
                 job = Job(line['endtime'],
                           line['starttime'],
                           line['jobid'],
-                          line['hostdescription'],
+                          line['site'],
+                        #   line['hostdescription'],
                           line['host'],
                           int(line['exitcode']))
                 self.run.add_job(job)
