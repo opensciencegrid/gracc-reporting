@@ -169,7 +169,7 @@ class JobSuccessRateReporter(Reporter):
         # Elasticsearch query
         s = Search(using=self.client, index=self.indexpattern) \
             .filter("range", CompletionDate={"gte": starttimeq, "lt": endtimeq}) \
-            .filter("term", JobStatus=4) \      
+            .filter("term", JobStatus=4) \
             .exclude("term", JobUniverse=7)     # Exclude DAGS
 
         if 'no_production' in rep_config and rep_config['no_production']:
