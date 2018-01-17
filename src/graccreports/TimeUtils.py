@@ -68,10 +68,11 @@ class TimeUtils(object):
             except Exception as e:
                 raise
             else:
-                timestamp = int(_timestamp)
+                timestamp = _timestamp
         except Exception as e:
             raise
         
+        timestamp = int(timestamp)        
         dt_timestamp = datetime.fromtimestamp(timestamp)
         return TimeUtils.parse_datetime(dt_timestamp, utc=True)
 
