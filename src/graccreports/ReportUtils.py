@@ -444,9 +444,10 @@ class Reporter(TimeUtils):
                                                         'https://gracc.opensciencegrid.org/q')
 
         try:
-            client = Elasticsearch(hostname,
+            client = Elasticsearch([hostname],
+                                   
                                 #    use_ssl=True,
-                                   use_ssl=False,
+                                #    use_ssl=False,
                                    verify_certs=False,
                                    timeout=60)
         except Exception as e:
