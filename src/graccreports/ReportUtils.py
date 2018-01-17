@@ -442,12 +442,10 @@ class Reporter(TimeUtils):
         else:
             hostname = self.config['elasticsearch'].get(self.althost,
                                                         'https://gracc.opensciencegrid.org/q')
+            
 
         try:
-            client = Elasticsearch([hostname],
-                                   
-                                #    use_ssl=True,
-                                #    use_ssl=False,
+            client = Elasticsearch(hostname,
                                    verify_certs=False,
                                    timeout=60)
         except Exception as e:

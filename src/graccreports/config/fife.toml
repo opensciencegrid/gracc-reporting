@@ -6,7 +6,7 @@ configured_vos = ['cdf', 'cdms', 'darkside', 'dune', 'gm2', 'mars', 'minerva', '
 [elasticsearch]
     hostname = 'https://gracc.opensciencegrid.org/q'
     # landscapeitb = 'https://landscapeitb.fnal.gov/es'
-    landscapeitb = 'http://esclient01:9200'
+    landscapeitb = ['http://esclient01:9200', 'http://esclient02:9200']
 
 # Email
 # Set the global email related values under this section
