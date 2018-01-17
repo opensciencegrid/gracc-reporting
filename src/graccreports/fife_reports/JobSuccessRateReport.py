@@ -168,7 +168,9 @@ class JobSuccessRateReporter(Reporter):
 
         # Elasticsearch query
         s = Search(using=self.client, index=self.indexpattern) \
-            .filter("range", CompletionDate={"gte": starttimeq, "lt": endtimeq})
+            .filter("range", CompletionDate={"gte": starttimeq, "lt": endtimeq}) \
+            .filter("term", JobStatus=4) \      
+            .exclude("term", JobUniverse=7)     # Exclude DAGS
 
         if 'no_production' in rep_config and rep_config['no_production']:
             s = s.filter("wildcard", x509UserProxyFirstFQAN=fqan_string)
@@ -256,9 +258,12 @@ class JobSuccessRateReporter(Reporter):
                 # realhost = self.realhost_pattern.sub('', hit['Host'])  # Parse to get the real hostname
                 # LastRemoteHost
 
+                # MachineAttrMachine0
+
                 try:
                     exitcode = hit['ExitCode']
-                except KeyError:
+                except KeyError:    
+                    # Jobs that run in docker containers report failures in ExitSignal
                     exitcode = hit['ExitSignal']
 
                 line = dict((
@@ -268,7 +273,7 @@ class JobSuccessRateReporter(Reporter):
                     ('jobid', hit['JobsubJobId']),
                     ('site', hit['MATCH_GLIDEIN_Site']),
                     # ('hostdescription', hit['Host_description']),
-                    ('host', hit['LastRemoteHost']),
+                    ('host', hit['MachineAttrMachine0']),
                     ('exitcode', exitcode)
                                     ))
 
