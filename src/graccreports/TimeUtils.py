@@ -51,7 +51,7 @@ class TimeUtils(object):
         """
         return isinstance(item, datetime) or isinstance(item, date)
 
-    def get_epoch_stamps_for_grafana(self, start_time=None, end_time=None):
+    def get_epoch_time_range_utc(self, start_time=None, end_time=None):
         """Generates tuple of self.start_time, self.end_time in epoch time
         form
         

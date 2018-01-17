@@ -5,6 +5,7 @@ configured_vos = ['cdf', 'cdms', 'darkside', 'dune', 'gm2', 'mars', 'minerva', '
 
 [elasticsearch]
     hostname = 'https://gracc.opensciencegrid.org/q'
+    landscapeitb = 'https://landscapeitb.fnal.gov/es'
 
 # Email
 # Set the global email related values under this section
@@ -107,6 +108,7 @@ configured_vos = ['cdf', 'cdms', 'darkside', 'dune', 'gm2', 'mars', 'minerva', '
 
 [jobsuccessrate]
     index_pattern='gracc.osg.raw-%Y.%m'
+    landscape_index_pattern='fifebatch-history-%Y.%m.%d'
 
 	[jobsuccessrate.darkside]
         voname = '/fermilab/darkside/Role=*'
@@ -127,6 +129,7 @@ configured_vos = ['cdf', 'cdms', 'darkside', 'dune', 'gm2', 'mars', 'minerva', '
         # num_failed_sites = 20
         # num_hosts_per_site = 20
         # errors_per_host = 20
+        fqan = '/fermilab/nova/Role=Production/Capability=NULL'
         voname = '/fermilab/nova/Role=Production/Capability=NULL'
         to_emails = ['nobody@example.com', ]
 
