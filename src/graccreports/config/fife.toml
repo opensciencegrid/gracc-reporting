@@ -12,7 +12,7 @@ configured_vos = ['cdf', 'cdms', 'darkside', 'dune', 'gm2', 'mars', 'minerva', '
 
 [email]
     # This is the FQDN of the mail server, which GRACC will use to send the email
-    smtphost = 'smtp.example.com'
+    smtphost = 'smtp.fnal.gov'
 
     [email.from]
         name = 'GRACC Operations'  # This is the real name from which the report appears to be emailed from
@@ -21,7 +21,7 @@ configured_vos = ['cdf', 'cdms', 'darkside', 'dune', 'gm2', 'mars', 'minerva', '
     # Tester emails
     [email.test]
         names = ['Test Recipient', ]
-        emails = ['nobody@example.com', ]
+        emails = ['sbhat@fnal.gov', ]
 
 # VO substitutions
 # For VOs such as uboone, where we might expect to see uboone in raw records
