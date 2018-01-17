@@ -517,15 +517,15 @@ class JobSuccessRateReporter(Reporter):
 
         # Sanitize epoch timestamps coming from Elasticsearch
         try:
-            jt = jobtimes(*(self.parse_datetime(dt, utc=True)
+            jt = jobtimes(*[self.parse_datetime(dt, utc=True)
                             for dt in
-                            (job.start_time, job.end_time)))
+                            (job.start_time, job.end_time)])
         except ValueError, TypeError:
             # We're going to assume this is actually an epoch time stamp here
             try:
-                jt = jobtimes(*(self.epoch_to_datetime(dt)
+                jt = jobtimes(*[self.epoch_to_datetime(dt)
                                 for dt in
-                                (job.start_time, job.end_time)))
+                                (job.start_time, job.end_time)])
             except Exception as e:
                 raise 
 
