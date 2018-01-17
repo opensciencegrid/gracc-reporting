@@ -47,6 +47,7 @@ class TimeUtils(object):
         Parse epoch timestamp, return as UTC time datetime
 
         :param timestamp:  string or int.  Timestamp to convert to datetime.datetime object
+        :return:  datetime.datetime object in UTC time zone
         """
         if timestamp is None:
             return None

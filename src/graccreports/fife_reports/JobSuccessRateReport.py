@@ -527,10 +527,9 @@ class JobSuccessRateReporter(Reporter):
                                 for dt in
                                 (job.start_time, job.end_time)))
             except Exception as e:
-                raise Exception(e)
+                raise 
 
-
-        timestamps_exact = self.get_epoch_stamps_for_grafana(*jt)
+        timestamps_exact = self.get_epoch_time_range_utc(*jt)
         padding = 300000  # milliseconds
         timestamps_padded = (timestamps_exact[0] - padding,
                                 timestamps_exact[1] + padding)
@@ -625,7 +624,7 @@ class JobSuccessRateReporter(Reporter):
 
     def _generate_fifemon_link(self):
         """Generate fifemon link for User Batch Details page"""
-        epoch_stamps = self.get_epoch_stamps_for_grafana()
+        epoch_stamps = self.get_epoch_time_range_utc()
         elist = [elt for elt in epoch_stamps]
         elist.append('{0}pro'.format(self.vo.lower()))
         fifemon_link_raw = 'https://fifemon.fnal.gov/monitor/dashboard/db/' \
