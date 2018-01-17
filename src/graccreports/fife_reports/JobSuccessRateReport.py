@@ -272,7 +272,8 @@ class JobSuccessRateReporter(Reporter):
 
                 line = dict((
                     ('starttime', hit['JobCurrentStartDate']),
-                    ('endtime', hit['CompletionDate']),
+                    # ('endtime', hit['CompletionDate']),
+                    ('endtime', hit.CompletionDate),
                     ('userid', hit['env.GRID_USER']),
                     ('jobid', hit['JobsubJobId']),
                     ('site', hit['MATCH_GLIDEIN_Site']),
