@@ -3,6 +3,7 @@
 from datetime import datetime, date
 from dateutil import tz, parser
 from calendar import timegm
+import time
 
 
 class TimeUtils(object):
@@ -39,6 +40,39 @@ class TimeUtils(object):
         else:
             x = x.replace(tzinfo=tz.tzutc())
         return x.astimezone(tz.tzutc())
+
+    @staticmethod
+    def epoch_to_datetime(timestamp):
+        """
+        Parse epoch timestamp, return as UTC time datetime
+
+        :param timestamp:  string or int.  Timestamp to convert to datetime.datetime object
+        """
+        if timestamp is None:
+            return None
+
+        if isinstance(timestamp, str):
+            timestamp = float(timestamp)
+        
+        now = time.time()
+        # Check for milliseconds vs seconds epoch timestamp
+        try:
+            assert timestamp > now
+        except AssertionError:    # We assume that the epoch time is in ms
+            _timestamp = timestamp / 1000
+            try:
+                assert _timestamp > now:
+            except AssertionError:
+                raise OverflowError("Timestamp {0} is too large to be an epoch time".format(timestamp))
+            except Exception as e:
+                raise
+            else:
+                timestamp = int(_timestamp)
+        except Exception as e:
+            raise
+        
+        dt_timestamp = datetime.fromtimestamp(timestamp)
+        return self.parse_datetime(dt_timestamp, utc=True)
 
     @staticmethod
     def check_date_datetime(item):

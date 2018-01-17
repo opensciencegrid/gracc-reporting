@@ -1,7 +1,6 @@
 import sys
 import re
 from time import sleep
-
 import traceback
 import datetime
 from collections import defaultdict, namedtuple
@@ -16,6 +15,7 @@ config_vals = {'num_clusters': 100, 'jobs_per_cluster': 1e6,
                'num_failed_sites': 1000}
 logfile = 'jobsuccessratereport.log'
 default_templatefile = 'template_jobrate.html'
+output_time_format = "%Y-%m-%d %H:%M:%S"
 
 
 @Reporter.init_reporter_parser
@@ -266,6 +266,10 @@ class JobSuccessRateReporter(Reporter):
                     # Jobs that run in docker containers report failures in ExitSignal
                     exitcode = hit['ExitSignal']
 
+                # for pos in ('JobCurrentStartDate', 'CompletionDate'):
+                #     hit_adjusted[pos] = datetime.datetime.fromtimestamp(int(hit[pos]))
+
+
                 line = dict((
                     ('starttime', hit['JobCurrentStartDate']),
                     ('endtime', hit['CompletionDate']),
@@ -511,18 +515,30 @@ class JobSuccessRateReporter(Reporter):
         """
         jobtimes = namedtuple('jobtimes', ['start', 'end'])
 
+        # Sanitize epoch timestamps coming from Elasticsearch
+        try:
+            jt = jobtimes(*(self.parse_datetime(dt, utc=True)
+                            for dt in
+                            (job.start_time, job.end_time)))
+        except ValueError, TypeError:
+            # We're going to assume this is actually an epoch time stamp here
+            try:
+                jt = jobtimes(*(self.epoch_to_datetime(dt)
+                                for dt in
+                                (job.start_time, job.end_time)))
+            except Exception as e:
+                raise Exception(e)
+
+
+        timestamps_exact = self.get_epoch_stamps_for_grafana(*jt)
+        padding = 300000  # milliseconds
+        timestamps_padded = (timestamps_exact[0] - padding,
+                                timestamps_exact[1] + padding)
+
         try:
             job_link_parts = \
                 [elt for elt in
                  self._get_job_parts_from_jobid(job.jobid)]
-            jt = jobtimes(*(self.parse_datetime(dt, utc=True)
-                            for dt in
-                            (job.start_time, job.end_time)))
-
-            timestamps_exact = self.get_epoch_stamps_for_grafana(*jt)
-            padding = 300000  # milliseconds
-            timestamps_padded = (timestamps_exact[0] - padding,
-                                 timestamps_exact[1] + padding)
             job_link_parts.extend(timestamps_padded)
             job_link = 'https://fifemon.fnal.gov/monitor/dashboard/db' \
                        '/job-cluster-summary?var-cluster={0}' \
@@ -537,13 +553,13 @@ class JobSuccessRateReporter(Reporter):
                                                   job.jobid)
 
         try:
-            j_out = jobtimes(*(datetime.datetime.strftime(t, "%Y-%m-%d %H:%M:%S")
+            j_out = jobtimes(*(datetime.datetime.strftime(t, output_time_format)
                            for t in jt))
         except NameError:
             jt = jobtimes(*(self.parse_datetime(dt, utc=True)
                        for dt in
                        (job.start_time, job.end_time)))
-            j_out = jobtimes(*(datetime.datetime.strftime(t, "%Y-%m-%d %H:%M:%S")
+            j_out = jobtimes(*(datetime.datetime.strftime(t, output_time_format)
                            for t in jt))
 
         linemap = ((job_html, 'left'), (j_out.start, 'left'),
