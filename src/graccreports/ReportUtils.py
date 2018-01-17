@@ -445,7 +445,8 @@ class Reporter(TimeUtils):
 
         try:
             client = Elasticsearch(hostname,
-                                   use_ssl=True,
+                                #    use_ssl=True,
+                                   use_ssl=False,
                                    verify_certs=False,
                                    timeout=60)
         except Exception as e:
