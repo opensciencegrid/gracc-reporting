@@ -146,21 +146,18 @@ class JobSuccessRateReporter(Reporter):
         """
         # Set up our search parameters
         rep_config = self.config[self.report_type.lower()][self.vo.lower()]
-        # voq = rep_config['voname']  # Using a specific string to check for VO
         fqan_string = rep_config['fqan']
-        # productioncheck = '*Role=Production*'
 
+
+        # TODO:  We want starttimeq and endtimeq to be created depending on the field mapping
+        # of the relevant time field (CompletionDate here).  We should dynamically search the 
+        # mapping and choose whether to use get_epoch_time_range_utc or isoformat()
+        # It's going to have something like:
+        # self.client.indices.get_field_mapping(fields=['CompletionDate'], index=[self.indexpattern]), 
+        # And then parse through the dictionary to get the mapping type
         starttimeq, endtimeq = self.get_epoch_time_range_utc(self.start_time, self.end_time)
         starttimeq, endtimeq = (x / 1000 for x in (starttimeq, endtimeq))
-
-        # def get_time_from_epoch_utc(dt):
-        #     epoch = datetime.datetime.utcfromtimestamp(0)
-        #     return (dt - epoch).total_seconds()
-        #
-        # starttimeq = get_time_from_epoch_utc(self.start_time)
-        # endtimeq = get_time_from_epoch_utc(self.end_time)
-
-        # print starttimeq, endtimeq
+        # starttimeq, endtimeq = (t.isoformat() for t in (self.start_time, self.end_time))
 
         self.logger.info(self.indexpattern)
         if self.verbose:
@@ -207,78 +204,19 @@ class JobSuccessRateReporter(Reporter):
         """
         for hit in resultset.scan():
             try:
-            #     # Parse userid
-            #     env.GRID_USER
-            #     try:
-            #         # Grabs the first parenthesized subgroup in the
-            #         # hit['CommonName'] string, where that subgroup comes
-            #         # after "CN=UID:"
-            #
-            #         # Patch while we fix gratia probes to include CommonName Field
-            #         userid = self.usermatch_CILogon.match(hit['DN']).\
-            #             group(1)
-            #         # userid = self.usermatch_CILogon.match(hit['CommonName']).\
-            #         #     group(1)    # Original
-            #         # End patch
-            #
-            #     except AttributeError:
-            #         # If this doesn't match CILogon standard, see if it
-            #         # matches *.fnal.gov string at the end.  If so,
-            #         # it's a managed proxy most likely, so give the localuserid
-            #
-            #         # Patch while we fix gratia probes to include CommonName Field
-            #         if self.usermatch_FNAL.match(hit['DN']) and 'LocalUserId' in hit:
-            #                 userid = hit['LocalUserId']
-            #         else:
-            #             userid = hit['DN']  # Just print the CN string, move on
-            #
-            #         # # Original
-            #         # if self.usermatch_FNAL.match(
-            #         #         hit['CommonName']) and 'LocalUserId' in hit:
-            #         #     userid = hit['LocalUserId']
-            #         # else:
-            #         #     userid = hit[
-            #         #         'CommonName']  # Just print the CN string, move on
-            #         # End patch
-
-                # user = hit['env.GRID_USER']
-                # # print user
-                # # exit(0)
-                #     # Parse jobid
-                # jobid = hit['JobsubJobId']
-                # try:
-                #     # Parse the GlobalJobId string to grab the cluster number and schedd
-                #     jobparts = self.globaljobparts.match(hit['GlobalJobId']).group(2,1)
-                #     # Put these together to create the jobid (e.g. 123.0@fifebatch1.fnal.gov)
-                #     jobid = '{0}@{1}'.format(*jobparts)
-                # except AttributeError:
-                #     jobid = hit['GlobalJobId']  # If for some reason a probe
-                #                                 # gives us a bad jobid string,
-                #                                 # just keep going
-                # realhost = self.realhost_pattern.sub('', hit['Host'])  # Parse to get the real hostname
-                # LastRemoteHost
-
-                # MachineAttrMachine0
-
                 try:
-                    exitcode = hit['ExitCode']
+                    exitcode = hit.ExitCode
                 except KeyError:    
                     # Jobs that run in docker containers report failures in ExitSignal
-                    exitcode = hit['ExitSignal']
-
-                # for pos in ('JobCurrentStartDate', 'CompletionDate'):
-                #     hit_adjusted[pos] = datetime.datetime.fromtimestamp(int(hit[pos]))
-
+                    exitcode = hit.ExitSignal
 
                 line = dict((
-                    ('starttime', hit['JobCurrentStartDate']),
-                    # ('endtime', hit['CompletionDate']),
+                    ('starttime', hit.JobCurrentStartDate),
                     ('endtime', hit.CompletionDate),
-                    ('userid', hit['env.GRID_USER']),
-                    ('jobid', hit['JobsubJobId']),
-                    ('site', hit['MATCH_GLIDEIN_Site']),
-                    # ('hostdescription', hit['Host_description']),
-                    ('host', hit['MachineAttrMachine0']),
+                    ('userid', hit.env.GRID_USER),
+                    ('jobid', hit.JobsubJobId),
+                    ('site', hit.MATCH_GLIDEIN_Site),
+                    ('host', hit.MachineAttrMachine0),
                     ('exitcode', exitcode)
                                     ))
 
@@ -516,7 +454,10 @@ class JobSuccessRateReporter(Reporter):
         """
         jobtimes = namedtuple('jobtimes', ['start', 'end'])
 
-        # Sanitize epoch timestamps coming from Elasticsearch
+        # Sanitize epoch timestamps coming from Elasticsearch.  
+        # TODO:  When we implement the getting of the time field mapping
+        # we will need to replace this with some logic to choose the 
+        # correct path
         try:
             jt = jobtimes(*[self.parse_datetime(dt, utc=True)
                             for dt in
