@@ -5,15 +5,13 @@ configured_vos = ['cdf', 'cdms', 'darkside', 'dune', 'gm2', 'mars', 'minerva', '
 
 [elasticsearch]
     hostname = 'https://gracc.opensciencegrid.org/q'
-    # landscapeitb = 'https://landscapeitb.fnal.gov/es'
-    landscapeitb = ['http://esclient01:9200', 'http://esclient02:9200']
 
 # Email
 # Set the global email related values under this section
 
 [email]
     # This is the FQDN of the mail server, which GRACC will use to send the email
-    smtphost = 'smtp.fnal.gov'
+    smtphost = 'smtp.example.com
 
     [email.from]
         name = 'GRACC Operations'  # This is the real name from which the report appears to be emailed from
@@ -22,7 +20,7 @@ configured_vos = ['cdf', 'cdms', 'darkside', 'dune', 'gm2', 'mars', 'minerva', '
     # Tester emails
     [email.test]
         names = ['Test Recipient', ]
-        emails = ['sbhat@fnal.gov', ]
+        emails = ['nobody@example.com', ]
 
 # VO substitutions
 # For VOs such as uboone, where we might expect to see uboone in raw records
@@ -109,13 +107,11 @@ configured_vos = ['cdf', 'cdms', 'darkside', 'dune', 'gm2', 'mars', 'minerva', '
 
 [jobsuccessrate]
     index_pattern='gracc.osg.raw-%Y.%m'
-    landscape_index_pattern='fifebatch-history-%Y.%m.%d'
 
 	[jobsuccessrate.darkside]
         fqan = '/fermilab/darkside/Role=*'
-        # fqan = '/fermilab/darkside/Role=*'
         to_emails = ['nobody@example.com', ]
-        noproduction = true
+        no_production = true
 
 	[jobsuccessrate.dune]
         fqan = '/dune/Role=Production/Capability=NULL'
@@ -132,7 +128,6 @@ configured_vos = ['cdf', 'cdms', 'darkside', 'dune', 'gm2', 'mars', 'minerva', '
         # num_hosts_per_site = 20
         # errors_per_host = 20
         fqan = '/fermilab/nova/Role=Production/Capability=NULL'
-        # fqan = '/fermilab/nova/Role=Production/Capability=NULL'
         to_emails = ['nobody@example.com', ]
 
 	[jobsuccessrate.seaquest]
