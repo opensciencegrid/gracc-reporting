@@ -5,7 +5,7 @@ import traceback
 import datetime
 from collections import defaultdict, namedtuple
 
-from elasticsearch_dsl import Search
+from elasticsearch_dsl import Search, Q
 
 from . import Reporter, runerror, get_configfile, get_template
 
@@ -167,7 +167,9 @@ class JobSuccessRateReporter(Reporter):
         s = Search(using=self.client, index=self.indexpattern) \
             .filter("range", CompletionDate={"gte": starttimeq, "lt": endtimeq}) \
             .filter("term", JobStatus=4) \
-            .exclude("term", JobUniverse=7)     # Exclude DAGS
+            .query("bool", filter=[~Q("term", JobUniverse=7)])  # Exclude DAGS
+            # .exclude("term", JobUniverse=7)     # Once djw repo elasticsearch-dsl is upgraded to 6.0.0
+
 
         if 'no_production' in rep_config and rep_config['no_production']:
             s = s.filter("wildcard", x509UserProxyFirstFQAN=fqan_string)
