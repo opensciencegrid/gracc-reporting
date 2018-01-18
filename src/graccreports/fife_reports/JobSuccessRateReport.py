@@ -206,7 +206,7 @@ class JobSuccessRateReporter(Reporter):
             try:
                 try:
                     exitcode = hit.ExitCode
-                except KeyError:    
+                except (KeyError, AttributeError):    
                     # Jobs that run in docker containers report failures in ExitSignal
                     exitcode = hit.ExitSignal
 
