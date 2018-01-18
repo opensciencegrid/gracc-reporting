@@ -223,9 +223,6 @@ class JobSuccessRateReporter(Reporter):
                 for key in line.iterkeys():
                     line[key] = line[key].strip()
 
-                print '\t'.join(line.itervalues())
-
-
                 if self.verbose and line['exitcode'] != '0':
                     print '\t'.join(line.itervalues())
                 yield line
