@@ -1,12 +1,11 @@
 import sys
 import re
 from time import sleep
-
 import traceback
 import datetime
 from collections import defaultdict, namedtuple
 
-from elasticsearch_dsl import Search
+from elasticsearch_dsl import Search, Q
 
 from . import Reporter, runerror, get_configfile, get_template
 
@@ -16,6 +15,7 @@ config_vals = {'num_clusters': 100, 'jobs_per_cluster': 1e6,
                'num_failed_sites': 1000}
 logfile = 'jobsuccessratereport.log'
 default_templatefile = 'template_jobrate.html'
+output_time_format = "%Y-%m-%d %H:%M:%S"
 
 
 @Reporter.init_reporter_parser
@@ -105,6 +105,8 @@ class JobSuccessRateReporter(Reporter):
 
         super(JobSuccessRateReporter, self).__init__(report, config, start,
                                                      end, verbose,
+                                                     althost="landscapeitb",
+                                                     index_key="landscape_index_pattern",
                                                      is_test=is_test,
                                                      no_email=no_email,
                                                      logfile=logfile_fname,
@@ -144,11 +146,18 @@ class JobSuccessRateReporter(Reporter):
         """
         # Set up our search parameters
         rep_config = self.config[self.report_type.lower()][self.vo.lower()]
-        voq = rep_config['voname']  # Using a specific string to check for VO
-        productioncheck = '*Role=Production*'
+        fqan_string = rep_config['fqan']
 
-        starttimeq = self.start_time.isoformat()
-        endtimeq = self.end_time.isoformat()
+
+        # TODO:  We want starttimeq and endtimeq to be created depending on the field mapping
+        # of the relevant time field (CompletionDate here).  We should dynamically search the 
+        # mapping and choose whether to use get_epoch_time_range_utc or isoformat()
+        # It's going to have something like:
+        # self.client.indices.get_field_mapping(fields=['CompletionDate'], index=[self.indexpattern]), 
+        # And then parse through the dictionary to get the mapping type
+        starttimeq, endtimeq = self.get_epoch_time_range_utc(self.start_time, self.end_time)
+        starttimeq, endtimeq = (x / 1000 for x in (starttimeq, endtimeq))
+        # starttimeq, endtimeq = (t.isoformat() for t in (self.start_time, self.end_time))
 
         self.logger.info(self.indexpattern)
         if self.verbose:
@@ -156,14 +165,16 @@ class JobSuccessRateReporter(Reporter):
 
         # Elasticsearch query
         s = Search(using=self.client, index=self.indexpattern) \
-            .filter("range", EndTime={"gte": starttimeq, "lt": endtimeq}) \
-            .filter("term", ResourceType="Payload")
+            .filter("range", CompletionDate={"gte": starttimeq, "lt": endtimeq}) \
+            .filter("term", JobStatus=4) \
+            .query("bool", filter=[~Q("term", JobUniverse=7)])  # Exclude DAGS
+            # .exclude("term", JobUniverse=7)     # Once djw repo elasticsearch-dsl is upgraded to 6.0.0
+
 
         if 'no_production' in rep_config and rep_config['no_production']:
-            s = s.filter("wildcard", VOName=voq)
+            s = s.filter("wildcard", x509UserProxyFirstFQAN=fqan_string)
         else:
-            s = s.filter("wildcard", VOName=productioncheck)\
-                .filter("term", VOName=voq)
+            s = s.filter("term", x509UserProxyFirstFQAN=fqan_string)
 
         if self.verbose:
             print s.to_dict()
@@ -195,59 +206,20 @@ class JobSuccessRateReporter(Reporter):
         """
         for hit in resultset.scan():
             try:
-                # Parse userid
                 try:
-                    # Grabs the first parenthesized subgroup in the
-                    # hit['CommonName'] string, where that subgroup comes
-                    # after "CN=UID:"
-
-                    # Patch while we fix gratia probes to include CommonName Field
-                    userid = self.usermatch_CILogon.match(hit['DN']).\
-                        group(1)
-                    # userid = self.usermatch_CILogon.match(hit['CommonName']).\
-                    #     group(1)    # Original
-                    # End patch
-
-                except AttributeError:
-                    # If this doesn't match CILogon standard, see if it
-                    # matches *.fnal.gov string at the end.  If so,
-                    # it's a managed proxy most likely, so give the localuserid
-
-                    # Patch while we fix gratia probes to include CommonName Field
-                    if self.usermatch_FNAL.match(hit['DN']) and 'LocalUserId' in hit:
-                            userid = hit['LocalUserId']
-                    else:
-                        userid = hit['DN']  # Just print the CN string, move on
-
-                    # # Original
-                    # if self.usermatch_FNAL.match(
-                    #         hit['CommonName']) and 'LocalUserId' in hit:
-                    #     userid = hit['LocalUserId']
-                    # else:
-                    #     userid = hit[
-                    #         'CommonName']  # Just print the CN string, move on
-                    # End patch
-
-                # Parse jobid
-                try:
-                    # Parse the GlobalJobId string to grab the cluster number and schedd
-                    jobparts = self.globaljobparts.match(hit['GlobalJobId']).group(2,1)
-                    # Put these together to create the jobid (e.g. 123.0@fifebatch1.fnal.gov)
-                    jobid = '{0}@{1}'.format(*jobparts)
-                except AttributeError:
-                    jobid = hit['GlobalJobId']  # If for some reason a probe
-                                                # gives us a bad jobid string,
-                                                # just keep going
-                realhost = self.realhost_pattern.sub('', hit['Host'])  # Parse to get the real hostname
+                    exitcode = hit.ExitCode
+                except (KeyError, AttributeError):    
+                    # Jobs that run in docker containers report failures in ExitSignal
+                    exitcode = hit.ExitSignal
 
                 line = dict((
-                    ('starttime', hit['StartTime']),
-                    ('endtime', hit['EndTime']),
-                    ('userid', userid),
-                    ('jobid', jobid),
-                    ('hostdescription', hit['Host_description']),
-                    ('host', realhost),
-                    ('exitcode', hit['Resource_ExitCode'])
+                    ('starttime', hit.JobCurrentStartDate),
+                    ('endtime', hit.CompletionDate),
+                    ('userid', hit['env.GRID_USER']),
+                    ('jobid', hit.JobsubJobId),
+                    ('site', hit.MATCH_GLIDEIN_Site),
+                    ('host', hit.MachineAttrMachine0),
+                    ('exitcode', exitcode)
                                     ))
 
                 for key in line.iterkeys():
@@ -269,11 +241,12 @@ class JobSuccessRateReporter(Reporter):
         while True:
             line = yield
 
-            if line['hostdescription'] != "NULL":  # Not NULL site
+            if line['host'] != "NULL":  # Not NULL site
                 job = Job(line['endtime'],
                           line['starttime'],
                           line['jobid'],
-                          line['hostdescription'],
+                          line['site'],
+                        #   line['hostdescription'],
                           line['host'],
                           int(line['exitcode']))
                 self.run.add_job(job)
@@ -480,18 +453,32 @@ class JobSuccessRateReporter(Reporter):
         """
         jobtimes = namedtuple('jobtimes', ['start', 'end'])
 
+        # Sanitize epoch timestamps coming from Elasticsearch.  
+        # TODO:  When we implement the getting of the time field mapping
+        # we will need to replace this with some logic to choose the 
+        # correct path
+        try:
+            jt = jobtimes(*[self.parse_datetime(dt, utc=True)
+                            for dt in
+                            (job.start_time, job.end_time)])
+        except ValueError, TypeError:
+            # We're going to assume this is actually an epoch time stamp here
+            try:
+                jt = jobtimes(*[self.epoch_to_datetime(dt)
+                                for dt in
+                                (job.start_time, job.end_time)])
+            except Exception as e:
+                raise 
+
+        timestamps_exact = self.get_epoch_time_range_utc(*jt)
+        padding = 300000  # milliseconds
+        timestamps_padded = (timestamps_exact[0] - padding,
+                                timestamps_exact[1] + padding)
+
         try:
             job_link_parts = \
                 [elt for elt in
                  self._get_job_parts_from_jobid(job.jobid)]
-            jt = jobtimes(*(self.parse_datetime(dt, utc=True)
-                            for dt in
-                            (job.start_time, job.end_time)))
-
-            timestamps_exact = self.get_epoch_stamps_for_grafana(*jt)
-            padding = 300000  # milliseconds
-            timestamps_padded = (timestamps_exact[0] - padding,
-                                 timestamps_exact[1] + padding)
             job_link_parts.extend(timestamps_padded)
             job_link = 'https://fifemon.fnal.gov/monitor/dashboard/db' \
                        '/job-cluster-summary?var-cluster={0}' \
@@ -506,13 +493,13 @@ class JobSuccessRateReporter(Reporter):
                                                   job.jobid)
 
         try:
-            j_out = jobtimes(*(datetime.datetime.strftime(t, "%Y-%m-%d %H:%M:%S")
+            j_out = jobtimes(*(datetime.datetime.strftime(t, output_time_format)
                            for t in jt))
         except NameError:
             jt = jobtimes(*(self.parse_datetime(dt, utc=True)
                        for dt in
                        (job.start_time, job.end_time)))
-            j_out = jobtimes(*(datetime.datetime.strftime(t, "%Y-%m-%d %H:%M:%S")
+            j_out = jobtimes(*(datetime.datetime.strftime(t, output_time_format)
                            for t in jt))
 
         linemap = ((job_html, 'left'), (j_out.start, 'left'),
@@ -578,7 +565,7 @@ class JobSuccessRateReporter(Reporter):
 
     def _generate_fifemon_link(self):
         """Generate fifemon link for User Batch Details page"""
-        epoch_stamps = self.get_epoch_stamps_for_grafana()
+        epoch_stamps = self.get_epoch_time_range_utc()
         elist = [elt for elt in epoch_stamps]
         elist.append('{0}pro'.format(self.vo.lower()))
         fifemon_link_raw = 'https://fifemon.fnal.gov/monitor/dashboard/db/' \

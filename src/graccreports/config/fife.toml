@@ -11,7 +11,7 @@ configured_vos = ['cdf', 'cdms', 'darkside', 'dune', 'gm2', 'mars', 'minerva', '
 
 [email]
     # This is the FQDN of the mail server, which GRACC will use to send the email
-    smtphost = 'smtp.example.com'
+    smtphost = 'smtp.example.com
 
     [email.from]
         name = 'GRACC Operations'  # This is the real name from which the report appears to be emailed from
@@ -37,7 +37,7 @@ configured_vos = ['cdf', 'cdms', 'darkside', 'dune', 'gm2', 'mars', 'minerva', '
     index_pattern='gracc.osg.raw-%Y.%m'
 
 	[efficiency.cdf]
-	    min_hours = 1000
+	min_hours = 1000
         min_efficiency = 0.5
         to_emails = ['nobody@example.com', ]
 
@@ -47,7 +47,7 @@ configured_vos = ['cdf', 'cdms', 'darkside', 'dune', 'gm2', 'mars', 'minerva', '
         to_emails = ['nobody@example.com', ]
 
 	[efficiency.darkside]
-	    min_hours = 500
+	min_hours = 500
         min_efficiency = 0.35
         to_emails = ['nobody@example.com', ]
 
@@ -109,16 +109,16 @@ configured_vos = ['cdf', 'cdms', 'darkside', 'dune', 'gm2', 'mars', 'minerva', '
     index_pattern='gracc.osg.raw-%Y.%m'
 
 	[jobsuccessrate.darkside]
-        voname = '/fermilab/darkside/Role=*'
+        fqan = '/fermilab/darkside/Role=*'
         to_emails = ['nobody@example.com', ]
-        noproduction = true
+        no_production = true
 
 	[jobsuccessrate.dune]
-        voname = '/dune/Role=Production/Capability=NULL'
+        fqan = '/dune/Role=Production/Capability=NULL'
         to_emails = ['nobody@example.com', ]
 
 	[jobsuccessrate.mu2e]
-        voname = '/fermilab/mu2e/Role=Production/Capability=NULL'
+        fqan = '/fermilab/mu2e/Role=Production/Capability=NULL'
         to_emails = ['nobody@example.com', ]
 
 	[jobsuccessrate.nova]
@@ -127,16 +127,16 @@ configured_vos = ['cdf', 'cdms', 'darkside', 'dune', 'gm2', 'mars', 'minerva', '
         # num_failed_sites = 20
         # num_hosts_per_site = 20
         # errors_per_host = 20
-        voname = '/fermilab/nova/Role=Production/Capability=NULL'
+        fqan = '/fermilab/nova/Role=Production/Capability=NULL'
         to_emails = ['nobody@example.com', ]
 
 	[jobsuccessrate.seaquest]
-        voname = '/fermilab/seaquest/Role=*'
+        fqan = '/fermilab/seaquest/Role=*'
         to_emails = ['nobody@example.com', ]
         no_production = true
 
 	[jobsuccessrate.uboone]
-        voname = '/fermilab/uboone/Role=Production/Capability=NULL'
+        fqan = '/fermilab/uboone/Role=Production/Capability=NULL'
         to_emails = ['nobody@example.com', ]
 
 

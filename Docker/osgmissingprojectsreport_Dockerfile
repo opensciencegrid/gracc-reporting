@@ -1,5 +1,5 @@
 # OSG base image for gracc-reporting
-FROM shreyb/gracc-reporting:osg_1.0
+FROM shreyb/gracc-reporting:osg_1.1
 
 # Executable
 ENTRYPOINT ["osgmissingprojects"]

@@ -3,6 +3,7 @@
 from datetime import datetime, date
 from dateutil import tz, parser
 from calendar import timegm
+import time
 
 
 class TimeUtils(object):
@@ -41,6 +42,41 @@ class TimeUtils(object):
         return x.astimezone(tz.tzutc())
 
     @staticmethod
+    def epoch_to_datetime(timestamp):
+        """
+        Parse epoch timestamp, return as UTC time datetime
+
+        :param timestamp:  string or int.  Timestamp to convert to datetime.datetime object
+        :return:  datetime.datetime object in UTC time zone
+        """
+        if timestamp is None:
+            return None
+
+        if isinstance(timestamp, str):
+            timestamp = float(timestamp)
+        
+        now = time.time()
+        # Check for milliseconds vs seconds epoch timestamp
+        try:
+            assert timestamp > now
+        except AssertionError:    # We assume that the epoch time is in ms
+            _timestamp = timestamp / 1000
+            try:
+                assert _timestamp > now
+            except AssertionError:
+                raise OverflowError("Timestamp {0} is too large to be an epoch time".format(timestamp))
+            except Exception as e:
+                raise
+            else:
+                timestamp = _timestamp
+        except Exception as e:
+            raise
+        
+        timestamp = int(timestamp)        
+        dt_timestamp = datetime.fromtimestamp(timestamp)
+        return TimeUtils.parse_datetime(dt_timestamp, utc=True)
+
+    @staticmethod
     def check_date_datetime(item):
         """
         Check to make sure if item is instance of datetime.datetime or 
@@ -51,7 +87,7 @@ class TimeUtils(object):
         """
         return isinstance(item, datetime) or isinstance(item, date)
 
-    def get_epoch_stamps_for_grafana(self, start_time=None, end_time=None):
+    def get_epoch_time_range_utc(self, start_time=None, end_time=None):
         """Generates tuple of self.start_time, self.end_time in epoch time
         form
         

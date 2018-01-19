@@ -206,7 +206,7 @@ class Efficiency(Reporter):
         """Coroutine: This generates an HTML line from the raw data
         line and sends it to the tablebuilder"""
         tablebuilder = self._generate_data_table()
-        epoch_stamps = self.get_epoch_stamps_for_grafana()
+        epoch_stamps = self.get_epoch_time_range_utc()
         elist = [elt for elt in epoch_stamps]
         elist_vo = [elt for elt in elist]
         elist_vo.append(self.vo.lower())
