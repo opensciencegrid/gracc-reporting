@@ -10,6 +10,8 @@ from datetime import datetime, date
 from dateutil import tz, parser
 
 
+# TODO:  Given that this has a number of static methods and ONE instance method,
+# there is no reason to keep this a class 
 class TimeUtils(object):
     """
     Class to hold Time/datetime manipulations for the gracc reports.
