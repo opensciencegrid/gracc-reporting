@@ -469,7 +469,7 @@ class JobSuccessRateReporter(Reporter):
                                 (job.start_time, job.end_time)])
             except Exception as e:
                 raise 
-
+    
         timestamps_exact = self.get_epoch_time_range_utc(*jt)
         padding = 300000  # milliseconds
         timestamps_padded = (timestamps_exact[0] - padding,

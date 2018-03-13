@@ -73,7 +73,7 @@ class TimeUtils(object):
             raise
         
         timestamp = int(timestamp)        
-        dt_timestamp = datetime.fromtimestamp(timestamp)
+        dt_timestamp = datetime.utcfromtimestamp(timestamp)
         return TimeUtils.parse_datetime(dt_timestamp, utc=True)
 
     @staticmethod
@@ -88,8 +88,9 @@ class TimeUtils(object):
         return isinstance(item, datetime) or isinstance(item, date)
 
     def get_epoch_time_range_utc(self, start_time=None, end_time=None):
-        """Generates tuple of self.start_time, self.end_time in epoch time
-        form
+        """Generates tuple of start_time, end_time  OR self.start_time, 
+        self.end_time in epoch time form (the first two override the 
+        second two)
         
         :param start_time: datetime.datetime, datetime.date, or str timestamp
         representing start time.
