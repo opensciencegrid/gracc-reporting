@@ -67,7 +67,7 @@ class Reporter(TimeUtils):
                  template=None, is_test=False, no_email=False,
                  logfile=None, logfile_override=False, check_vo=False,
                  althost=None):
-        TimeUtils.__init__(self)
+        super(Reporter, self).__init__(self)
         self.verbose = verbose
         self.configfile = config
         self.config = self._parse_config(config)
