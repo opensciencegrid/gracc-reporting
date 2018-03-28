@@ -1,117 +1,86 @@
-#!/usr/bin/python
+"""TimeUtils is a library of helper functions, built heavily on datetime,
+time, and dateutil, to help with the conversions of timestamps in gracc-
+reporting.  Note that in this module, parse_datetime is the only function
+that can accept non-UTC timestamps.  All other functions assume either epoch
+time or UTC timestamps"""
 
 from datetime import datetime, date
-from dateutil import tz, parser
 from calendar import timegm
-import time
 
+from dateutil import tz, parser
 
-class TimeUtils(object):
+class InvalidUnitError(ValueError):
+    pass
+
+def parse_datetime(timestamp, utc=False):
     """
-    Class to hold Time/datetime manipulations for the gracc reports.
+    Parse datetime, return as UTC time datetime
+
+    :param timestamp:  datetime.date, datetime.datetime, or str.  Timestamp
+        to convert to datetime.datetime object
+    :param bool utc:  True if timestamp is in UTC.  False if it's local time
+    :return: datetime.datetime object in UTC timezone
     """
-    def __init__(self):
-        self.start_time = None
-        self.end_time = None
+    if timestamp is None:
+        return None
 
-    @staticmethod
-    def parse_datetime(timestamp, utc=False):
-        """
-        Parse datetime, return as UTC time datetime
-        
-        :param timestamp:  datetime.date, datetime.datetime, or str.  Timestamp
-         to convert to datetime.datetime object
-        :param bool utc:  True if timestamp is in UTC.  False if it's local time
-        :return: datetime.datetime object in UTC timezone
-        """
-        if timestamp is None:
-            return None
+    if isinstance(timestamp, datetime):
+        _timestamp = timestamp
+    elif isinstance(timestamp, date):
+        min_timestamp = datetime.min.time()
+        _timestamp = datetime.combine(timestamp, min_timestamp)
+    else:
+        _timestamp = parser.parse(timestamp)
 
-        if isinstance(timestamp, datetime):
-            x = timestamp
-        elif isinstance(timestamp, date):
-            mn = datetime.min.time()
-            x = datetime.combine(timestamp, mn)
-        else:
-            x = parser.parse(timestamp)
+    if not utc:
+        _timestamp = _timestamp.replace(tzinfo=tz.tzlocal())  # Assume time is local TZ
+    else:
+        _timestamp = _timestamp.replace(tzinfo=tz.tzutc())
+    return _timestamp.astimezone(tz.tzutc())
 
-        if not utc:
-            x = x.replace(tzinfo=tz.tzlocal())  # Assume time is local TZ
-        else:
-            x = x.replace(tzinfo=tz.tzutc())
-        return x.astimezone(tz.tzutc())
 
-    @staticmethod
-    def epoch_to_datetime(timestamp):
-        """
-        Parse epoch timestamp, return as UTC time datetime
+def epoch_to_datetime(timestamp, unit='second'):    # Note that changes might affect JSR links
+    """
+    Parse epoch timestamp, return as UTC time datetime
 
-        :param timestamp:  string or int.  Timestamp to convert to datetime.datetime object
-        :return:  datetime.datetime object in UTC time zone
-        """
-        if timestamp is None:
-            return None
+    :param timestamp:  string or int.  Timestamp to convert to datetime.datetime object
+    :return:  datetime.datetime object in UTC time zone
+    """
+    _accepted_units = {'second': 1, 'millisecond': 1e3, 'microsecond': 1e6}
 
-        if isinstance(timestamp, str):
-            timestamp = float(timestamp)
-        
-        now = time.time()
-        # Check for milliseconds vs seconds epoch timestamp
-        try:
-            assert timestamp > now
-        except AssertionError:    # We assume that the epoch time is in ms
-            _timestamp = timestamp / 1000
-            try:
-                assert _timestamp > now
-            except AssertionError:
-                raise OverflowError("Timestamp {0} is too large to be an epoch time".format(timestamp))
-            except Exception as e:
-                raise
-            else:
-                timestamp = _timestamp
-        except Exception as e:
-            raise
-        
-        timestamp = int(timestamp)        
-        dt_timestamp = datetime.fromtimestamp(timestamp)
-        return TimeUtils.parse_datetime(dt_timestamp, utc=True)
+    if timestamp is None:
+        return None
 
-    @staticmethod
-    def check_date_datetime(item):
-        """
-        Check to make sure if item is instance of datetime.datetime or 
-        datetime.date
-        
-        :param item: object to test
-        :return: True if item is date or datetime instance
-        """
-        return isinstance(item, datetime) or isinstance(item, date)
+    if isinstance(timestamp, str):
+        timestamp = float(timestamp)
 
-    def get_epoch_time_range_utc(self, start_time=None, end_time=None):
-        """Generates tuple of self.start_time, self.end_time in epoch time
-        form
-        
-        :param start_time: datetime.datetime, datetime.date, or str timestamp
-        representing start time.
-        :param end_time: Same as above, but end time
-        :return tuple: Timestamps representing milliseconds since epoch 
-        """
-        d = {"start_time": start_time, "end_time": end_time}
-        for key in d:
-            if d[key] is not None:
-                if not self.check_date_datetime(d[key]):
-                    d[key] = self.parse_datetime(d[key])  # Convert to datetime
-            else:
-                try:
-                    val = getattr(self, key)
-                    if val is not None and self.check_date_datetime(val):
-                        d[key] = val
-                    else:
-                        raise AttributeError
-                except AttributeError:
-                    print "A value must be specified for variable {0}".format(key)
-                    raise
+    try:
+        _timestamp = timestamp / _accepted_units[unit]
+    except KeyError:
+        raise InvalidUnitError("unit passed in was {0}. unit must be one "
+                               "of {1}.".format(unit, ', '.join(
+                                   _accepted_units)))
 
-            d[key] = timegm(d[key].timetuple()) * 1000  # Convert to Epoch milliseconds
+    timestamp = int(round(_timestamp))
+    dt_timestamp = datetime.utcfromtimestamp(timestamp)
+    return parse_datetime(dt_timestamp, utc=True)
 
-        return d["start_time"], d["end_time"]
+
+def get_epoch_time_range_utc_ms(start_time, end_time):
+    """Generates tuple of start_time, end_time in epoch time
+    form from UTC datetime or date objects
+
+    :param start_time: datetime.datetime, datetime.date, or str timestamp
+    representing start time in UTC.
+    :param end_time: Same as above, but end time (UTC)
+    :return tuple: Timestamps representing milliseconds since epoch
+    """
+    assert start_time < end_time
+    return_dict = {"start_time": start_time, "end_time": end_time}
+
+    for key in return_dict:
+        # Make sure our timestamps are tz-aware, and are proper datetimes
+        return_dict[key] = parse_datetime(return_dict[key], utc=True)
+        return_dict[key] = timegm(return_dict[key].timetuple()) * 1000
+
+    return return_dict["start_time"], return_dict["end_time"]

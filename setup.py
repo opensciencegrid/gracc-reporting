@@ -14,5 +14,5 @@ setup(name='gracc-reporting',
       author_email='sbhat@fnal.gov',
       author='Shreyas Bhat',
       url='https://github.com/opensciencegrid/gracc-reporting',
-      packages=['gracc_reporting'}
+      packages=['gracc_reporting']
       )
