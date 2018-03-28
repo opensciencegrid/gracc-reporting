@@ -16,7 +16,7 @@ from elasticsearch import Elasticsearch
 
 import TextUtils
 from IndexPattern import indexpattern_generate
-from TimeUtils import TimeUtils
+# from TimeUtils import TimeUtils
 
 
 class ContextFilter(logging.Filter):
@@ -37,7 +37,7 @@ class ContextFilter(logging.Filter):
         return True
 
 
-class Reporter(TimeUtils):
+class Reporter(object):
     """
     Base class for all OSG reports
     :param str report: Which report is getting run
