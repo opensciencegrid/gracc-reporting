@@ -73,7 +73,7 @@ class Reporter(object):
         # TimeUtils.__init__(self)
         self.verbose = verbose
         self.configfile = config
-        self.config = self._parse_config(config)  # TODO: need test
+        self.config = self._parse_config(config)
         self.is_test = is_test
         self.no_email = no_email
         self.report_type = report

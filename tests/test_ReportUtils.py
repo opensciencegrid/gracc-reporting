@@ -2,6 +2,8 @@ import unittest
 import os
 from copy import deepcopy
 
+import toml
+
 import gracc_reporting.ReportUtils as ReportUtils
 
 
@@ -53,4 +55,44 @@ class TestGetLogfilePath(TestReportUtilsBase):
                               'test.log')
         self.assertEqual(self.r_copy.get_logfile_path(), answer)
         del self.r_copy.config["default_logdir"]
+
+class TestParseConfig(TestReportUtilsBase):
+    def test_parse_config_control(self):
+        """Parse a normal config"""
+        answer = {u'test': {
+                    u'index_pattern': u'gracc.osg.raw-%Y.%m', 
+                    u'testvo': {
+                        u'min_hours': 1000, 
+                        u'min_efficiency': 0.5, 
+                        u'to_emails': [u'nobody@example.com']
+                        }
+                    }, 
+                    u'configured_vos': [u'testvo'], 
+                    u'elasticsearch': {
+                        u'hostname': u'https://gracc.opensciencegrid.org/q'
+                        }, 
+                    u'email': {
+                        u'test': {
+                            u'names': [u'Test Recipient'], 
+                            u'emails': [u'nobody@example.com']
+                            }, 
+                        u'from': {
+                            u'name': u'GRACC Operations', 
+                            u'email': u'nobody@example.com'
+                        }, 
+                        u'smtphost': u'smtp.example.com'
+                    }, 
+                    u'default_logdir': u'/tmp/gracc-test'
+                }
+        self.assertDictEqual(self.r._parse_config(config_file), answer)
+
+    def test_invalid_config(self):
+        """Raise toml.TomlDecodeError if we're parsing a bad config file"""
+        bad_toml = "blahblah\""
+        junk_file = "/tmp/junk.toml"
+
+        with open(junk_file, 'w') as f:
+            f.write(bad_toml)
+
+        self.assertRaises(toml.TomlDecodeError, self.r._parse_config, junk_file)
 
