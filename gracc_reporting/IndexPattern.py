@@ -3,6 +3,8 @@
 from datetime import datetime
 
 
+# TODO:  Move tests to a unit test!
+
 def indexpattern_generate(pattern=None, start=None, end=None):
     """Function to return the proper index pattern for queries to
     elasticsearch on gracc.opensciencegrid.org.  This improves performance by

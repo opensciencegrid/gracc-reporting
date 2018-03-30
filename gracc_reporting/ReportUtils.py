@@ -15,8 +15,11 @@ import copy
 from elasticsearch import Elasticsearch
 
 import TextUtils
+import TimeUtils
 from IndexPattern import indexpattern_generate
 # from TimeUtils import TimeUtils
+
+# TODO:  https://pymotw.com/2/argparse/#sharing-parser-rules
 
 
 class ContextFilter(logging.Filter):
@@ -62,33 +65,34 @@ class Reporter(object):
     """
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, report, config, start, end=None, verbose=False,
-                 index_key='index_pattern',
-                 template=None, is_test=False, no_email=False,
-                 logfile=None, logfile_override=False, check_vo=False,
-                 althost=None):
-        TimeUtils.__init__(self)
+    def __init__(self, report, config, start, end=None, 
+                 althost=None, index_key='index_pattern', vo=None,
+                 template=None, is_test=False, no_email=False, verbose=False,
+                 logfile=None
+                 ):
+        # TimeUtils.__init__(self)
         self.verbose = verbose
         self.configfile = config
-        self.config = self._parse_config(config)
+        self.config = self._parse_config(config)  # TODO: need test
         self.is_test = is_test
         self.no_email = no_email
         self.report_type = report
-        self.logfile = self.get_logfile_path(logfile, override=logfile_override) if logfile \
-            else 'reports.log'
-        self.logger = self.__setupgenLogger()
+        self.logfile = logfile if logfile else self.get_logfile_path()
+        # self.logfile = self.get_logfile_path(logfile, override=logfile_override) if logfile \
+        #     else 'reports.log'
+        self.logger = self.__setup_gen_logger()
         self.althost = althost
-        self.start_time = self.parse_datetime(start)
-        self.end_time = self.parse_datetime(end)
+        self.start_time = TimeUtils.parse_datetime(start)
+        self.end_time = TimeUtils.parse_datetime(end)
         self.template = template
-        self.epochrange = None
+        # self.epochrange = None
         self.header = []
-        if check_vo: self.__check_vo()
+        if vo: self.vo = self.__check_vo(vo)  # TODO: Need test
         self.indexpattern = self.indexpattern_generate(index_key,
                                                        start=self.start_time,
                                                        end=self.end_time)
-        self.email_info = self.__get_email_info()
-        self.client = self.__establish_client()
+        self.email_info = self.__get_email_info()   # TODO: Need test
+        self.client = self.__establish_client()     # TODO: Need test
 
     # Report methods that must or should be implemented
     @abc.abstractmethod
@@ -156,7 +160,7 @@ class Reporter(object):
         text = {}
         content = self.format_report()
 
-        if self.test_no_email(self.email_info['to']['email']):
+        if self.check_no_email(self.email_info['to']['email']):
             return
 
         if title is not None: self.title = title
@@ -232,24 +236,24 @@ class Reporter(object):
         pass
 
     # Helper methods that can be used in subclasses
-    @staticmethod
-    def init_reporter_parser(specific_parser):
-        """
-        Decorator function that initializes all of our report-specific parser
-        functions
+    # @staticmethod
+    # def init_reporter_parser(specific_parser):
+    #     """
+    #     Decorator function that initializes all of our report-specific parser
+    #     functions
 
-        :param specific_parser: report-specific parser-function to parse
-        :return: Decorated report-specific wrapper function reference
-        """
-        def wrapper():
-            """
-            Wrapper function that calls the report-specific parser function
-            :return: argparse.ArgumentParser Namespace from specific_parser
-            """
-            parser = Reporter.parse_opts()
-            specific_parser(parser)
-            return parser.parse_args()
-        return wrapper
+    #     :param specific_parser: report-specific parser-function to parse
+    #     :return: Decorated report-specific wrapper function reference
+    #     """
+    #     def wrapper():
+    #         """
+    #         Wrapper function that calls the report-specific parser function
+    #         :return: argparse.ArgumentParser Namespace from specific_parser
+    #         """
+    #         parser = Reporter.parse_opts()
+    #         specific_parser(parser)
+    #         return parser.parse_args()
+    #     return wrapper
 
     def indexpattern_generate(self, index_key, **kwargs):
         """Returns the Elasticsearch index pattern based on the class
@@ -266,38 +270,38 @@ class Reporter(object):
 
         return indexpattern_generate(pattern=pat, **kwargs)
 
-    @staticmethod
-    def parse_opts():
-        """Parses command line options
+    # @staticmethod
+    # def parse_opts():
+    #     """Parses command line options
 
-        :return: argparse.ArgumentParser object with parsed arguments for report
-        """
-        parser = argparse.ArgumentParser()
-        parser.add_argument("-c", "--config", dest="config",
-                            default=None, help="non-standard location of "
-                                               "report configuration file")
-        parser.add_argument("-v", "--verbose", dest="verbose",
-                            action="store_true", default=False,
-                            help="print debug messages to stdout")
-        parser.add_argument("-s", "--start", dest="start",
-                            help="report start date YYYY/MM/DD HH:mm:SS or "
-                                 "YYYY-MM-DD HH:mm:SS")
-        parser.add_argument("-e", "--end", dest="end",
-                            help="report end date YYYY/MM/DD HH:mm:SS or "
-                                 "YYYY-MM-DD HH:mm:SS")
-        parser.add_argument("-T", "--template",dest="template",
-                            help="template_file", default=None)
-        parser.add_argument("-d", "--dryrun", dest="is_test",
-                            action="store_true", default=False,
-                            help="send emails only to _testers")
-        parser.add_argument("-n", "--nomail", dest="no_email",
-                            action="store_true", default=False,
-                            help="Do not send email. ")
-        parser.add_argument("-L", "--logfile", dest="logfile",
-                            default=None, help="Specify non-standard location"
-                                               "for logfile")
+    #     :return: argparse.ArgumentParser object with parsed arguments for report
+    #     """
+    #     parser = argparse.ArgumentParser()
+    #     parser.add_argument("-c", "--config", dest="config",
+    #                         default=None, help="non-standard location of "
+    #                                            "report configuration file")
+    #     parser.add_argument("-v", "--verbose", dest="verbose",
+    #                         action="store_true", default=False,
+    #                         help="print debug messages to stdout")
+    #     parser.add_argument("-s", "--start", dest="start",
+    #                         help="report start date YYYY/MM/DD HH:mm:SS or "
+    #                              "YYYY-MM-DD HH:mm:SS")
+    #     parser.add_argument("-e", "--end", dest="end",
+    #                         help="report end date YYYY/MM/DD HH:mm:SS or "
+    #                              "YYYY-MM-DD HH:mm:SS")
+    #     parser.add_argument("-T", "--template",dest="template",
+    #                         help="template_file", default=None)
+    #     parser.add_argument("-d", "--dryrun", dest="is_test",
+    #                         action="store_true", default=False,
+    #                         help="send emails only to _testers")
+    #     parser.add_argument("-n", "--nomail", dest="no_email",
+    #                         action="store_true", default=False,
+    #                         help="Do not send email. ")
+    #     parser.add_argument("-L", "--logfile", dest="logfile",
+    #                         default=None, help="Specify non-standard location"
+    #                                            "for logfile")
 
-        return parser
+    #     return parser
 
     @staticmethod
     def sorted_buckets(agg, key=operator.attrgetter('key')):
@@ -310,7 +314,7 @@ class Reporter(object):
         """
         return sorted(agg.buckets, key=key)
 
-    def test_no_email(self, emails):
+    def check_no_email(self, emails):
         """
         Checks to see if the no_email flag is True, and takes actions if so.
 
@@ -325,21 +329,21 @@ class Reporter(object):
         else:
             return False
 
-    def get_logfile_path(self, fn, override=False):
+    def get_logfile_path(self, override_fn=None):
         """
         Gets log file location.  First tries user override, then tries config 
-        file, then some standard locations
+        file, then $HOME
 
         :param str fn: Filename of logfile
         :param bool override: Override this method by feeding in a logfile path
         :return str: Path to logfile where we have permission to write
         """
 
-        if override:
-            print "Writing log to {0}".format(fn)
-            return fn
-
-        try_locations = ['/var/log', os.path.expanduser('~'), '/tmp']
+        if override_fn:
+            print "Writing log to {0}".format(override_fn)
+            return override_fn
+    
+        try_locations = [os.path.expanduser('~')]
 
         try:
             logdir = self.config['default_logdir']
@@ -349,11 +353,12 @@ class Reporter(object):
         except KeyError:    # No entry in configfile
             pass
 
-        d = 'gracc-reporting'
+        dirname = 'gracc-reporting'
+        filename = '{0}.log'.format(self.report_type)
 
         for prefix in try_locations:
-            dirpath = os.path.join(prefix, d)
-            filepath = os.path.join(prefix, d, fn)
+            dirpath = os.path.join(prefix, dirname)
+            filepath = os.path.join(prefix, dirname, filename)
 
             errmsg = "Couldn't write logfile to {0}.  " \
                      "Moving to next path".format(filepath)
@@ -364,7 +369,7 @@ class Reporter(object):
             if not os.path.exists(dirpath):
                 # Try to make the logfile directory
                 try:
-                    os.mkdir(dirpath)
+                    os.makedirs(dirpath)
                 except OSError as e:  # Permission Denied or missing directory
                     print e
                     print errmsg
@@ -381,8 +386,8 @@ class Reporter(object):
                 print successmsg
                 break
         else:
-            # If none of the prefixes work for some reason, write to local dir
-            filepath = fn
+            # If none of the prefixes work for some reason, write to current working dir
+            filepath = os.path.join(os.getcwd(), filename)
         return filepath
 
     # Non-public methods
@@ -407,29 +412,44 @@ class Reporter(object):
         else:
             raise OSError("Cannot find file {0:s}".format(configfile))
 
-    def __check_vo(self):
+    def __check_vo(self, vo):
         """
         Check to see if the vo is a section in config file (as of this writing,
         only applies to fife_reports package).  If not, raise KeyError.
 
         If check passes, then we generate the vo_list from the 'valid_vos' key
         in the config file.  This can be used by inheriting classes or ignored
+
+        We should only run this check if self.vo is declared either directly or
+        in some subclass of the Reporter class.
         :return None: 
         """
-        if not self.vo or \
-                (self.vo
-                    and self.vo.lower() not in self.config['configured_vos']
-                    and self.vo.lower() not in self.config[self.report_type.lower()]):
-            if self.verbose:
-                self.logger.info(self.configfile)
-                self.logger.info(self.config)
-            raise KeyError("The VO {0} was not found in the config file."
-                            " Please review the config file to see if changes"
-                            " need to be made and try again.  The config file"
-                           " used was {1}".format(self.vo.lower(), self.configfile))
+        key_error_msg_fmt = "The VO {0} was not found in the config file."\
+                        " Please review the config file to see if changes"\
+                        " need to be made and try again.  The config file"\
+                        " used was {1}"
+
+        try:
+            assert (vo.lower() in self.config['configured_vos'] and
+                    vo.lower() in self.config[self.report_type.lower()])
+        except (NameError, AssertionError):
+            raise KeyError(key_error_msg_fmt.format(vo, self.configfile))
+
+        # if not self.vo or \
+        #         (self.vo
+        #             and self.vo.lower() not in self.config['configured_vos']
+        #             and self.vo.lower() not in self.config[self.report_type.lower()]):
+        #     if self.verbose:
+        #         self.logger.info(self.configfile)
+        #         self.logger.info(self.config)
+        #     raise KeyError("The VO {0} was not found in the config file."
+        #                     " Please review the config file to see if changes"
+        #                     " need to be made and try again.  The config file"
+        #                    " used was {1}".format(self.vo.lower(), self.configfile))
         else:
-            self.vo_list = self.config[self.vo.lower()]['valid_vos'] \
-                if self.vo.lower() in self.config else [self.vo.lower(), ]
+            self.vo_list = self.config[vo.lower()]['valid_vos'] \
+                if vo.lower() in self.config else [vo.lower(), ]
+            return vo
 
     def __establish_client(self):
         """Initialize and return the elasticsearch client
@@ -443,7 +463,6 @@ class Reporter(object):
             hostname = self.config['elasticsearch'].get(self.althost,
                                                         'https://gracc.opensciencegrid.org/q')
             
-
         try:
             client = Elasticsearch(hostname,
                                    verify_certs=False,
@@ -480,18 +499,21 @@ class Reporter(object):
                 attrs.insert(1, vo)
                 names = []
             except AttributeError:      # No vo-specific info in config file
-                try:
+                # try:
                     add_names = copy.deepcopy(
                         self.config[self.report_type.lower()]['to_names']
                     )
-                except KeyError:    # This is the project or missing project report
-                    try:
-                        attrs.insert(0, 'project')
-                        add_names = copy.deepcopy(
-                            self.config['project'][self.report_type.lower()]['to_names'])
-                    except KeyError:    # Some case that shouldn't pop up.  Raise an error
-                        raise
-                finally:
+                # TODO:  Project and Missing Project reports should get separate config entries (that are dupes of each other)
+                # except Exception:
+                #     raise
+                # except KeyError:    # This is the project or missing project report
+                    # try:
+                    #     attrs.insert(0, 'project')
+                    #     add_names = copy.deepcopy(
+                    #         self.config['project'][self.report_type.lower()]['to_names'])
+                    # except KeyError:    # Some case that shouldn't pop up.  Raise an error
+                    #     raise
+                # finally:
                     names.extend(add_names)
             finally:
                 # Iterate through config keys (attrs) to get emails we want
@@ -510,7 +532,7 @@ class Reporter(object):
 
         return email_info
 
-    def __setupgenLogger(self):
+    def __setup_gen_logger(self):
         """Creates logger for Reporter class.
 
         For non-verbose use, use WARNING level (or above)
@@ -600,74 +622,73 @@ def runerror(config, error, traceback, logfile):
         print err
         print error, traceback
         raise
-
-    return None
-
-
-def get_default_resource(kind, filename):
-    """
-    Returns the default config file or html template for a report
-
-    :param str kind: Must be 'config', or 'html_templates', unless we expand
-    the input file kinds in the future
-    :param str filename: The filename of the resource file we're looking for
-    :return str: Path of the default resource
-    """
-    default_path = os.path.join('/etc/gracc-reporting', kind)
-
-    # If the file is in /etc/gracc-reporting/$kind, return that path
-    if os.path.exists(default_path):
-        print "Reading Resource from {0}".format(default_path)
-        resfile = os.path.join(default_path, filename)
-        if os.path.exists(resfile):
-            return resfile
-    # Otherwise, find the file (resource) in the package
-    else:
-        try:
-            return pkg_resources.resource_filename('graccreports',
-                                           os.path.join(kind, filename))
-        except KeyError as e:    # No resource of that name
-            print "The resource you're looking for, {0}, does not exist.  Either" \
-                  " override the resource (use --help on your report to see the " \
-                  "applicable option) or check how you implemented the resource" \
-                  " call in your report.".format(filename)
-            print "The error and traceback returned was: \n{0}".format(e)
-            raise
+    return
 
 
-def get_configfile(flag='osg', override=None):
-    """
-    Returns the appropriate config file for the gracc reports
+# def get_default_resource(kind, filename):
+#     """
+#     Returns the default config file or html template for a report
 
-    :param str flag:  In the future, I want this to be 'osg' or 'fife', or
-    whatever other subpackages we have.  Right now, the FIFE reports all use
-    different config files, so we have to use the separate flags for each
-    ('osg', 'efficiency', 'jobrate').
-    :param str override: Can be a config file in a non-standard location
-    :return str: Absolute path to the config file
-    """
-    if override and os.path.exists(override):
-        return override
+#     :param str kind: Must be 'config', or 'html_templates', unless we expand
+#     the input file kinds in the future
+#     :param str filename: The filename of the resource file we're looking for
+#     :return str: Path of the default resource
+#     """
+#     default_path = os.path.join('/etc/gracc-reporting', kind)
 
-    f = '{0}.toml'.format(flag)
+#     # If the file is in /etc/gracc-reporting/$kind, return that path
+#     if os.path.exists(default_path):
+#         print "Reading Resource from {0}".format(default_path)
+#         resfile = os.path.join(default_path, filename)
+#         if os.path.exists(resfile):
+#             return resfile
+#     # Otherwise, find the file (resource) in the package
+#     else:
+#         try:
+#             return pkg_resources.resource_filename('graccreports',
+#                                            os.path.join(kind, filename))
+#         except KeyError as e:    # No resource of that name
+#             print "The resource you're looking for, {0}, does not exist.  Either" \
+#                   " override the resource (use --help on your report to see the " \
+#                   "applicable option) or check how you implemented the resource" \
+#                   " call in your report.".format(filename)
+#             print "The error and traceback returned was: \n{0}".format(e)
+#             raise
 
-    return get_default_resource('config', f)
+
+# def get_configfile(flag='osg', override=None):
+#     """
+#     Returns the appropriate config file for the gracc reports
+
+#     :param str flag:  In the future, I want this to be 'osg' or 'fife', or
+#     whatever other subpackages we have.  Right now, the FIFE reports all use
+#     different config files, so we have to use the separate flags for each
+#     ('osg', 'efficiency', 'jobrate').
+#     :param str override: Can be a config file in a non-standard location
+#     :return str: Absolute path to the config file
+#     """
+#     if override and os.path.exists(override):
+#         return override
+
+#     f = '{0}.toml'.format(flag)
+
+#     return get_default_resource('config', f)
 
 
-def get_template(override=None, deffile=None):
-    """
-    Returns the appropriate HTML template for the gracc reports.  Allows for
-    override of default template location, or search in default locations.
+# def get_template(override=None, deffile=None):
+#     """
+#     Returns the appropriate HTML template for the gracc reports.  Allows for
+#     override of default template location, or search in default locations.
 
-    :param str override: Can be a template in a non-standard location
-    :param deffile: Default filename.  Should be passed in from calling
-    report (something like 'template_flocking.html')
-    :return str: Absolute path to template file
-    """
-    if override and os.path.exists(override):
-        return override
-    else:
-        return get_default_resource('html_templates', deffile)
+#     :param str override: Can be a template in a non-standard location
+#     :param deffile: Default filename.  Should be passed in from calling
+#     report (something like 'template_flocking.html')
+#     :return str: Absolute path to template file
+#     """
+#     if override and os.path.exists(override):
+#         return override
+#     else:
+#         return get_default_resource('html_templates', deffile)
 
 
 def coroutine(func):
@@ -688,3 +709,36 @@ def force_to_unicode(text):
     If it's str, convert it to Unicode using UTF-8 encoding
     """
     return text if isinstance(text, unicode) else text.decode('utf8')
+
+
+def parse_opts():
+    """Parses command line options
+
+    :return: argparse.ArgumentParser object with parsed arguments for report
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-c", "--config", dest="config",
+                        default=None, help="non-standard location of "
+                                            "report configuration file")
+    parser.add_argument("-v", "--verbose", dest="verbose",
+                        action="store_true", default=False,
+                        help="print debug messages to stdout")
+    parser.add_argument("-s", "--start", dest="start",
+                        help="report start date YYYY/MM/DD HH:mm:SS or "
+                                "YYYY-MM-DD HH:mm:SS")
+    parser.add_argument("-e", "--end", dest="end",
+                        help="report end date YYYY/MM/DD HH:mm:SS or "
+                                "YYYY-MM-DD HH:mm:SS")
+    parser.add_argument("-T", "--template", dest="template",
+                        help="template_file", default=None)
+    parser.add_argument("-d", "--dryrun", dest="is_test",
+                        action="store_true", default=False,
+                        help="send emails only to _testers")
+    parser.add_argument("-n", "--nomail", dest="no_email",
+                        action="store_true", default=False,
+                        help="Do not send email. ")
+    parser.add_argument("-L", "--logfile", dest="logfile",
+                        default=None, help="Specify non-standard location"
+                                            "for logfile")
+
+    return parser
