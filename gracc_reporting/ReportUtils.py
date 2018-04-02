@@ -87,7 +87,7 @@ class Reporter(object):
         self.template = template
         # self.epochrange = None
         self.header = []
-        if vo: self.vo = self.__check_vo(vo)  # TODO: Need test
+        if vo: self.vo = self.__check_vo(vo)
         self.indexpattern = self.indexpattern_generate(index_key,
                                                        start=self.start_time,
                                                        end=self.end_time)

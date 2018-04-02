@@ -1,36 +1,39 @@
+"""Unit tests for ReportUtils"""
+
 import unittest
 import os
-from copy import deepcopy
 
 import toml
 
 import gracc_reporting.ReportUtils as ReportUtils
 
-
-config_file = 'test_config.toml'
-bad_config_file = 'test_bad_config.toml'
-
+CONFIG_FILE = 'test_config.toml'
+BAD_CONFIG_FILE = 'test_bad_config.toml'
 
 
 class FakeVOReport(ReportUtils.Reporter):
-    def __init__(self, cfg_file=config_file, vo=None):
+    """Fake Report class on top of ReportUtils.Reporter"""
+    def __init__(self, cfg_file=CONFIG_FILE, vo=None):
         report = 'test'
         start = '2018-03-28 06:30'
         end = '2018-03-29 06:30'
         super(FakeVOReport, self).__init__(report=report, config=cfg_file,
                                          start=start, end=end, vo=vo)
 
+    # Defined to satisfy abstract class constraints
     def query(self): pass
     def run_report(self): pass
 
 
 class TestReportUtilsBase(unittest.TestCase):
+    """Base class for ReportUtils tests"""
     def setUp(self):
         self.r = FakeVOReport(vo='testVO')
-        self.r_copy = FakeVOReport(cfg_file=bad_config_file)
+        self.r_copy = FakeVOReport(cfg_file=BAD_CONFIG_FILE)
 
 
 class TestGetLogfilePath(TestReportUtilsBase):
+    """Tests for ReportUtils.Reporter.get_logfile_path"""
     def test_override(self):
         """Return override logfile if that's passed in"""
         fn = "/tmp/override.log"
@@ -56,7 +59,9 @@ class TestGetLogfilePath(TestReportUtilsBase):
         self.assertEqual(self.r_copy.get_logfile_path(), answer)
         del self.r_copy.config["default_logdir"]
 
+
 class TestParseConfig(TestReportUtilsBase):
+    """Tests for ReportUtils.Reporter._parse_config"""
     def test_parse_config_control(self):
         """Parse a normal config"""
         answer = {u'test': {
@@ -84,7 +89,7 @@ class TestParseConfig(TestReportUtilsBase):
                     }, 
                     u'default_logdir': u'/tmp/gracc-test'
                 }
-        self.assertDictEqual(self.r._parse_config(config_file), answer)
+        self.assertDictEqual(self.r._parse_config(CONFIG_FILE), answer)
 
     def test_invalid_config(self):
         """Raise toml.TomlDecodeError if we're parsing a bad config file"""
@@ -96,3 +101,20 @@ class TestParseConfig(TestReportUtilsBase):
 
         self.assertRaises(toml.TomlDecodeError, self.r._parse_config, junk_file)
 
+
+class TestCheckVO(unittest.TestCase):
+    """We're not going to actually test ReportUtils.Reporter.__check_vo 
+    directly. We're instead going to check for behavior if we pass a valid 
+    and invalid VO into the class instantiation"""
+
+    def test_valid_vo(self):
+        """Instantiate Reporter with a valid VO"""
+        answer = "testVO"
+        good_report_inst = FakeVOReport(vo=answer)
+        self.assertEqual(good_report_inst.vo, answer)
+        del good_report_inst
+
+    def test_bad_vo(self):
+        """Instantiate Reporter with an invalid VO"""
+        self.assertRaises(KeyError, FakeVOReport, vo="thisshouldfail")
+        
