@@ -1,8 +1,9 @@
+"""Unit tests for TimeUtils"""
+
 import unittest
 from datetime import datetime, date
-import time
 
-from dateutil import tz, parser
+from dateutil import tz
 
 import gracc_reporting.TimeUtils as TimeUtils
 
@@ -45,12 +46,13 @@ class TestParseDatetime(unittest.TestCase):
             self.assertEqual(TimeUtils.parse_datetime(
                 in_date, utc=True), answer)
 
-    def test_fail_parse(self): 
+    def test_fail_parse(self):
+        """Invalid time string should fail to parse""" 
         self.assertRaises(Exception, TimeUtils.parse_datetime, self.fail_string)
 
 
 class TestEpochToDatetime(unittest.TestCase):
-
+    """Test TimeUtils.epoch_to_datetime"""
     epoch_time = 1522253329
     datetime_time = datetime(2018, 3, 28, 11, 8, 49)
 
@@ -59,18 +61,18 @@ class TestEpochToDatetime(unittest.TestCase):
         self.assertEqual(
             datetime.fromtimestamp(self.epoch_time), self.datetime_time)
 
-    def test_return_none(self): 
+    def test_return_none(self):
         """If we pass in None, we should get back None"""
         self.assertIsNone(TimeUtils.epoch_to_datetime(None))
 
-    def test_control_epoch(self): 
+    def test_control_epoch(self):
         """If we pass in self.epoch_time, we should get self.datetime_time"""
         answer = self.datetime_time.replace(
             tzinfo=tz.tzlocal()).astimezone(tz=tz.tzutc())
         self.assertEqual(TimeUtils.epoch_to_datetime(self.epoch_time), answer)
 
-    def test_units(self): 
-        """If we specify a valid unit, the correct conversion 
+    def test_units(self):
+        """If we specify a valid unit, the correct conversion
         should take place"""
         answer = self.datetime_time.replace(
             tzinfo=tz.tzlocal()).astimezone(tz=tz.tzutc())
@@ -83,32 +85,35 @@ class TestEpochToDatetime(unittest.TestCase):
         for unit_name, value in units_inputs.iteritems():
             self.assertEqual(TimeUtils.epoch_to_datetime(value, unit=unit_name), answer)
 
-    def test_unit_fail(self): 
+    def test_unit_fail(self):
         """Raise InvalidUnitError if invalid unit is passed in"""
-        self.assertRaises(TimeUtils.InvalidUnitError, 
-            TimeUtils.epoch_to_datetime, self.epoch_time, 'hours')
+        self.assertRaises(TimeUtils.InvalidUnitError,
+                          TimeUtils.epoch_to_datetime, self.epoch_time,
+                          'hours')
 
 class TestGetEpochTimeRangeUtcms(unittest.TestCase):
+    """Test TimeUtils.get_epoch_time_range_utc_ms"""
     start = datetime(2018, 3, 27, 16, 8, 49)
     end = datetime(2018, 3, 28, 16, 8, 49)
 
     def test_invalid_args_type(self):
         """Raise generic Exception if we pass in invalid args"""
         args_list = ['hello', 'world']
-        self.assertRaises(Exception, 
-            TimeUtils.get_epoch_time_range_utc_ms, *args_list)
+        self.assertRaises(Exception,
+                          TimeUtils.get_epoch_time_range_utc_ms, *args_list)
 
     def test_invalid_args_value(self):
         """Raise AssertionError if we pass in bad values.  Switching
         start and end should trip this"""
         self.assertRaises(AssertionError,
-            TimeUtils.get_epoch_time_range_utc_ms, self.end, self.start)
-    
+                          TimeUtils.get_epoch_time_range_utc_ms,
+                          self.end, self.start)
+
     def test_control_epoch_range(self):
         """Return epoch time range in ms for valid input range"""
         answer = (1522166929000, 1522253329000)
         self.assertTupleEqual(TimeUtils.get_epoch_time_range_utc_ms(self.start, self.end), answer)
-    
-        
+
+
 if __name__ == '__main__':
     unittest.main()
