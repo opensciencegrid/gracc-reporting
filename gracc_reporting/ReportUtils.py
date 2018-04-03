@@ -91,8 +91,8 @@ class Reporter(object):
         self.indexpattern = self.indexpattern_generate(index_key,
                                                        start=self.start_time,
                                                        end=self.end_time)
-        self.email_info = self.__get_email_info()   # TODO: Need test
-        self.client = self.__establish_client()     # TODO: Need test
+        self.email_info = self.__get_email_info()
+        self.client = self.__establish_client()
 
     # Report methods that must or should be implemented
     @abc.abstractmethod
