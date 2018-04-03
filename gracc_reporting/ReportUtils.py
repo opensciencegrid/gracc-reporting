@@ -59,7 +59,7 @@ class Reporter(object):
     :param str logfile: Filename of log file for report
     :param bool logfile_override: Override default logfile location
     :param bool check_vo: Should we do VO validation?
-    :param str althost: Alternate Elasticsearch Host key from config file.
+    :param str althost_key: Alternate Elasticsearch Host key from config file.
         Must be specified in [elasticsearch] section of
         config file by name (e.g. my_es_cluster="https://hostname.me")
     """
@@ -704,7 +704,7 @@ def runerror(config, error, traceback, logfile):
 
 def coroutine(func):
     """Decorator to prime coroutines by advancing them to their first yield
-    point
+    point.  From http://www.dabeaz.com/coroutines/Coroutines.pdf
 
     :param function func: Coroutine function to prime
     :return function: Coroutine that's been primed
@@ -714,6 +714,7 @@ def coroutine(func):
         cr.next()
         return cr
     return wrapper
+
 
 def force_to_unicode(text):
     """If text is unicode, it is returned as is.

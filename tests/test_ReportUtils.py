@@ -11,6 +11,7 @@ CONFIG_FILE = 'test_config.toml'
 BAD_CONFIG_FILE = 'test_bad_config.toml'
 
 
+# Reporter stuff
 class FakeVOReport(ReportUtils.Reporter):
     """Fake Report class on top of ReportUtils.Reporter"""
     def __init__(self, cfg_file=CONFIG_FILE, vo=None, althost_key=None,
@@ -197,3 +198,26 @@ class TestGetEmailInfo(TestReportUtilsBase):
         test_report_test = FakeVOReport(is_test=True)
         self.assertDictEqual(test_report_test.email_info['to'], recipients_dict)
         del test_report_test
+
+
+# Everything besides Reporter
+class TestUtilFuncs(unittest.TestCase):
+    """Unit tests for ReportUtils module level functions"""
+    def test_coroutine(self):
+        """Use ReportUtils.coroutine decorator to create simple coroutine"""
+        @ReportUtils.coroutine
+        def test_func(*args, **kwargs):
+            pass
+            value = yield
+            yield value
+
+        f = test_func()
+        self.assertEqual(f.send(1), 1)
+
+    def test_force_to_unicode_string(self):
+        """Return unicode string"""        
+        self.assertIsInstance(ReportUtils.force_to_unicode('blah'), unicode)
+
+    def test_force_to_unicode_utf(self):
+        """Return unicode string"""
+        self.assertIsInstance(ReportUtils.force_to_unicode(u'blah'), unicode)
