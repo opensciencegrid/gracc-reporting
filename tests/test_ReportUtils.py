@@ -4,6 +4,7 @@ import unittest
 import os
 
 import toml
+from elasticsearch import Elasticsearch, exceptions
 
 import gracc_reporting.ReportUtils as ReportUtils
 
@@ -13,12 +14,13 @@ BAD_CONFIG_FILE = 'test_bad_config.toml'
 
 class FakeVOReport(ReportUtils.Reporter):
     """Fake Report class on top of ReportUtils.Reporter"""
-    def __init__(self, cfg_file=CONFIG_FILE, vo=None):
+    def __init__(self, cfg_file=CONFIG_FILE, vo=None, althost_key=None):
         report = 'test'
         start = '2018-03-28 06:30'
         end = '2018-03-29 06:30'
         super(FakeVOReport, self).__init__(report=report, config=cfg_file,
-                                         start=start, end=end, vo=vo)
+                                         start=start, end=end, vo=vo, 
+                                         althost_key=althost_key)
 
     # Defined to satisfy abstract class constraints
     def query(self): pass
@@ -66,6 +68,8 @@ class TestParseConfig(TestReportUtilsBase):
         """Parse a normal config"""
         answer = {u'test': {
                     u'index_pattern': u'gracc.osg.raw-%Y.%m', 
+                    u'to_emails': [u'nobody@example.com'],
+                    u'to_names' : [u'test name'],
                     u'testvo': {
                         u'min_hours': 1000, 
                         u'min_efficiency': 0.5, 
@@ -74,7 +78,9 @@ class TestParseConfig(TestReportUtilsBase):
                     }, 
                     u'configured_vos': [u'testvo'], 
                     u'elasticsearch': {
-                        u'hostname': u'https://gracc.opensciencegrid.org/q'
+                        u'hostname': u'https://gracc.opensciencegrid.org/q',
+                        u'secondary_host': u'https://gracc.opensciencegrid.org/q',
+                        u'bad_host': u'https://www.blah.badurl'
                         }, 
                     u'email': {
                         u'test': {
@@ -118,3 +124,32 @@ class TestCheckVO(unittest.TestCase):
         """Instantiate Reporter with an invalid VO"""
         self.assertRaises(KeyError, FakeVOReport, vo="thisshouldfail")
         
+
+class TestEstablishClient(unittest.TestCase):
+    """Test establishing of Elasticsearch client"""
+    def test_default_case(self):
+        """Automatically pass because all other tests 
+        must pass this to run""" 
+        pass
+
+    def test_no_althostkey_no_config_entry(self):
+        """host should return https://gracc.opensciencegrid.org/q if no
+        althost is specified and there is no config file entry"""
+        _cfg = BAD_CONFIG_FILE 
+        test_report = FakeVOReport(cfg_file=_cfg)
+        self.assertEqual(test_report.client.transport.hosts[0]['host'], 
+                         'gracc.opensciencegrid.org')
+        del test_report
+
+    def test_althost_key(self):
+        """Connect to host specified in secondary_host key"""
+        test_report_ok = FakeVOReport(althost_key='secondary_host')
+        self.assertEqual(test_report_ok.client.transport.hosts[0]['host'], 
+                         'gracc.opensciencegrid.org')
+        del test_report_ok
+
+    def test_althost_bad(self):
+        """Raise SystemExit if connecting to a bad host"""
+        # test_report_bad = FakeVOReport(althost_key='bad_host')
+        self.assertRaises(SystemExit, FakeVOReport, althost_key='bad_host')
+

@@ -66,7 +66,7 @@ class Reporter(object):
     __metaclass__ = abc.ABCMeta
 
     def __init__(self, report, config, start, end=None, 
-                 althost=None, index_key='index_pattern', vo=None,
+                 althost_key=None, index_key='index_pattern', vo=None,
                  template=None, is_test=False, no_email=False, verbose=False,
                  logfile=None
                  ):
@@ -81,7 +81,7 @@ class Reporter(object):
         # self.logfile = self.get_logfile_path(logfile, override=logfile_override) if logfile \
         #     else 'reports.log'
         self.logger = self.__setup_gen_logger()
-        self.althost = althost
+        self.althost_key = althost_key
         self.start_time = TimeUtils.parse_datetime(start)
         self.end_time = TimeUtils.parse_datetime(end)
         self.template = template
@@ -456,17 +456,28 @@ class Reporter(object):
 
         :return: elasticsearch.Elasticsearch object
         """
-        if self.althost is None:
-            hostname = self.config['elasticsearch'].get('hostname',
-                                                        'https://gracc.opensciencegrid.org/q')
-        else:
-            hostname = self.config['elasticsearch'].get(self.althost,
-                                                        'https://gracc.opensciencegrid.org/q')
-            
         try:
-            client = Elasticsearch(hostname,
+            if self.althost_key is not None:
+                _hostname = self.config['elasticsearch'][self.althost_key]
+            else:
+                try:
+                    _hostname = self.config['elasticsearch']['hostname']
+                except KeyError:
+                    _hostname = 'https://gracc.opensciencegrid.org/q'
+
+
+        # if self.althost is None:
+        #     hostname = self.config['elasticsearch'].get('hostname',
+        #                                                 'https://gracc.opensciencegrid.org/q')
+        # else:
+        #     hostname = self.config['elasticsearch'].get(self.althost,
+        #                                                 'https://gracc.opensciencegrid.org/q')
+            
+        # try:
+            client = Elasticsearch(_hostname,
                                    verify_certs=False,
-                                   timeout=60)
+                                   timeout=60,
+                                   sniff_on_start=True)
         except Exception as e:
             self.logger.exception("Couldn't initialize Elasticsearch instance."
                                   " Error/traceback: {0}".format(e))
