@@ -12,20 +12,25 @@ implementation will be gladly accepted.
 
                         David S. Harrison
                         (daha@best.com)
+
+Returns a nicely formatted string for the floating point number
+provided.  This number will be rounded to the supplied accuracy
+and commas and spaces will be added.  I think every language should
+do this for numbers.  Why don't they?  Here are some examples:
+
+>>> niceNum(123567.0, 1000)
+'124,000'
+
+>>> niceNum(5.3918e-07, 1e-10)
+'0.000 000 539 2'
+
+This kind of thing is wonderful for producing tables for
+human consumption.
+
 """
 import math
 
-# Returns a nicely formatted string for the floating point number
-# provided.  This number will be rounded to the supplied accuracy
-# and commas and spaces will be added.  I think every language should
-# do this for numbers.  Why don't they?  Here are some examples:
-# >>> print niceNum(123567.0, 1000)
-# 124,000
-# >>> print niceNum(5.3918e-07, 1e-10)
-# 0.000 000 539 2
-# This kind of thing is wonderful for producing tables for
-# human consumption.
-#
+
 def niceNum(num, precision = 1):
     """Returns a string representation for a floating point number
     that is rounded to the given precision and displayed with
@@ -68,3 +73,7 @@ def niceNum(num, precision = 1):
     else:
         result = "0"
     return result
+
+if __name__ == '__main__':
+    import doctest
+    doctest.testmod()
