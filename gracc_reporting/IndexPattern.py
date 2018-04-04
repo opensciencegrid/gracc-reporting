@@ -1,9 +1,6 @@
-#!/usr/bin/python
+"""Generate gracc-reporting index patterns"""
 
 from datetime import datetime
-
-
-# TODO:  Move tests to a unit test!
 
 def indexpattern_generate(pattern=None, start=None, end=None):
     """Function to return the proper index pattern for queries to
@@ -57,67 +54,4 @@ def indexpattern_generate(pattern=None, start=None, end=None):
             else:
                 break
         return '{0}*'.format(index_pattern_common)
-
-
-if __name__ == "__main__":
-    # Testing
-    date_dateend = datetime(2016, 06, 12)
-
-    date_datestart1 = datetime(2016, 06, 10)
-    date_datestart2 = datetime(2016, 5, 10)
-    date_datestart3 = datetime(2015, 05, 10)
-
-    datebreak = '20160205'
-
-    def check_error(errortype, **kwargs):
-        try:
-            indexpattern_generate(**kwargs)
-        except errortype as e:
-            print "We expect to see a {0} error here".format(errortype.__name__)
-            print e
-        except Exception as e:
-            raise AssertionError(
-                "We should have seen a(n) {0}.  "
-                "We saw some other error".format(errortype.__name__)
-            )
-        else:
-            raise AssertionError(
-                "Failed date-independent TypeError try-except test.  We "
-                "got no errors and we should have")
-
-    # No pattern
-    testout= 'gracc.osg.summary'
-    assert indexpattern_generate() == testout
-    assert indexpattern_generate(start=date_datestart1, end=date_dateend) == testout
-    assert indexpattern_generate(start=date_datestart1) == testout
-    print "Passed no pattern tests"
-
-    # Pattern is not date-dependent
-    pattern1 = 'gracc.osg.summary'
-    pattern2 = 'gracc.osg.raw-*'
-    pattern_bad = 4
-    for p in (pattern1, pattern2):
-        assert indexpattern_generate(pattern=p) == p
-        assert indexpattern_generate(pattern=p, start=date_datestart1) == p
-
-    for sdate in (None, date_datestart1):
-        check_error(TypeError, pattern=pattern_bad, start=sdate)
-
-    print "Passed date-independent pattern tests"
-
-    # Pattern is date-dependent
-    pattern_good = 'gracc.osg.raw-%Y.%m'
-
-    check_error(AttributeError, pattern=pattern_good, start=datebreak, end=date_dateend)
-    check_error(AttributeError, pattern=pattern_good, start=date_datestart1, end=datebreak)
-    check_error(AttributeError, pattern=pattern_good)
-
-    assert indexpattern_generate(pattern=pattern_good, start=date_datestart1, end=date_dateend) == 'gracc.osg.raw-2016.06', \
-        "Assertion Error, {0}-{1} test failed".format(date_datestart1, date_dateend)
-    assert indexpattern_generate(pattern=pattern_good, start=date_datestart2, end=date_dateend) == 'gracc.osg.raw-2016.0*', \
-        "Assertion Error, {0}-{1} test failed".format(date_datestart2, date_dateend)
-    assert indexpattern_generate(pattern=pattern_good, start=date_datestart3, end=date_dateend) == 'gracc.osg.raw-201*', \
-        "Assertion Error, {0}-{1} test failed".format(date_datestart3, date_dateend)
-
-    print "Passed date-dependent tests"
-    print "\nPassed all tests"
+    
