@@ -30,8 +30,7 @@ human consumption.
 """
 import math
 
-
-def niceNum(num, precision = 1):
+def niceNum(num, precision=1):
     """Returns a string representation for a floating point number
     that is rounded to the given precision and displayed with
     commas and spaces."""
@@ -73,7 +72,3 @@ def niceNum(num, precision = 1):
     else:
         result = "0"
     return result
-
-if __name__ == '__main__':
-    import doctest
-    doctest.testmod()
