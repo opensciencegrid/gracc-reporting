@@ -5,9 +5,11 @@ configured_vos = ['testvo']
 
 
 [elasticsearch]
+    ok_statuses = ['green', 'yellow']
     hostname = 'https://gracc.opensciencegrid.org/q'
     secondary_host = 'https://gracc.opensciencegrid.org/q'
     bad_host = 'https://www.blah.badurl'
+
 
 [email]
     # This is the FQDN of the mail server, which GRACC will use to send the email

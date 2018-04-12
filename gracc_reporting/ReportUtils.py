@@ -506,7 +506,7 @@ class Reporter(object):
             return __start_client(_hostname, _ok_statuses)
         except Exception as e:
             self.logger.exception("Couldn't initialize Elasticsearch instance."
-                                  " Error/traceback: {0}".format(e))
+                                  " Error: {0}".format(e))
             sys.exit(1)
 
 

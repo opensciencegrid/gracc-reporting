@@ -2,6 +2,7 @@
 
 import unittest
 import os
+from shutil import copyfile
 
 import toml
 
@@ -159,6 +160,21 @@ class TestEstablishClient(TestReportUtilsBase):
         """Raise SystemExit if passing in an althost_key that's not in the 
         config file"""
         self.assertRaises(SystemExit, FakeVOReport, althost_key='invalid_key')
+
+    def test_cluster_bad_status(self):
+        """Raise SystemExit if the cluster is in a state that's not 
+        in the config file as being 'OK'"""
+        _cfg = '/tmp/junk.toml'
+        text = """
+[elasticsearch]
+    ok_statuses = ['purple']
+        """
+        copyfile(BAD_CONFIG_FILE, _cfg)
+        with open(_cfg, 'a') as f:
+            f.write(text)
+                
+        self.assertRaises(SystemExit, FakeVOReport, cfg_file=_cfg)
+
 
 
 class TestGetEmailInfo(TestReportUtilsBase):
