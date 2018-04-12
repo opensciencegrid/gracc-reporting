@@ -80,6 +80,7 @@ class TestParseConfig(TestReportUtilsBase):
                     }, 
                     u'configured_vos': [u'testvo'], 
                     u'elasticsearch': {
+                        u'ok_statuses': [u'green', u'yellow'],
                         u'hostname': u'https://gracc.opensciencegrid.org/q',
                         u'secondary_host': u'https://gracc.opensciencegrid.org/q',
                         u'bad_host': u'https://www.blah.badurl'
@@ -153,6 +154,11 @@ class TestEstablishClient(TestReportUtilsBase):
     def test_althost_bad(self):
         """Raise SystemExit if connecting to a bad host"""
         self.assertRaises(SystemExit, FakeVOReport, althost_key='bad_host')
+
+    def test_althost_invalid(self):
+        """Raise SystemExit if passing in an althost_key that's not in the 
+        config file"""
+        self.assertRaises(SystemExit, FakeVOReport, althost_key='invalid_key')
 
 
 class TestGetEmailInfo(TestReportUtilsBase):

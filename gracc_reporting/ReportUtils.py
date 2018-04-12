@@ -11,8 +11,10 @@ import pkg_resources
 import json
 import toml
 import copy
+# from httplib import HTTPConnection
+import httplib
 
-from elasticsearch import Elasticsearch
+from elasticsearch import Elasticsearch, client
 
 import TextUtils
 import TimeUtils
@@ -21,6 +23,8 @@ from IndexPattern import indexpattern_generate
 
 # TODO:  https://pymotw.com/2/argparse/#sharing-parser-rules
 
+
+OK_ES_STATUSES=['green',]
 
 class ContextFilter(logging.Filter):
     """This is a class to inject contextual information into the record
@@ -456,34 +460,55 @@ class Reporter(object):
 
         :return: elasticsearch.Elasticsearch object
         """
+        _fallback_ok = ['green', ]
+        _default_host = 'https://gracc.opensciencegrid.org/q'
+
+        if self.verbose:
+            httplib.HTTPConnection.debuglevel = 1
+            httplib.HTTPSConnection.debuglevel = 1
+
+
+        def __start_client(hostname, ok_statuses):
+            if self.verbose:
+                print hostname
+            _client = Elasticsearch(hostname,
+                                    verify_certs=False,
+                                    timeout=60)
+
+            _cat_client = client.CatClient(_client)
+            assert _cat_client.health(h=["status",]).strip()\
+                in ok_statuses
+            return _client
+
         try:
+            try:
+                _es_part = self.config['elasticsearch']
+            except KeyError:
+                # ES hosts not configured in config file, so use default values
+                _hostname = _default_host
+                _ok_statuses = _fallback_ok
+                return __start_client(_hostname, _ok_statuses)
+
+            _ok_statuses = self.config['elasticsearch'].get(
+                'ok_statuses', _fallback_ok)
+
             if self.althost_key is not None:
-                _hostname = self.config['elasticsearch'][self.althost_key]
-            else:
                 try:
-                    _hostname = self.config['elasticsearch']['hostname']
+                    _hostname = self.config['elasticsearch'][self.althost_key]        
                 except KeyError:
-                    _hostname = 'https://gracc.opensciencegrid.org/q'
-
-
-        # if self.althost is None:
-        #     hostname = self.config['elasticsearch'].get('hostname',
-        #                                                 'https://gracc.opensciencegrid.org/q')
-        # else:
-        #     hostname = self.config['elasticsearch'].get(self.althost,
-        #                                                 'https://gracc.opensciencegrid.org/q')
+                    raise KeyError("Reporter class instantiated with althost_key" 
+                        " \'{0}\' that isn't set in the configuration file.".format(
+                            self.althost_key))
+            else:
+                _hostname = self.config['elasticsearch'].get(
+                    'hostname', _default_host)
             
-        # try:
-            client = Elasticsearch(_hostname,
-                                   verify_certs=False,
-                                   timeout=60,
-                                   sniff_on_start=True)
+            return __start_client(_hostname, _ok_statuses)
         except Exception as e:
             self.logger.exception("Couldn't initialize Elasticsearch instance."
                                   " Error/traceback: {0}".format(e))
             sys.exit(1)
-        else:
-            return client
+
 
     def __get_email_info(self):
         """
@@ -559,7 +584,8 @@ class Reporter(object):
         # Console handler - info
         ch = logging.StreamHandler()
         if self.verbose:
-            ch.setLevel(logging.INFO)
+            ch.setLevel = logging.DEBUG
+            # ch.setLevel(logging.INFO)
         else:
             ch.setLevel(logging.WARNING)
 
@@ -728,7 +754,7 @@ def parse_opts():
 
     :return: argparse.ArgumentParser object with parsed arguments for report
     """
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("-c", "--config", dest="config",
                         default=None, help="non-standard location of "
                                             "report configuration file")
