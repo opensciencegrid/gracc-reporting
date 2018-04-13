@@ -49,8 +49,8 @@ class Reporter(object):
     Base class for all OSG reports
     :param str report: Which report is getting run
     :param str config: Filename of toml configuration file
-    :param str start: Start time of report range
-    :param str end: End time of report range
+    :param str start: Start time of report range - Local TZ of machine
+    :param str end: End time of report range - Local TZ of machine
     :param bool verbose: Verbose flag
     :param bool raw: True = Use GRACC raw ES indices;
         False = use Summary indices)
@@ -86,8 +86,10 @@ class Reporter(object):
         #     else 'reports.log'
         self.logger = self.__setup_gen_logger()
         self.althost_key = althost_key
-        self.start_time = TimeUtils.parse_datetime(start)
+        # self.start_time and self.end_time will be in UTC
+        self.start_time = TimeUtils.parse_datetime(start) 
         self.end_time = TimeUtils.parse_datetime(end)
+        
         self.template = template
         # self.epochrange = None
         self.header = []

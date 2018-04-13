@@ -51,7 +51,7 @@ def epoch_to_datetime(timestamp, unit='second'):    # Note that changes might af
     if timestamp is None:
         return None
 
-    if isinstance(timestamp, str):
+    if not isinstance(timestamp, (float, int)):
         timestamp = float(timestamp)
 
     try:
