@@ -21,8 +21,7 @@ import TimeUtils
 from IndexPattern import indexpattern_generate
 # from TimeUtils import TimeUtils
 
-# TODO:  https://pymotw.com/2/argparse/#sharing-parser-rules
-
+__all__ = ['Reporter', 'runerror', 'coroutine', 'parse_opts']
 
 OK_ES_STATUSES=['green',]
 
@@ -89,7 +88,7 @@ class Reporter(object):
         # self.start_time and self.end_time will be in UTC
         self.start_time = TimeUtils.parse_datetime(start) 
         self.end_time = TimeUtils.parse_datetime(end)
-        
+
         self.template = template
         # self.epochrange = None
         self.header = []
@@ -360,7 +359,7 @@ class Reporter(object):
             pass
 
         dirname = 'gracc-reporting'
-        filename = '{0}.log'.format(self.report_type)
+        filename = '{0}.log'.format(self.report_type.lower())
 
         for prefix in try_locations:
             dirpath = os.path.join(prefix, dirname)
@@ -510,7 +509,6 @@ class Reporter(object):
             self.logger.exception("Couldn't initialize Elasticsearch instance."
                                   " Error: {0}".format(e))
             sys.exit(1)
-
 
     def __get_email_info(self):
         """
@@ -744,11 +742,11 @@ def coroutine(func):
     return wrapper
 
 
-def force_to_unicode(text):
-    """If text is unicode, it is returned as is.
-    If it's str, convert it to Unicode using UTF-8 encoding
-    """
-    return text if isinstance(text, unicode) else text.decode('utf8')
+# def force_to_unicode(text):
+#     """If text is unicode, it is returned as is.
+#     If it's str, convert it to Unicode using UTF-8 encoding
+#     """
+#     return text if isinstance(text, unicode) else text.decode('utf8')
 
 
 def parse_opts():
