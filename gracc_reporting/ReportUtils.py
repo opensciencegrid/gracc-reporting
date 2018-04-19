@@ -51,58 +51,67 @@ class Reporter(object):
     :param str start: Start time of report range - Local TZ of machine
     :param str end: End time of report range - Local TZ of machine
     :param bool verbose: Verbose flag
-    :param bool raw: True = Use GRACC raw ES indices;
-        False = use Summary indices)
-    :param bool allraw: True = short-circuit index-pattern optimization and
-        search all raw indices
     :param str template: Filename of HTML template to inject report data into
     :param bool is_test: Dry-run or real run
     :param bool no_email: If true, don't send any emails
-    :param str title: Report title
     :param str logfile: Filename of log file for report
-    :param bool logfile_override: Override default logfile location
-    :param bool check_vo: Should we do VO validation?
     :param str althost_key: Alternate Elasticsearch Host key from config file.
         Must be specified in [elasticsearch] section of
         config file by name (e.g. my_es_cluster="https://hostname.me")
     """
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, report, config, start, end=None, 
-                 althost_key=None, index_key='index_pattern', vo=None,
-                 template=None, is_test=False, no_email=False, verbose=False,
-                 logfile=None
-                 ):
-        # TimeUtils.__init__(self)
-        self.verbose = verbose
-        self.configfile = config
-        self.config = self._parse_config(config)
-        self.is_test = is_test
-        self.no_email = no_email
-        self.report_type = report
-        self.logfile = logfile if logfile else self.get_logfile_path()
+    __optional_kwargs = {
+        'althost_key': None,
+        'index_key': 'index_pattern',
+        'vo': None,
+        'template': None,
+        'logfile': None,
+        'is_test': False,
+        'no_email': False, 
+        'verbose': False        
+    }
+
+    def __init__(self, report_type, config_file, start, end, **kwargs):
+        validate_and_add_kwargs_for_instance(self, self.__optional_kwargs, kwargs)
+        self.report_type = report_type
+        # self.verbose = verbose
+        self.configfile = config_file
+        self.config = self._parse_config(config_file)
+        # self.is_test = is_test
+        # self.no_email = no_email
+        # self.report_type = report
+        self.logfile = self.logfile if self.logfile is not None\
+            else self.get_logfile_path()
         # self.logfile = self.get_logfile_path(logfile, override=logfile_override) if logfile \
         #     else 'reports.log'
         self.logger = self.__setup_gen_logger()
-        self.althost_key = althost_key
+        # self.althost_key = althost_key
         # self.start_time and self.end_time will be in UTC
         self.start_time = TimeUtils.parse_datetime(start) 
         self.end_time = TimeUtils.parse_datetime(end)
 
-        self.template = template
+        # self.template = template
         # self.epochrange = None
         self.header = []
-        if vo: self.vo = self.__check_vo(vo)
-        self.indexpattern = self.indexpattern_generate(index_key,
+        if self.vo is not None: 
+            self.vo = self.__check_vo(self.vo)
+        self.indexpattern = self.indexpattern_generate(self.index_key,
                                                        start=self.start_time,
                                                        end=self.end_time)
         self.email_info = self.__get_email_info()
         self.client = self.__establish_client()
 
-    # Report methods that must or should be implemented
+    # Report methods that must or should be implemented in subclasses
     @abc.abstractmethod
     def query(self):
         """Method to define report's Elasticsearch query. Must be overridden"""
+        pass
+
+    @abc.abstractmethod
+    def run_report(self):
+        """Method within report that actually runs the various other methods
+        in the Reporter and report-specific class.  Must be overridden."""
         pass
 
     def run_query(self, overridequery=None):
@@ -234,32 +243,7 @@ class Reporter(object):
             ", ".join(self.email_info['to']['email'])))
         return
 
-    @abc.abstractmethod
-    def run_report(self):
-        """Method within report that actually runs the various other methods
-        in the Reporter and report-specific class.  Must be overridden."""
-        pass
-
-    # Helper methods that can be used in subclasses
-    # @staticmethod
-    # def init_reporter_parser(specific_parser):
-    #     """
-    #     Decorator function that initializes all of our report-specific parser
-    #     functions
-
-    #     :param specific_parser: report-specific parser-function to parse
-    #     :return: Decorated report-specific wrapper function reference
-    #     """
-    #     def wrapper():
-    #         """
-    #         Wrapper function that calls the report-specific parser function
-    #         :return: argparse.ArgumentParser Namespace from specific_parser
-    #         """
-    #         parser = Reporter.parse_opts()
-    #         specific_parser(parser)
-    #         return parser.parse_args()
-    #     return wrapper
-
+    # Other methods
     def indexpattern_generate(self, index_key, **kwargs):
         """Returns the Elasticsearch index pattern based on the class
         variables of start time and end time, and the index pattern fed in.
@@ -726,6 +710,20 @@ def runerror(config, error, traceback, logfile):
 #         return override
 #     else:
 #         return get_default_resource('html_templates', deffile)
+
+
+def validate_and_add_kwargs_for_instance(instance, valid_kwargs, given_kwargs):
+    for key, value in valid_kwargs.iteritems():
+        setattr(instance, key, value)
+    for key, value in given_kwargs.iteritems():
+        try:
+            assert key in valid_kwargs
+            instance.__dict__[key] = value
+        except AssertionError:
+            raise TypeError("Invalid kwarg for class {0}.'\
+                    ' Allowed kwargs are {1}".format(
+                instance.__class__.__name__,
+                ', '.join(valid_kwargs.iterkeys())))
 
 
 def coroutine(func):
