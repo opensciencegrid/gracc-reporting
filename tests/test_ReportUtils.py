@@ -20,8 +20,11 @@ class FakeVOReport(ReportUtils.Reporter):
         report = 'test'
         start = '2018-03-28 06:30'
         end = '2018-03-29 06:30'
-        super(FakeVOReport, self).__init__(report=report, config=cfg_file,
-                                           start=start, end=end, vo=vo,
+        super(FakeVOReport, self).__init__(report_type=report, 
+                                           config_file=cfg_file,
+                                           start=start, 
+                                           end=end, 
+                                           vo=vo,
                                            althost_key=althost_key,
                                            is_test=is_test)
 
@@ -235,11 +238,3 @@ class TestUtilFuncs(unittest.TestCase):
 
         f = test_func()
         self.assertEqual(f.send(1), 1)
-
-    def test_force_to_unicode_string(self):
-        """Return unicode string"""        
-        self.assertIsInstance(ReportUtils.force_to_unicode('blah'), unicode)
-
-    def test_force_to_unicode_utf(self):
-        """Return unicode string"""
-        self.assertIsInstance(ReportUtils.force_to_unicode(u'blah'), unicode)
