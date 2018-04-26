@@ -25,6 +25,10 @@ __all__ = ['Reporter', 'runerror', 'coroutine', 'parse_opts']
 
 OK_ES_STATUSES=['green',]
 
+
+# TODO:  Change name of parse_opts to something like get_parser(), so it isn't confusing.  Then 
+# change the code in all the reports to use that correctly
+
 class ContextFilter(logging.Filter):
     """This is a class to inject contextual information into the record
 
@@ -712,16 +716,18 @@ def runerror(config, error, traceback, logfile):
 #         return get_default_resource('html_templates', deffile)
 
 
-def validate_and_add_kwargs_for_instance(instance, valid_kwargs, given_kwargs):
-    for key, value in valid_kwargs.iteritems():
-        setattr(instance, key, value)
+def validate_and_add_kwargs_for_instance(instance, valid_kwargs, given_kwargs, add_arg_defaults_to_instance=True):
+    if add_arg_defaults_to_instance:
+        for key, value in valid_kwargs.iteritems():
+            setattr(instance, key, value)
     for key, value in given_kwargs.iteritems():
         try:
             assert key in valid_kwargs
             instance.__dict__[key] = value
         except AssertionError:
-            raise TypeError("Invalid kwarg for class {0}.'\
-                    ' Allowed kwargs are {1}".format(
+            raise TypeError("Invalid kwarg {0} for class {1}.'\
+                    ' Allowed kwargs are {2}".format(
+                key,
                 instance.__class__.__name__,
                 ', '.join(valid_kwargs.iterkeys())))
 
@@ -747,34 +753,40 @@ def coroutine(func):
 #     return text if isinstance(text, unicode) else text.decode('utf8')
 
 
-def parse_opts():
+def parse_opts(no_time_options=False):
     """Parses command line options
 
     :return: argparse.ArgumentParser object with parsed arguments for report
     """
     parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument("-c", "--config", dest="config",
+    always_include = parser.add_argument_group('Included in all reports')
+
+    always_include.add_argument("-c", "--config", dest="config",
                         default=None, help="non-standard location of "
                                             "report configuration file")
-    parser.add_argument("-v", "--verbose", dest="verbose",
+    always_include.add_argument("-v", "--verbose", dest="verbose",
                         action="store_true", default=False,
                         help="print debug messages to stdout")
+    always_include.add_argument("-T", "--template", dest="template",
+                        help="template_file", default=None)
+    always_include.add_argument("-d", "--dryrun", dest="is_test",
+                        action="store_true", default=False,
+                        help="send emails only to _testers")
+    always_include.add_argument("-n", "--nomail", dest="no_email",
+                        action="store_true", default=False,
+                        help="Do not send email. ")
+    always_include.add_argument("-L", "--logfile", dest="logfile",
+                        default=None, help="Specify non-standard location"
+                        "for logfile")
+    if no_time_options:
+        return parser
+
+    time_options = parser.add_argument_group('Time range setting options')
     parser.add_argument("-s", "--start", dest="start",
                         help="report start date YYYY/MM/DD HH:mm:SS or "
                                 "YYYY-MM-DD HH:mm:SS")
     parser.add_argument("-e", "--end", dest="end",
                         help="report end date YYYY/MM/DD HH:mm:SS or "
                                 "YYYY-MM-DD HH:mm:SS")
-    parser.add_argument("-T", "--template", dest="template",
-                        help="template_file", default=None)
-    parser.add_argument("-d", "--dryrun", dest="is_test",
-                        action="store_true", default=False,
-                        help="send emails only to _testers")
-    parser.add_argument("-n", "--nomail", dest="no_email",
-                        action="store_true", default=False,
-                        help="Do not send email. ")
-    parser.add_argument("-L", "--logfile", dest="logfile",
-                        default=None, help="Specify non-standard location"
-                                            "for logfile")
 
     return parser
