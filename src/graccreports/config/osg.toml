@@ -80,7 +80,7 @@ default_logdir = '/var/log'
         to_names = ['Recipient Name',]
 
     [project.osg]
-        probe_list = ['condor:submit1.bioinformatics.vt.edu', 'condor:iplant-condor.tacc.utexas.edu', 'condor:workflow.isi.edu', 'condor:osg-xsede.grid.iu.edu', 'condor:xd-login.opensciencegrid.org', 'condor:ce04.cmsaf.mit.edu']
+        probe_list = ['condor:submit1.bioinformatics.vt.edu', 'condor:iplant-condor.tacc.utexas.edu', 'condor:workflow.isi.edu', 'condor:osg-xsede.grid.iu.edu', 'condor:xd-login.opensciencegrid.org', 'condor:ce04.cmsaf.mit.edu', 'condor:csiu.grid.iu.edu']
         to_emails = ['nobody@example.com', ]
         to_names = ['Recipient Name',]
 
