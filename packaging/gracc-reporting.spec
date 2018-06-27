@@ -24,8 +24,6 @@ BuildRequires:  epel-rpm-macros
 Requires:       python-elasticsearch-dsl
 Requires:	python-elasticsearch
 Requires:       python-dateutil
-Requires:	python-psycopg2
-Requires:	python-requests
 Requires:   python-toml
 Requires(pre): shadow-utils
 
