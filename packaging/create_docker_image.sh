@@ -24,8 +24,8 @@ if [[ "x$DOCKER" == "x" ]] ; then
 	exit 1
 fi
 
-DOCKERIMAGEPREFIX="shreyb/gracc-reporting:base_"
-DOCKERIMAGE="${DOCKERIMAGEPREFIX}${VERSION}"
+DOCKERIMAGEPREFIX="shreyb/gracc-reporting"
+DOCKERIMAGE="${DOCKERIMAGEPREFIX}:${VERSION}"
 echo "Will build image $DOCKERIMAGE"
 
 cp ${SRC} ${START}/${TARFILENAME}
