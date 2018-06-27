@@ -3,7 +3,3 @@ __pycache__/
 *.py[cod]
 *.log
 
-# Special scripts
-Docker/*.py
-packaging/*.rpm
-packaging/*.sh
