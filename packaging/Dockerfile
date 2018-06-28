@@ -1,38 +1,22 @@
-# Build RPM
-# Centos 7 base image
-FROM centos:7 as builder
+# Note:  Building this on an alpine image because it requires a lot less patching
+FROM python:2.7-alpine
+# FROM opensciencegrid/osg-wn
 
 # Version
 ARG version
 
-# Setup:  Get EPEL
-RUN rpm -Uvh https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+# Setup:  Get EPEL -- not needed anymore
+# RUN rpm -Uvh https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 
-# Setup:  Install RPM tools 
-RUN yum install -y rpm-build rpmdevtools python-setuptools python-srpm-macros python-rpm-macros python2-rpm-macros epel-rpm-macros
+# Setup:  Install python development tools 
+# RUN yum install -y python-pip
+# RUN pip install -U pip
+# Need this next line because python-setuptools in EPEL is too old for pip
+# RUN rpm -e --nodeps python-setuptools
+# RUN pip install setuptools && pip install wheel
 
-# Set up directory structure
-RUN mkdir -p ~/rpmbuild/{RPMS,SRPMS,BUILD,SOURCES,SPECS,tmp}
+ADD gracc-reporting-$version.tar.gz /tmp/gracc-reporting-$version.tar.gz 
+WORKDIR /tmp/gracc-reporting-$version.tar.gz/gracc-reporting-$version/
 
-COPY gracc-reporting-$version.tar.gz /tmp/gracc-reporting-$version.tar.gz 
-COPY gracc-reporting.spec /tmp
-
-RUN cp /tmp/gracc-reporting-$version.tar.gz ~/rpmbuild/SOURCES/
-RUN cp /tmp/gracc-reporting.spec ~/rpmbuild/SPECS/
-
-WORKDIR ~/rpmbuild/SOURCES
-RUN rpmbuild -ba ~/rpmbuild/SPECS/gracc-reporting.spec
-
-# Build base image
-FROM centos:7 as base
-ARG version
-COPY --from=builder /root/rpmbuild/RPMS/noarch/gracc-reporting-$version.noarch.rpm /tmp
-
-# Set up all package managers and repos, make sure they're up to date
-RUN rpm -Uvh https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm \
-&& curl -o /etc/yum.repos.d/djw8605-GRACC-epel-7.repo https://copr.fedorainfracloud.org/coprs/djw8605/GRACC/repo/epel-7/djw8605-GRACC-epel-7.repo \
-&& yum -y update
-
-# Install gracc-reporting
-RUN yum -y install /tmp/gracc-reporting-$version.noarch.rpm
+RUN python setup.py install
 
