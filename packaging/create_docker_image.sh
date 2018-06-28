@@ -1,7 +1,6 @@
 #!/bin/bash
 # Wrapper to set the correct env variables and build the docker container for gracc-reporting
 
-# Build the RPM
 START=${PWD}
 SETUP_DOT_PY=${PWD}/../setup.py
 
