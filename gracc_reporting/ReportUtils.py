@@ -11,7 +11,6 @@ import pkg_resources
 import json
 import toml
 import copy
-# from httplib import HTTPConnection
 import httplib
 
 from elasticsearch import Elasticsearch, client
@@ -19,7 +18,6 @@ from elasticsearch import Elasticsearch, client
 import TextUtils
 import TimeUtils
 from IndexPattern import indexpattern_generate
-# from TimeUtils import TimeUtils
 
 __all__ = ['Reporter', 'runerror', 'coroutine', 'get_report_parser']
 
@@ -79,8 +77,6 @@ class Reporter(object):
         self.configfile = config_file
         self.config = self._parse_config(config_file)
 
-#        self.logfile = self.logfile if self.logfile is not None\
-#            else self.get_logfile_path()
         self.logger = self.__setup_gen_logger()
         self.start_time = TimeUtils.parse_datetime(start) 
         self.end_time = TimeUtils.parse_datetime(end)
@@ -348,6 +344,7 @@ class Reporter(object):
         :param configfile:  Path to TOML config file to be parsed
         :return: dict of config
         """
+        print "Using config file ", configfile
         if os.path.exists(configfile):
             try:
                 with open(configfile, 'r') as f:
