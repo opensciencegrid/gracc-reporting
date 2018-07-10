@@ -21,13 +21,10 @@ import TimeUtils
 from IndexPattern import indexpattern_generate
 # from TimeUtils import TimeUtils
 
-__all__ = ['Reporter', 'runerror', 'coroutine', 'parse_opts']
+__all__ = ['Reporter', 'runerror', 'coroutine', 'get_report_parser']
 
 OK_ES_STATUSES=['green',]
 
-
-# TODO:  Change name of parse_opts to something like get_parser(), so it isn't confusing.  Then 
-# change the code in all the reports to use that correctly
 
 class ContextFilter(logging.Filter):
     """This is a class to inject contextual information into the record
@@ -79,24 +76,15 @@ class Reporter(object):
     def __init__(self, report_type, config_file, start, end, **kwargs):
         validate_and_add_kwargs_for_instance(self, self.__optional_kwargs, kwargs)
         self.report_type = report_type
-        # self.verbose = verbose
         self.configfile = config_file
         self.config = self._parse_config(config_file)
-        # self.is_test = is_test
-        # self.no_email = no_email
-        # self.report_type = report
-        self.logfile = self.logfile if self.logfile is not None\
-            else self.get_logfile_path()
-        # self.logfile = self.get_logfile_path(logfile, override=logfile_override) if logfile \
-        #     else 'reports.log'
+
+#        self.logfile = self.logfile if self.logfile is not None\
+#            else self.get_logfile_path()
         self.logger = self.__setup_gen_logger()
-        # self.althost_key = althost_key
-        # self.start_time and self.end_time will be in UTC
         self.start_time = TimeUtils.parse_datetime(start) 
         self.end_time = TimeUtils.parse_datetime(end)
 
-        # self.template = template
-        # self.epochrange = None
         self.header = []
         if self.vo is not None: 
             self.vo = self.__check_vo(self.vo)
@@ -263,39 +251,6 @@ class Reporter(object):
 
         return indexpattern_generate(pattern=pat, **kwargs)
 
-    # @staticmethod
-    # def parse_opts():
-    #     """Parses command line options
-
-    #     :return: argparse.ArgumentParser object with parsed arguments for report
-    #     """
-    #     parser = argparse.ArgumentParser()
-    #     parser.add_argument("-c", "--config", dest="config",
-    #                         default=None, help="non-standard location of "
-    #                                            "report configuration file")
-    #     parser.add_argument("-v", "--verbose", dest="verbose",
-    #                         action="store_true", default=False,
-    #                         help="print debug messages to stdout")
-    #     parser.add_argument("-s", "--start", dest="start",
-    #                         help="report start date YYYY/MM/DD HH:mm:SS or "
-    #                              "YYYY-MM-DD HH:mm:SS")
-    #     parser.add_argument("-e", "--end", dest="end",
-    #                         help="report end date YYYY/MM/DD HH:mm:SS or "
-    #                              "YYYY-MM-DD HH:mm:SS")
-    #     parser.add_argument("-T", "--template",dest="template",
-    #                         help="template_file", default=None)
-    #     parser.add_argument("-d", "--dryrun", dest="is_test",
-    #                         action="store_true", default=False,
-    #                         help="send emails only to _testers")
-    #     parser.add_argument("-n", "--nomail", dest="no_email",
-    #                         action="store_true", default=False,
-    #                         help="Do not send email. ")
-    #     parser.add_argument("-L", "--logfile", dest="logfile",
-    #                         default=None, help="Specify non-standard location"
-    #                                            "for logfile")
-
-    #     return parser
-
     @staticmethod
     def sorted_buckets(agg, key=operator.attrgetter('key')):
         """Sorts the Elasticsearch Aggregation buckets based on the key you
@@ -428,17 +383,6 @@ class Reporter(object):
         except (NameError, AssertionError):
             raise KeyError(key_error_msg_fmt.format(vo, self.configfile))
 
-        # if not self.vo or \
-        #         (self.vo
-        #             and self.vo.lower() not in self.config['configured_vos']
-        #             and self.vo.lower() not in self.config[self.report_type.lower()]):
-        #     if self.verbose:
-        #         self.logger.info(self.configfile)
-        #         self.logger.info(self.config)
-        #     raise KeyError("The VO {0} was not found in the config file."
-        #                     " Please review the config file to see if changes"
-        #                     " need to be made and try again.  The config file"
-        #                    " used was {1}".format(self.vo.lower(), self.configfile))
         else:
             self.vo_list = self.config[vo.lower()]['valid_vos'] \
                 if vo.lower() in self.config else [vo.lower(), ]
@@ -524,21 +468,11 @@ class Reporter(object):
                 names = []
             except AttributeError:      # No vo-specific info in config file
                 # try:
-                    add_names = copy.deepcopy(
+                add_names = copy.deepcopy(
                         self.config[self.report_type.lower()]['to_names']
                     )
                 # TODO:  Project and Missing Project reports should get separate config entries (that are dupes of each other)
-                # except Exception:
-                #     raise
-                # except KeyError:    # This is the project or missing project report
-                    # try:
-                    #     attrs.insert(0, 'project')
-                    #     add_names = copy.deepcopy(
-                    #         self.config['project'][self.report_type.lower()]['to_names'])
-                    # except KeyError:    # Some case that shouldn't pop up.  Raise an error
-                    #     raise
-                # finally:
-                    names.extend(add_names)
+                names.extend(add_names)
             finally:
                 # Iterate through config keys (attrs) to get emails we want
                 add_emails = copy.deepcopy(self.config)
@@ -573,26 +507,26 @@ class Reporter(object):
         ch = logging.StreamHandler()
         if self.verbose:
             ch.setLevel = logging.DEBUG
-            # ch.setLevel(logging.INFO)
         else:
             ch.setLevel(logging.WARNING)
 
-        # FileHandler
-        fh = logging.FileHandler(self.logfile)
-        fh.setLevel(logging.DEBUG)
+        if self.logfile is not None:
+            # FileHandler
+            fh = logging.FileHandler(self.logfile)
+            fh.setLevel(logging.DEBUG)
 
-        try:
-            f = ContextFilter(self.vo)
-            fh.addFilter(f)
-            logfileformat = logging.Formatter(
-                "%(asctime)s - %(name)s - %(levelname)s - %(vo)s - %(message)s")
-        except (NameError, AttributeError):
-            logfileformat = logging.Formatter(
-                "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+            try:
+                f = ContextFilter(self.vo)
+                fh.addFilter(f)
+                logfileformat = logging.Formatter(
+                    "%(asctime)s - %(name)s - %(levelname)s - %(vo)s - %(message)s")
+            except (NameError, AttributeError):
+                logfileformat = logging.Formatter(
+                    "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
-        fh.setFormatter(logfileformat)
+            fh.setFormatter(logfileformat)
 
-        logger.addHandler(fh)
+            logger.addHandler(fh)
 
         # We only want one Stream Handler
         for handler in logger.handlers:
@@ -650,72 +584,6 @@ def runerror(config, error, traceback, logfile):
     return
 
 
-# def get_default_resource(kind, filename):
-#     """
-#     Returns the default config file or html template for a report
-
-#     :param str kind: Must be 'config', or 'html_templates', unless we expand
-#     the input file kinds in the future
-#     :param str filename: The filename of the resource file we're looking for
-#     :return str: Path of the default resource
-#     """
-#     default_path = os.path.join('/etc/gracc-reporting', kind)
-
-#     # If the file is in /etc/gracc-reporting/$kind, return that path
-#     if os.path.exists(default_path):
-#         print "Reading Resource from {0}".format(default_path)
-#         resfile = os.path.join(default_path, filename)
-#         if os.path.exists(resfile):
-#             return resfile
-#     # Otherwise, find the file (resource) in the package
-#     else:
-#         try:
-#             return pkg_resources.resource_filename('graccreports',
-#                                            os.path.join(kind, filename))
-#         except KeyError as e:    # No resource of that name
-#             print "The resource you're looking for, {0}, does not exist.  Either" \
-#                   " override the resource (use --help on your report to see the " \
-#                   "applicable option) or check how you implemented the resource" \
-#                   " call in your report.".format(filename)
-#             print "The error and traceback returned was: \n{0}".format(e)
-#             raise
-
-
-# def get_configfile(flag='osg', override=None):
-#     """
-#     Returns the appropriate config file for the gracc reports
-
-#     :param str flag:  In the future, I want this to be 'osg' or 'fife', or
-#     whatever other subpackages we have.  Right now, the FIFE reports all use
-#     different config files, so we have to use the separate flags for each
-#     ('osg', 'efficiency', 'jobrate').
-#     :param str override: Can be a config file in a non-standard location
-#     :return str: Absolute path to the config file
-#     """
-#     if override and os.path.exists(override):
-#         return override
-
-#     f = '{0}.toml'.format(flag)
-
-#     return get_default_resource('config', f)
-
-
-# def get_template(override=None, deffile=None):
-#     """
-#     Returns the appropriate HTML template for the gracc reports.  Allows for
-#     override of default template location, or search in default locations.
-
-#     :param str override: Can be a template in a non-standard location
-#     :param deffile: Default filename.  Should be passed in from calling
-#     report (something like 'template_flocking.html')
-#     :return str: Absolute path to template file
-#     """
-#     if override and os.path.exists(override):
-#         return override
-#     else:
-#         return get_default_resource('html_templates', deffile)
-
-
 def validate_and_add_kwargs_for_instance(instance, valid_kwargs, given_kwargs, add_arg_defaults_to_instance=True):
     if add_arg_defaults_to_instance:
         for key, value in valid_kwargs.iteritems():
@@ -746,14 +614,7 @@ def coroutine(func):
     return wrapper
 
 
-# def force_to_unicode(text):
-#     """If text is unicode, it is returned as is.
-#     If it's str, convert it to Unicode using UTF-8 encoding
-#     """
-#     return text if isinstance(text, unicode) else text.decode('utf8')
-
-
-def parse_opts(no_time_options=False):
+def get_report_parser(no_time_options=False):
     """Parses command line options
 
     :return: argparse.ArgumentParser object with parsed arguments for report
