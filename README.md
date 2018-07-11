@@ -7,7 +7,7 @@ be part of a system that replaces the old GRATIA reports.
 
 No reports are included with this package, but can be built by creating a class that 
 is a subclass of the ReportUtils.Reporter class in this package.  For examples, please
-see the separate osg-reporting package.
+see the separate gracc-osg-reports package.
 
 Installation
 ============
