@@ -464,12 +464,22 @@ class Reporter(object):
                 attrs.insert(1, vo)
                 names = []
             except AttributeError:      # No vo-specific info in config file
-                # try:
-                add_names = copy.deepcopy(
-                        self.config[self.report_type.lower()]['to_names']
-                    )
-                # TODO:  Project and Missing Project reports should get separate config entries (that are dupes of each other)
-                names.extend(add_names)
+                try:
+                    add_names = copy.deepcopy(
+                            self.config[self.report_type.lower()]['to_names']
+                        )
+                    names.extend(add_names)
+                except KeyError:    # This is the project report.  TODO:  Handle this elegantly
+                    # TODO:  Project and Missing Project reports should get separate config entries (that are dupes of each other)
+                    try:
+                        attrs.insert(0, 'project')
+                        add_names = copy.deepcopy(
+                                self.config['project'][self.report_type.lower()]['to_names']
+                            )
+                    except KeyError:
+                        raise
+                finally:
+                    names.extend(add_names)
             finally:
                 # Iterate through config keys (attrs) to get emails we want
                 add_emails = copy.deepcopy(self.config)
