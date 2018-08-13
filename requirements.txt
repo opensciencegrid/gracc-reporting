@@ -1,6 +1,0 @@
-elasticsearch
-elasticsearch_dsl
-python-dateutil
-psycopg2
-requests
-toml
