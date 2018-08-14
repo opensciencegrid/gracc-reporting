@@ -200,8 +200,9 @@ class OSGPerSiteReporter(Reporter):
             self.logger.info(self.indexpattern)
 
         s = Search(using=self.client, index=self.indexpattern) \
-            .filter("range", EndTime={"gte": starttimeq, "lt": endtimeq})\
-            .filter('term', ResourceType="Batch")
+            .filter("range", EndTime={"gte": starttimeq, "lt": endtimeq}) \
+            .filter('term', ResourceType="Batch") \
+            .filter('term', Grid="OSG")  # ignore 'local' records
 
         # Note:  Using ?: operator in painless language to coalesce the
         # 'OIM_Site' and 'SiteName' fields.
