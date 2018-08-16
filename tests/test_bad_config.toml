@@ -1,0 +1,16 @@
+[email]
+    # This is the FQDN of the mail server, which GRACC will use to send the email
+    smtphost = 'smtp.example.com'
+
+    [email.from]
+        name = 'GRACC Operations'  # This is the real name from which the report appears to be emailed from
+        email = 'nobody@example.com'  # This is the email from which the reports appears to be emailed from
+
+    # Tester emails
+    [email.test]
+        names = ['Test Recipient', ]
+        emails = ['nobody@example.com', ]
+
+[test]
+    to_names=[]
+    to_emails=[]
