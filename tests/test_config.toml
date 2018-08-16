@@ -1,0 +1,38 @@
+# General
+
+default_logdir = '/tmp/gracc-test'
+configured_vos = ['testvo']
+
+
+[elasticsearch]
+    ok_statuses = ['green', 'yellow']
+    hostname = 'https://gracc.opensciencegrid.org/q'
+    secondary_host = 'https://gracc.opensciencegrid.org/q'
+    bad_host = 'https://www.blah.badurl'
+
+
+[email]
+    # This is the FQDN of the mail server, which GRACC will use to send the email
+    smtphost = 'smtp.example.com'
+
+    [email.from]
+        name = 'GRACC Operations'  # This is the real name from which the report appears to be emailed from
+        email = 'nobody@example.com'  # This is the email from which the reports appears to be emailed from
+
+    # Tester emails
+    [email.test]
+        names = ['Test Recipient', ]
+        emails = ['nobody1@example.com', ]
+
+
+[test]
+    # Hybrid config of report-level config (like OSG reports), and VO-level config (like fife reports)
+    index_pattern='gracc.osg.raw-%Y.%m'
+    to_names = ['test name', ]
+    to_emails = ['nobody2@example.com', ]
+
+    [test.testvo]
+        min_hours = 1000
+        min_efficiency = 0.5
+        to_emails = ['nobody3@example.com', ]
+

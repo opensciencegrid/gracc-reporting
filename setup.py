@@ -1,34 +1,21 @@
-from setuptools import setup
+"""Setup file for gracc-reporting"""
 import sys
+from setuptools import setup
 
 # Enforce python version
-version_tuple = (2, 7)
-if sys.version_info < version_tuple:
+VERSION_TUPLE = (2, 7)
+if sys.version_info < VERSION_TUPLE:
     print "Sorry, installing gracc-reporting requires Python {0}.{1} " \
-          "or above".format(*version_tuple)
+          "or above".format(*VERSION_TUPLE)
     exit(1)
 
 setup(name='gracc-reporting',
-      version='1.1.1',
+      version='2.0',
       description='GRACC Email Reports',
       author_email='sbhat@fnal.gov',
       author='Shreyas Bhat',
       url='https://github.com/opensciencegrid/gracc-reporting',
-      package_dir={'': 'src'},
-      packages=['graccreports', 'graccreports.fife_reports', 'graccreports.osg_reports', 'graccreports.minerva_report'],
-      include_package_data=True,
-      entry_points= {
-          'console_scripts': [
-              'efficiencyreport = graccreports.fife_reports.EfficiencyReporterPerVO:main',
-              'jobsuccessratereport = graccreports.fife_reports.JobSuccessRateReport:main',
-              'osgflockingreport = graccreports.osg_reports.OSGFlockingReporter:main',
-              'osgreport = graccreports.osg_reports.OSGReporter:main',
-              'osgpersitereport = graccreports.osg_reports.OSGPerSiteReporter:main',
-              'osgprobereport = graccreports.osg_reports.ProbeReport:main',
-              'osgtopoppusagereport = graccreports.osg_reports.TopOppUsageByFacility:main',
-              'osgmissingprojects = graccreports.osg_reports.MissingProject:main',
-              'minervareport = graccreports.minerva_report.MinervaReport:main',
-              'topwastedhoursvoreport = graccreports.fife_reports.TopWastedHoursVO:main'
-            ]
-      }
-      )
+      packages=['gracc_reporting'],
+      install_requires=['elasticsearch==5.5.2', 'elasticsearch_dsl==5.4.0',
+                        'python-dateutil==2.7.2', 'toml==0.9.4',]
+     )
