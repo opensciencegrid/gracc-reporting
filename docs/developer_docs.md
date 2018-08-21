@@ -213,4 +213,7 @@ _packaging/_ and run _create_docker_image.sh_.  Keep in mind that you must have 
 Science Grid docker hub gracc-reporting repository in order to run this script.
 
 An example report building directly on top of _gracc_reporting_ along with its sample config file is 
-provided in the _example_ directory here.
+provided in the _example_ directory here.  You can run the report by doing:
+```
+python SampleReport.py -c sample.toml -d -v -s '2018-08-20 00:00' -e '2018-08-21 00:00'
+```
