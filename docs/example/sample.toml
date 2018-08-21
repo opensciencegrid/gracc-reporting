@@ -1,0 +1,30 @@
+# General
+
+default_logdir = '/var/log'
+
+[elasticsearch]
+    hostname = 'https://gracc.opensciencegrid.org/q'
+    ok_statuses = ['green', 'yellow']
+
+
+# Email
+# Set the global email related values under this section
+[email]
+    # This is the FQDN of the mail server, which GRACC will use to send the email
+    smtphost = 'smtp.fnal.gov'
+
+    [email.from]
+        name = 'GRACC Operations'  # This is the real name from which the report appears to be emailed from
+        email = 'sbhat@fnal.gov'  # This is the email from which the reports appears to be emailed from
+
+    # Tester emails
+    [email.test]
+        names = ['Test Recipient', ]
+        emails = ['sbhat@fnal.gov', ]
+
+# Report-specific parameters
+[sample]
+    index_pattern='gracc.osg.summary'
+    to_emails = ['nobody@example.com', ]
+    to_names = ['Recipient Name', ]
+
