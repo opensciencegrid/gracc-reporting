@@ -135,4 +135,82 @@ that can accept non-UTC timestamps.  epoch_to_datetime assumes you're giving it 
 returns a UTC datetime, and get_epoch_time_range_utc assumes both start_time and end_time are 
 UTC datetime objects.
 
+## IndexPattern.py
 
+Generates gracc-reporting index patterns.  indexpattern_generate accepts a pattern that can be 
+processed by datetime.strftime, and given the time range of the report (also passed to the function),
+it tries to narrow down the index pattern to specific indices.  For example, if the pattern given is
+_gracc.osg.raw-%Y.%m_ and the start and end dates are 2018-07-01 and 2018-07-02, indexpattern_generate 
+will return _gracc.osg.raw-2018.07*_.  If the dates are 2018-07-01 and 2018-08-01, indexpattern_generate 
+will return _gracc.osg.raw-2018*_.  Without such filtering, we'd be searching gracc.osg.raw-* in these
+examples.
+
+## TextUtils.py
+
+This module provides static methods to create ascii, csv, and html attachment and send email to 
+specified group of people.  It's not been touched in a very long time, and eventually, it should be 
+reviewed and possibly improved.
+
+## NiceNum.py
+
+Returns a nicely formatted string for the floating point number
+provided.  This number will be rounded to the supplied accuracy
+and commas and spaces will be added.  Use the niceNum function from this module for formatting tables,
+especially when Reporter.generate_report_file is used. 
+
+
+# Configuration
+
+The configuration file that _gracc_reporting_ expects is a toml file.  It should, at the minimum, have
+the following:
+
+```toml
+ [elasticsearch]
+    hostname = 'https://gracc.opensciencegrid.org/q'
+
+# Email
+# Set the global email related values under this section
+[email]
+    # This is the FQDN of the mail server, which GRACC will use to send the email
+    smtphost = 'smtp.example.com'
+
+    [email.from]
+        name = 'GRACC Operations'  # This is the real name from which the report appears to be emailed from
+        email = 'somebody@somewhere.com'  # This is the email from which the reports appears to be emailed from
+
+    # Tester emails
+    [email.test]
+        names = ['Test Recipient', ]
+	emails = ['admin@somwhere.com', ]
+
+# Report-specific
+[report_name]
+    index_pattern='some.index.pattern'
+    to_emails = ['nobody@example.com', ]
+    to_names = ['Recipient Name', ]
+ ```
+
+ If using the Report.get_report_parser, the command-line flag to specify a config file is -c.
+
+
+
+# How to build gracc_reporting
+
+Building _gracc_reporting_ is quite simple.  To build the package, first make any necessary changes in 
+setup.py in the root of the repository.  Then, simply run 
+```
+python setup.py sdist
+```
+If you want to simply  write reports on top of gracc_reporting, you can take the tarball created in the
+_dist_ directory, move it where you need, untar it, and run 
+```
+python setup.py install
+```
+or simply run the last two commands in order to install the gracc-reporting package in place.
+
+For an OSG installation, for which we use a docker container to build reports on, navigate to 
+_packaging/_ and run _create_docker_image.sh_.  Keep in mind that you must have write access to the Open 
+Science Grid docker hub gracc-reporting repository in order to run this script.
+
+An example report building directly on top of _gracc_reporting_ along with its sample config file is 
+provided in the _example_ directory here.
