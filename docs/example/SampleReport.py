@@ -29,8 +29,11 @@ class SampleReport(ReportUtils.Reporter):
         self.send_report()
 
     def query(self):
-        """Our query"""
-        """GRACC likes iso-formatted dates"""
+        """Our query.  We're keeping it simple.  Just get the total number of
+        CoreHours for each Site (OIM_Site) from the Payload records over our 
+        time range"""
+
+        # GRACC likes iso-formatted dates
         starttimeq = self.start_time.isoformat()
         endtimeq = self.end_time.isoformat()
 
