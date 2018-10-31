@@ -10,7 +10,7 @@ if sys.version_info < VERSION_TUPLE:
     exit(1)
 
 setup(name='gracc-reporting',
-      version='2.0',
+      version='2.0.1',
       description='GRACC Email Reports',
       author_email='sbhat@fnal.gov',
       author='Shreyas Bhat',
