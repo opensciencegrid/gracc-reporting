@@ -75,7 +75,7 @@ def get_epoch_time_range_utc_ms(start_time, end_time):
     :param end_time: Same as above, but end time (UTC)
     :return tuple: Timestamps representing milliseconds since epoch
     """
-    assert start_time < end_time
+    assert start_time <= end_time
     return_dict = {"start_time": start_time, "end_time": end_time}
 
     for key in return_dict:
