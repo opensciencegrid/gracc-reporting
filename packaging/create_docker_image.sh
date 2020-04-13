@@ -2,7 +2,7 @@
 # Wrapper to set the correct env variables and build the docker container for gracc-reporting
 
 START=${PWD}
-SETUP_DOT_PY=${PWD}/../setup.py
+SETUP_DOT_PY=${PWD}/setup.py
 
 VERSION=`grep -E "version=\'.+\'\,$" ${SETUP_DOT_PY}`  # VERSION will be something like "version='2.0'," without surrounding "
 VERSION=${VERSION%\'*}	# Remove trailing quotation, comma
@@ -14,9 +14,6 @@ if [[ "x$VERSION" == "x" ]] ; then
 else 
 	echo "VERSION $VERSION"
 fi
-
-SRC=${START}/../dist/gracc-reporting-${VERSION}.tar.gz
-TARFILENAME=${SRC##*/}
 
 DOCKER=`which docker`
 echo "Docker executable found at $DOCKER"
@@ -30,17 +27,12 @@ DOCKERIMAGEPREFIX="opensciencegrid/gracc-reporting"
 DOCKERIMAGE="${DOCKERIMAGEPREFIX}:${VERSION}"
 echo "Will build image $DOCKERIMAGE"
 
-cp ${SRC} ${START}/${TARFILENAME}
-echo "Copied source to build dir"
-
-function cleanup {
-	test ! -f ${START}/${TARFILENAME} || rm ${START}/${TARFILENAME}
-}
-trap cleanup EXIT SIGHUP SIGINT SIGTERM
-
-
 echo "Building docker image"
-$DOCKER build --build-arg version=$VERSION . -t $DOCKERIMAGE
+
+# Get the script directory
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+
+$DOCKER build --build-arg version=$VERSION . -t $DOCKERIMAGE -f $DIR/Dockerfile
 
 STATUS=$?
 
