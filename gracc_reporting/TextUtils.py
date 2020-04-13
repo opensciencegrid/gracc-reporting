@@ -119,6 +119,11 @@ class TextUtils:
                         value = item.ljust(col_paddings[index] + 1)
                         if format_type == "html" and len(item.strip()) == 0:
                             value = space
+                # Escape commas if there is already a comma in the value
+                if format_type == "csv":
+                    if "," in value:
+                        value = '"{}"'.format(value)
+
                 if line == bcol:
                     line = "%s%s" % (line, value)
                 else:
