@@ -3,19 +3,14 @@
 import time
 import sys
 import datetime
-from email.MIMEText import MIMEText
-from email.MIMEImage import MIMEImage
-from email.MIMEMultipart import MIMEMultipart
-from email.MIMEBase import MIMEBase
-from email.Utils import formataddr
-from email.header import Header
-from email.quopriMIME import encode
-from email import Charset
-from cStringIO import StringIO
-from email.generator import Generator
+from io import StringIO
 import smtplib
+from email.message import EmailMessage
+import tabulate
+import pandas as pd
+from email.utils import formataddr
 
-import NiceNum
+from . import NiceNum
 
 
 ##########################################
@@ -53,86 +48,18 @@ class TextUtils:
             text (dict of lists) - {column_name:[values],column_name:[values]} where column_name corresponds to header name
         """
 
+        # Convert list of dicts to pandas data frame
+        df = pd.DataFrame.from_dict(text, orient='index').transpose()
+        # Order the columns according to the header
+        df = df[self.table_header]
+
         # the order is defined by header list
-        col_paddings = []
-        message = ""
-
         if format_type == "text":
-            col = rcol = lcol = ecol = tbcol = tecol = bcol = tcol = "|"
-            row = "+"
-            space = ""
-            for name in self.table_header:
-                pad = self.getWidth(text[name] + [name, ])
-                col_paddings.append(pad)
-                for i in range(pad):
-                    row = "%s-" % (row)
-                row = "%s-+" % (row)
-            ecol = "%s\n%s" % (ecol, row)
-            tecol = "%s\n%s" % (tecol, row)
-            message = "%s\n" % (row,)
-        else:
-            for name in self.table_header:
-                col_paddings.append(0)
-        if format_type == "csv":
-            col = ","
-            bcol = ecol = tecol = tbcol = ""
-            tcol = rcol = lcol = ","
-            row = ""
-            space = ""
-        if format_type == "html":
-            col = "</td>\n<td align=center>"
-            tbcol = "<tr><th align=center>"
-            tecol = "</th></tr>"
-            tcol = "</th><th align=center>"
-            rcol = "</td>\n<td align=right>"
-            lcol = "</td>\n<td align=left>"
-            bcol = "<tr><td align=left>"
-            ecol = "</td></tr>"
-            space = "&nbsp;"
-
-        if not template and format_type != "html":
-            line = ""
-            for i in range(len(self.table_header)):
-                pad = col_paddings[i]
-                column = self.table_header[i].center(pad + 1)
-                if i == 0:
-                    line = column
-                else:
-                    line = "%s%s%s" % (line, tcol, column)
-            message = "%s%s%s%s\n" % (message, tbcol, line, tecol)
-
-        for count in range(0, self.getLength(text)):
-            index = 0
-            line = bcol
-            for key in self.table_header:
-                item = text[key][count]
-                separator = lcol
-                if format_type != "csv" and (
-                        type(item) == type(0) or type(item) == type(0.0)):
-                    separator = rcol
-                    nv = NiceNum.niceNum(item, 1)
-                    value = nv.rjust(col_paddings[index] + 1)
-                else:
-                    if type(item) == type(0) or type(item) == type(0.0):
-                        value = repr(item).rjust(col_paddings[index] + 1)
-                    else:
-                        value = item.ljust(col_paddings[index] + 1)
-                        if format_type == "html" and len(item.strip()) == 0:
-                            value = space
-                # Escape commas if there is already a comma in the value
-                if format_type == "csv":
-                    if "," in value:
-                        value = '"{}"'.format(value)
-
-                if line == bcol:
-                    line = "%s%s" % (line, value)
-                else:
-                    line = "%s%s%s" % (line, separator, value)
-                index += 1
-            line = "%s%s" % (line, ecol)
-            message = "%s%s\n" % (message, line)
-
-        return message
+            return tabulate.tabulate(df, tablefmt="grid", headers=self.table_header, showindex=False, floatfmt=',.1f')
+        elif format_type == "html":
+            return tabulate.tabulate(df, tablefmt="html", headers=self.table_header, showindex=False, floatfmt=',.1f')
+        elif format_type == "csv":
+            return df.to_csv(index=False)
 
 
 def sendEmail(toList, subject, content, fromEmail=None, smtpServerHost=None, html_template=False):
@@ -145,47 +72,30 @@ def sendEmail(toList, subject, content, fromEmail=None, smtpServerHost=None, htm
     smtpServerHost(str) - smtpHost
     """
 
-    Charset.add_charset('utf-8', Charset.QP, Charset.QP, 'utf-8')
+    #Charset.add_charset('utf-8', Charset.QP, Charset.QP, 'utf-8')
 
     if toList[1] is None:
-        print >> sys.stderr, "Cannot send mail (no To: specified)!"
+        print("Cannot send mail (no To: specified)!", file=sys.stderr)
         sys.exit(1)
 
-    msg = MIMEMultipart()
+    msg = EmailMessage()
     msg["Subject"] = subject
     msg["From"] = formataddr(fromEmail)
     msg["To"] = _toStr(toList)
-    msg1 = MIMEMultipart("alternative")
     # new code
-    msgText1 = msgText2 = None
-    if content.has_key("text"):
-        msgText1 = MIMEText(u"<pre>" + content["text"] + u"</pre>", "html", 'utf-8')
-        msgText2 = MIMEText(content["text"], 'plain', 'utf-8')
-    msgHtml = MIMEText(content["html"], "html", 'utf-8')
-    msg1.attach(msgHtml)
-    if content.has_key("text"):
-        msg1.attach(msgText2)
-        msg1.attach(msgText1)
-    msg.attach(msg1)
+    if "text" in content:
+        msg.set_content(content["text"], 'plain')
+        msg.add_alternative("<pre>" + content["text"] + "</pre>", subtype="html")
+
     if html_template:
         attachment_html = content["html"]
     else:
-        attachment_html = u"<html><head><title>%s</title></head><body>%s</body>" \
-                      u"</html>" % (subject, content["html"])
-    part = MIMEBase('text', "html", charset='utf-8')
-    part.set_payload(attachment_html, 'utf-8')
-    part.add_header('Content-Disposition', \
-                    'attachment; filename="report_%s.html"' % datetime.datetime.now(). \
-                    strftime('%Y_%m_%d'), charset='utf-8')
-    msg.attach(part)
-    if content.has_key("csv"):
-        attachment_csv = content["csv"]
-        part = MIMEBase('text', "csv", charset='utf-8')
-        part.set_payload(attachment_csv, 'utf-8')
-        part.add_header('Content-Disposition', \
-                        'attachment; filename="report_%s.csv"' % datetime.datetime.now(). \
-                        strftime('%Y_%m_%d'), charset='utf-8')
-        msg.attach(part)
+        attachment_html = "<html><head><title>%s</title></head><body>%s</body>" \
+                      "</html>" % (subject, content["html"])
+
+    msg.add_attachment(attachment_html, filename="report_{}.html".format(datetime.datetime.now().strftime('%Y_%m_%d')))
+    if "csv" in content:
+        msg.add_attachment(content["csv"], filename="report_{}.csv".format(datetime.datetime.now().strftime('%Y_%m_%d')))
 
     msg = msg.as_string()
 
@@ -196,7 +106,7 @@ def sendEmail(toList, subject, content, fromEmail=None, smtpServerHost=None, htm
     else:
         # The email list isn't valid, so we write it to stderr and hope
         # it reaches somebody who cares.
-        print >> sys.stderr, "Problem in sending email to: ", toList
+        print("Problem in sending email to: ", toList, file=sys.stderr)
 
 
 def _toStr(toList):

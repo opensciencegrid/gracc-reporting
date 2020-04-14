@@ -1,0 +1,6 @@
+elasticsearch
+elasticsearch_dsl
+python-dateutil
+toml
+tabulate
+pandas

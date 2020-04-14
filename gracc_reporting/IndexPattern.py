@@ -39,7 +39,7 @@ def indexpattern_generate(pattern=None, start=None, end=None):
         # One of start or end is None or is not a datetime
         errmsg = "Start and end date for indexpattern_generate must be " \
                  "datetime objects if the pattern argument is date-dependent."
-        print errmsg
+        print(errmsg)
         raise AttributeError(errmsg)
 
     if test_indices[0] == test_indices[1]:

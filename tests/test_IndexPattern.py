@@ -6,11 +6,11 @@ from datetime import datetime
 from gracc_reporting.IndexPattern import indexpattern_generate
 
 
-date_dateend = datetime(2016, 06, 12)
+date_dateend = datetime(2016, 0o6, 12)
 
-date_datestart1 = datetime(2016, 06, 10)
+date_datestart1 = datetime(2016, 0o6, 10)
 date_datestart2 = datetime(2016, 5, 10)
-date_datestart3 = datetime(2015, 05, 10)
+date_datestart3 = datetime(2015, 0o5, 10)
 date_break = '20160205'
 
 gracc_summary_index = 'gracc.osg.summary'

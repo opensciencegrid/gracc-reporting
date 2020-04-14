@@ -11,13 +11,13 @@ import pkg_resources
 import json
 import toml
 import copy
-import httplib
+import http.client
 
 from elasticsearch import Elasticsearch, client
 
-import TextUtils
-import TimeUtils
-from IndexPattern import indexpattern_generate
+from . import TextUtils
+from . import TimeUtils
+from .IndexPattern import indexpattern_generate
 
 __all__ = ['Reporter', 'runerror', 'coroutine', 'get_report_parser']
 
@@ -42,7 +42,7 @@ class ContextFilter(logging.Filter):
         return True
 
 
-class Reporter(object):
+class Reporter(object, metaclass=abc.ABCMeta):
     """
     Base class for all OSG reports
     :param str report: Which report is getting run
@@ -58,7 +58,6 @@ class Reporter(object):
         Must be specified in [elasticsearch] section of
         config file by name (e.g. my_es_cluster="https://hostname.me")
     """
-    __metaclass__ = abc.ABCMeta
 
     __optional_kwargs = {
         'althost_key': None,
@@ -117,7 +116,7 @@ class Reporter(object):
 
         t = s.to_dict()
         if self.verbose:
-            print json.dumps(t, sort_keys=True, indent=4)
+            print(json.dumps(t, sort_keys=True, indent=4))
             self.logger.debug(json.dumps(t, sort_keys=True))
         else:
             self.logger.debug(json.dumps(t, sort_keys=True))
@@ -128,7 +127,7 @@ class Reporter(object):
                 raise Exception("Error accessing Elasticsearch")
 
             if self.verbose:
-                print json.dumps(response.to_dict(), sort_keys=True, indent=4)
+                print(json.dumps(response.to_dict(), sort_keys=True, indent=4))
 
             if hasattr(response, 'aggregations') and response.aggregations:
                 results = response.aggregations
@@ -166,9 +165,9 @@ class Reporter(object):
             return
 
         if title is not None: self.title = title
-        if self.title is None: self.title = u"GRACC Report"
+        if self.title is None: self.title = "GRACC Report"
 
-        if self.verbose: print self.title
+        if self.verbose: print(self.title)
 
         if content is None:  # self.format_report() does nothing in this case.
             # Assume all necessary operations are handled elsewhere, and all we
@@ -203,13 +202,12 @@ class Reporter(object):
                                                 template=self.template)
 
         if self.header:
-            htmlheader = unicode("\n".join(['<th>{0}</th>'.format(headerelt)
-                                            for headerelt in self.header]),
-                                 'utf-8')
+            htmlheader = str("\n".join(['<th>{0}</th>'.format(headerelt)
+                                            for headerelt in self.header]))
 
         if self.template:
             with open(self.template, 'r') as t:
-                htmltext = unicode("".join(t.readlines()), 'utf-8')
+                htmltext = str("".join(t.readlines()), 'utf-8')
 
             # Build the HTML file from the template
             htmldict = dict(title=self.title, header=htmlheader, table=htmldata)
@@ -217,7 +215,7 @@ class Reporter(object):
             text["html"] = htmltext
 
         else:
-            text["html"] = u"<html><body><h2>{0}</h2><table border=1>{1}</table></body></html>".format(
+            text["html"] = "<html><body><h2>{0}</h2><table border=1>{1}</table></body></html>".format(
                 self.title, htmldata)
 
         TextUtils.sendEmail((self.email_info['to']['name'],
@@ -284,7 +282,7 @@ class Reporter(object):
         """
 
         if override_fn:
-            print "Writing log to {0}".format(override_fn)
+            print("Writing log to {0}".format(override_fn))
             return override_fn
     
         try_locations = [os.path.expanduser('~')]
@@ -315,8 +313,8 @@ class Reporter(object):
                 try:
                     os.makedirs(dirpath)
                 except OSError as e:  # Permission Denied or missing directory
-                    print e
-                    print errmsg
+                    print(e)
+                    print(errmsg)
                     continue  # Don't try to write somewhere we can't
 
             # So dir exists.  Can we write to the logfiles there?
@@ -325,9 +323,9 @@ class Reporter(object):
                     f.write('')
             except (IOError,
                     OSError) as e:  # Permission Denied comes through as an IOError
-                print e, '\n', errmsg
+                print(e, '\n', errmsg)
             else:
-                print successmsg
+                print(successmsg)
                 break
         else:
             # If none of the prefixes work for some reason, write to current working dir
@@ -344,14 +342,14 @@ class Reporter(object):
         :param configfile:  Path to TOML config file to be parsed
         :return: dict of config
         """
-        print "Using config file ", configfile
+        print("Using config file ", configfile)
         if os.path.exists(configfile):
             try:
                 with open(configfile, 'r') as f:
                     config = toml.loads(f.read())
             except toml.TomlDecodeError as e:
-                print "Cannot decode toml file"
-                print e
+                print("Cannot decode toml file")
+                print(e)
                 raise
             return config
         else:
@@ -394,13 +392,13 @@ class Reporter(object):
         _default_host = 'https://gracc.opensciencegrid.org/q'
 
         if self.verbose:
-            httplib.HTTPConnection.debuglevel = 1
-            httplib.HTTPSConnection.debuglevel = 1
+            http.client.HTTPConnection.debuglevel = 1
+            http.client.HTTPSConnection.debuglevel = 1
 
 
         def __start_client(hostname, ok_statuses):
             if self.verbose:
-                print hostname
+                print(hostname)
             _client = Elasticsearch(hostname,
                                     verify_certs=False,
                                     timeout=60)
@@ -476,10 +474,9 @@ class Reporter(object):
                         add_names = copy.deepcopy(
                                 self.config['project'][self.report_type.lower()]['to_names']
                             )
+                        names.extend(add_names)
                     except KeyError:
                         raise
-                finally:
-                    names.extend(add_names)
             finally:
                 # Iterate through config keys (attrs) to get emails we want
                 add_emails = copy.deepcopy(self.config)
@@ -565,7 +562,7 @@ def runerror(config, error, traceback, logfile):
         reallogfile = os.path.join(os.path.expanduser('~'), logfile)
         with open(reallogfile, 'a') as f:
             f.write(str(error))
-    print >> sys.stderr, error
+    print(error, file=sys.stderr)
 
     with open(config, 'r') as f:
         c = toml.loads(f.read())
@@ -582,20 +579,20 @@ def runerror(config, error, traceback, logfile):
         s = smtplib.SMTP(c['email']['smtphost'])
         s.sendmail(from_email, admin_emails, msg.as_string())
         s.quit()
-        print "Successfully sent error email"
+        print("Successfully sent error email")
     except Exception as e:
         err = "Error:  unable to send email.\n%s\n" % e
-        print err
-        print error, traceback
+        print(err)
+        print(error, traceback)
         raise
     return
 
 
 def validate_and_add_kwargs_for_instance(instance, valid_kwargs, given_kwargs, add_arg_defaults_to_instance=True):
     if add_arg_defaults_to_instance:
-        for key, value in valid_kwargs.iteritems():
+        for key, value in valid_kwargs.items():
             setattr(instance, key, value)
-    for key, value in given_kwargs.iteritems():
+    for key, value in given_kwargs.items():
         try:
             assert key in valid_kwargs
             instance.__dict__[key] = value
@@ -604,7 +601,7 @@ def validate_and_add_kwargs_for_instance(instance, valid_kwargs, given_kwargs, a
                     ' Allowed kwargs are {2}".format(
                 key,
                 instance.__class__.__name__,
-                ', '.join(valid_kwargs.iterkeys())))
+                ', '.join(iter(valid_kwargs.keys()))))
 
 
 def coroutine(func):
@@ -616,7 +613,7 @@ def coroutine(func):
     """
     def wrapper(*args, **kwargs):
         cr = func(*args, **kwargs)
-        cr.next()
+        next(cr)
         return cr
     return wrapper
 
