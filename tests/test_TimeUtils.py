@@ -79,10 +79,10 @@ class TestEpochToDatetime(unittest.TestCase):
         conversions = {'second': 1, 'millisecond': 1e3, 'microsecond': 1e6}
         units_inputs = {}
 
-        for unit, factor in conversions.iteritems():
+        for unit, factor in conversions.items():
             units_inputs[unit] = self.epoch_time * factor
 
-        for unit_name, value in units_inputs.iteritems():
+        for unit_name, value in units_inputs.items():
             self.assertEqual(TimeUtils.epoch_to_datetime(value, unit=unit_name), answer)
 
     def test_unit_fail(self):
