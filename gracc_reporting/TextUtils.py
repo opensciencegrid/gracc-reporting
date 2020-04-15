@@ -53,7 +53,7 @@ class TextUtils:
         # Order the columns according to the header
         df = df[self.table_header]
 
-        alignment_list = ["left"] * len(self.table_header) - 1
+        alignment_list = ["left"] * (len(self.table_header) - 1)
         alignment_list.append("right")
         # the order is defined by header list
         if format_type == "text":
