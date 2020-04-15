@@ -10,5 +10,6 @@ setup(name='gracc-reporting',
       url='https://github.com/opensciencegrid/gracc-reporting',
       packages=['gracc_reporting'],
       install_requires=['elasticsearch', 'elasticsearch_dsl',
-                        'python-dateutil', 'toml',]
+                        'python-dateutil', 'toml', 'tabulate',
+                        'pandas']
      )
