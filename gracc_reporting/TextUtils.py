@@ -53,6 +53,8 @@ class TextUtils:
         # Order the columns according to the header
         df = df[self.table_header]
 
+        # TODO: Remove this alignment code when python-tabulate recognizes
+        # numbers with comma separators.
         alignment_list = ["left"] * (len(self.table_header) - 1)
         alignment_list.append("right")
         # the order is defined by header list
