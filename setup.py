@@ -3,7 +3,7 @@ import sys
 from setuptools import setup
 
 setup(name='gracc-reporting',
-      version='3.0.2',
+      version='3.0.3',
       description='GRACC Email Reports',
       author_email='sbhat@fnal.gov',
       author='Shreyas Bhat',
