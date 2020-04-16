@@ -207,7 +207,7 @@ class Reporter(object, metaclass=abc.ABCMeta):
 
         if self.template:
             with open(self.template, 'r') as t:
-                htmltext = str("".join(t.readlines()), 'utf-8')
+                htmltext = t.read()
 
             # Build the HTML file from the template
             htmldict = dict(title=self.title, header=htmlheader, table=htmldata)
