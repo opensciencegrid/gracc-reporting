@@ -64,12 +64,12 @@ class TextUtils:
         # the order is defined by header list
         if format_type == "text":
             return tabulate.tabulate(df, tablefmt="grid", headers=self.table_header,
-                                     floatfmt=',.0f', colalign=alignment_list)
+                                     showindex=False, floatfmt=',.0f', colalign=alignment_list)
         elif format_type == "html":
             return tabulate.tabulate(df, tablefmt="html", headers=self.table_header,
-                                     floatfmt=',.0f', colalign=alignment_list)
+                                     showindex=False, floatfmt=',.0f', colalign=alignment_list)
         elif format_type == "csv":
-            return df.to_csv()
+            return df.to_csv(index=False)
 
 
 def sendEmail(toList, subject, content, fromEmail=None, smtpServerHost=None, html_template=False):
