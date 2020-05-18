@@ -202,6 +202,7 @@ class Reporter(object, metaclass=abc.ABCMeta):
         htmldata = emailReport.printAsTextTable("html", content,
                                                 template=self.template)
 
+        htmlheader = ""
         if self.header:
             htmlheader = str("\n".join(['<th>{0}</th>'.format(headerelt)
                                             for headerelt in self.header]))
