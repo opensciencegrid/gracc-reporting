@@ -12,6 +12,7 @@ import json
 import toml
 import copy
 import http.client
+import pandas as pd
 
 from elasticsearch import Elasticsearch, client
 
@@ -190,7 +191,7 @@ class Reporter(object, metaclass=abc.ABCMeta):
                 self.logger.info(e)
                 raise
 
-        if not content:  # Check for any other falsy values like {}
+        if not isinstance(content, pd.DataFrame) and not content:  # Check for any other falsy values like {}
             self.logger.error("There is no content being passed to generate a "
                               "report file")
             sys.exit(1)

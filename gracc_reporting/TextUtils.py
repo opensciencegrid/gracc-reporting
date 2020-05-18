@@ -46,12 +46,16 @@ class TextUtils:
         Args:
             format_type(str) - text, csv, html
             text (dict of lists) - {column_name:[values],column_name:[values]} where column_name corresponds to header name
+                                   or pandas dataframe
         """
 
-        # Convert list of dicts to pandas data frame
-        df = pd.DataFrame.from_dict(text, orient='index').transpose()
-        # Order the columns according to the header
-        df = df[self.table_header]
+        if not isinstance(text, pd.DataFrame):
+            # Convert list of dicts to pandas data frame
+            df = pd.DataFrame.from_dict(text, orient='index').transpose()
+            # Order the columns according to the header
+            df = df[self.table_header]
+        else:
+            df = text
 
         # TODO: Remove this alignment code when python-tabulate recognizes
         # numbers with comma separators.
