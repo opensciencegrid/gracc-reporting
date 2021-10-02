@@ -96,6 +96,8 @@ def sendEmail(toList, subject, content, fromEmail=None, smtpServerHost=None, htm
     if "text" in content:
         msg.set_content(content["text"], 'plain')
         msg.add_alternative("<pre>" + content["text"] + "</pre>", subtype="html")
+	elif "html" in content and "text" not in content:
+        msg.add_alternative(content["html"], subtype="html")
 
     if html_template:
         attachment_html = content["html"]
