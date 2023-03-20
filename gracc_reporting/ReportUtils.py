@@ -390,7 +390,7 @@ class Reporter(object, metaclass=abc.ABCMeta):
 
         :return: elasticsearch.Elasticsearch object
         """
-        _fallback_ok = ['green', ]
+        _fallback_ok = ['green', 'yellow']
         _default_host = 'https://gracc.opensciencegrid.org/q'
 
         if self.verbose:
