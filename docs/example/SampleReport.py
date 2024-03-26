@@ -4,7 +4,7 @@ import traceback
 from collections import defaultdict
 import sys
 
-from elasticsearch_dsl import Search
+from opensearchpy  import Search
 
 from gracc_reporting import ReportUtils 
 
