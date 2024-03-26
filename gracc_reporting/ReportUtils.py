@@ -14,7 +14,7 @@ import copy
 import http.client
 import pandas as pd
 
-from elasticsearch import Elasticsearch, client
+from opensearchpy import OpenSearch, client
 
 from . import TextUtils
 from . import TimeUtils
@@ -401,7 +401,7 @@ class Reporter(object, metaclass=abc.ABCMeta):
         def __start_client(hostname, ok_statuses):
             if self.verbose:
                 print(hostname)
-            _client = Elasticsearch(hostname,
+            _client = OpenSearch(hostname,
                                     verify_certs=False,
                                     timeout=60)
 
