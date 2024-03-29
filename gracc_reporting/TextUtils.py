@@ -114,6 +114,7 @@ def sendEmail(toList, subject, content, fromEmail=None, smtpServerHost=None, smt
         server.login(user=smtpUser, password=smtpPassword)
         server.sendmail(fromEmail[1], toList[1], msg)
         server.quit()
+        print("Succesfully sent email")
     else:
         # The email list isn't valid, so we write it to stderr and hope
         # it reaches somebody who cares.
