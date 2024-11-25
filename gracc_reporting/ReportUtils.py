@@ -14,7 +14,7 @@ import copy
 import http.client
 import pandas as pd
 
-from elasticsearch import Elasticsearch, client
+from opensearchpy import OpenSearch, client
 
 from . import TextUtils
 from . import TimeUtils
@@ -182,7 +182,11 @@ class Reporter(object, metaclass=abc.ABCMeta):
                     {"html": self.text},
                     (self.email_info['from']['name'],
                      self.email_info['from']['email']),
-                    self.email_info['smtphost'])
+                    self.email_info['smtphost'],
+                    self.email_info['smtpport'],
+                    self.email_info['smtpuser'],
+                    self.email_info['smtppassword'],
+                    )
 
                 self.logger.info(successmessage)
                 return
@@ -226,6 +230,9 @@ class Reporter(object, metaclass=abc.ABCMeta):
                             (self.email_info['from']['name'],
                              self.email_info['from']['email']),
                             self.email_info['smtphost'],
+                            self.email_info['smtpport'],
+                            self.email_info['smtpuser'],
+                            self.email_info['smtppassword'],
                             html_template=self.template)
         self.logger.info("Sent reports to {0}".format(
             ", ".join(self.email_info['to']['email'])))
@@ -401,7 +408,7 @@ class Reporter(object, metaclass=abc.ABCMeta):
         def __start_client(hostname, ok_statuses):
             if self.verbose:
                 print(hostname)
-            _client = Elasticsearch(hostname,
+            _client = OpenSearch(hostname,
                                     verify_certs=False,
                                     timeout=60)
 
@@ -491,7 +498,7 @@ class Reporter(object, metaclass=abc.ABCMeta):
         email_info["to"]["name"] = names
 
         # Get other global info from config file
-        for key in ("from", "smtphost"):
+        for key in ("from", "smtphost", "smtpport", "smtpuser", "smtppassword"):
             email_info[key] = copy.deepcopy(config_email_info[key])
 
         return email_info

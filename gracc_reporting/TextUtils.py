@@ -72,7 +72,7 @@ class TextUtils:
             return df.to_csv(index=False)
 
 
-def sendEmail(toList, subject, content, fromEmail=None, smtpServerHost=None, html_template=False):
+def sendEmail(toList, subject, content, fromEmail=None, smtpServerHost=None, smtpPort=None, smtpUser=None, smtpPassword=None, html_template=False):
     """
     This turns the "report" into an email attachment and sends it to the EmailTarget(s).
     Args:
@@ -110,9 +110,11 @@ def sendEmail(toList, subject, content, fromEmail=None, smtpServerHost=None, htm
     msg = msg.as_string()
 
     if len(toList[1]) != 0:
-        server = smtplib.SMTP(smtpServerHost)
+        server = smtplib.SMTP_SSL(host=smtpServerHost, port=smtpPort)
+        server.login(user=smtpUser, password=smtpPassword)
         server.sendmail(fromEmail[1], toList[1], msg)
         server.quit()
+        print("Succesfully sent email")
     else:
         # The email list isn't valid, so we write it to stderr and hope
         # it reaches somebody who cares.
