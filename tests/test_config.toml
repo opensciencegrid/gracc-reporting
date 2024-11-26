@@ -1,6 +1,5 @@
 # General
 
-default_logdir = '/tmp/gracc-test'
 configured_vos = ['testvo']
 
 

@@ -39,35 +39,6 @@ class TestReportUtilsBase(unittest.TestCase):
         self.r = FakeVOReport(vo='testVO')
         self.r_copy = FakeVOReport(cfg_file=BAD_CONFIG_FILE)
 
-
-class TestGetLogfilePath(TestReportUtilsBase):
-    """Tests for ReportUtils.Reporter.get_logfile_path"""
-    def test_override(self):
-        """Return override logfile if that's passed in"""
-        fn = "/tmp/override.log"
-        self.assertEqual(self.r.get_logfile_path(fn), fn)
-
-    def test_configfile(self):
-        """Logfile should be set to configfile value"""
-        answer = os.path.join(self.r.config["default_logdir"],
-                              'gracc-reporting', 'test.log')
-        self.assertEqual(self.r.get_logfile_path(), answer)
-
-    def test_fallback(self):
-        """Set logdir to $HOME if no override and no configfile value"""
-        answer = os.path.join(os.path.expanduser('~'), 'gracc-reporting',
-                              'test.log')
-        self.assertEqual(self.r_copy.get_logfile_path(), answer)
-
-    def test_bad_configval(self):
-        """Set logdir to $HOME if configfile value is invalid"""
-        self.r_copy.config["default_logdir"] = '/'
-        answer = os.path.join(os.path.expanduser('~'), 'gracc-reporting',
-                              'test.log')
-        self.assertEqual(self.r_copy.get_logfile_path(), answer)
-        del self.r_copy.config["default_logdir"]
-
-
 class TestParseConfig(TestReportUtilsBase):
     """Tests for ReportUtils.Reporter._parse_config"""
     def test_parse_config_control(self):
@@ -99,8 +70,7 @@ class TestParseConfig(TestReportUtilsBase):
                             'email': 'nobody@example.com'
                         }, 
                         'smtphost': 'smtp.example.com'
-                    }, 
-                    'default_logdir': '/tmp/gracc-test'
+                    }
                 }
         self.assertDictEqual(self.r._parse_config(CONFIG_FILE), answer)
 
