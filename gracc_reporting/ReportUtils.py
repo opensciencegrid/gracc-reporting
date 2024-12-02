@@ -54,7 +54,6 @@ class Reporter(object, metaclass=abc.ABCMeta):
     :param str template: Filename of HTML template to inject report data into
     :param bool is_test: Dry-run or real run
     :param bool no_email: If true, don't send any emails
-    :param str logfile: Filename of log file for report
     :param str althost_key: Alternate Elasticsearch Host key from config file.
         Must be specified in [elasticsearch] section of
         config file by name (e.g. my_es_cluster="https://hostname.me")
@@ -65,7 +64,6 @@ class Reporter(object, metaclass=abc.ABCMeta):
         'index_key': 'index_pattern',
         'vo': None,
         'template': None,
-        'logfile': None,
         'is_test': False,
         'no_email': False, 
         'verbose': False        
@@ -280,67 +278,6 @@ class Reporter(object, metaclass=abc.ABCMeta):
         else:
             return False
 
-    def get_logfile_path(self, override_fn=None):
-        """
-        Gets log file location.  First tries user override, then tries config 
-        file, then $HOME
-
-        :param str fn: Filename of logfile
-        :param bool override: Override this method by feeding in a logfile path
-        :return str: Path to logfile where we have permission to write
-        """
-
-        if override_fn:
-            print("Writing log to {0}".format(override_fn))
-            return override_fn
-    
-        try_locations = [os.path.expanduser('~')]
-
-        try:
-            logdir = self.config['default_logdir']
-            if logdir in try_locations:
-                try_locations.remove(logdir)
-            try_locations.insert(0, logdir)
-        except KeyError:    # No entry in configfile
-            pass
-
-        dirname = 'gracc-reporting'
-        filename = '{0}.log'.format(self.report_type.lower())
-
-        for prefix in try_locations:
-            dirpath = os.path.join(prefix, dirname)
-            filepath = os.path.join(prefix, dirname, filename)
-
-            errmsg = "Couldn't write logfile to {0}.  " \
-                     "Moving to next path".format(filepath)
-
-            successmsg = "Writing log to {0}".format(filepath)
-
-            # Does the dir exist?  If not, can we create it?
-            if not os.path.exists(dirpath):
-                # Try to make the logfile directory
-                try:
-                    os.makedirs(dirpath)
-                except OSError as e:  # Permission Denied or missing directory
-                    print(e)
-                    print(errmsg)
-                    continue  # Don't try to write somewhere we can't
-
-            # So dir exists.  Can we write to the logfiles there?
-            try:
-                with open(filepath, 'a') as f:
-                    f.write('')
-            except (IOError,
-                    OSError) as e:  # Permission Denied comes through as an IOError
-                print(e, '\n', errmsg)
-            else:
-                print(successmsg)
-                break
-        else:
-            # If none of the prefixes work for some reason, write to current working dir
-            filepath = os.path.join(os.getcwd(), filename)
-        return filepath
-
     # Non-public methods
 
     @staticmethod
@@ -523,24 +460,6 @@ class Reporter(object, metaclass=abc.ABCMeta):
         else:
             ch.setLevel(logging.WARNING)
 
-        if self.logfile is not None:
-            # FileHandler
-            fh = logging.FileHandler(self.logfile)
-            fh.setLevel(logging.DEBUG)
-
-            try:
-                f = ContextFilter(self.vo)
-                fh.addFilter(f)
-                logfileformat = logging.Formatter(
-                    "%(asctime)s - %(name)s - %(levelname)s - %(vo)s - %(message)s")
-            except (NameError, AttributeError):
-                logfileformat = logging.Formatter(
-                    "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-
-            fh.setFormatter(logfileformat)
-
-            logger.addHandler(fh)
-
         # We only want one Stream Handler
         for handler in logger.handlers:
             if handler.__class__.__name__ == "StreamHandler":
@@ -554,23 +473,15 @@ class Reporter(object, metaclass=abc.ABCMeta):
         return logger
 
 
-def runerror(config, error, traceback, logfile):
+def runerror(config, error, traceback):
     """
     Global function to print, log, and email errors to admins
 
     :param str config: Config filename
     :param str error: Error raised
     :param str traceback: Traceback from error
-    :param str logfile: Filename of logfile
     :return None
     """
-    try:
-        with open(logfile, 'a') as f:
-            f.write(str(error))
-    except IOError: # Permission denied
-        reallogfile = os.path.join(os.path.expanduser('~'), logfile)
-        with open(reallogfile, 'a') as f:
-            f.write(str(error))
     print(error, file=sys.stderr)
 
     with open(config, 'r') as f:
@@ -649,9 +560,7 @@ def get_report_parser(no_time_options=False):
     always_include.add_argument("-n", "--nomail", dest="no_email",
                         action="store_true", default=False,
                         help="Do not send email. ")
-    always_include.add_argument("-L", "--logfile", dest="logfile",
-                        default=None, help="Specify non-standard location"
-                        "for logfile")
+
     if no_time_options:
         return parser
 

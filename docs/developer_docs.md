@@ -53,7 +53,6 @@ use.  If this is not given, Reporter will look for 'index\_pattern' to be set in
 that is not configured, it will simply use gracc.osg.summary.
 * vo (None):  Virtual organization to run report on.  Doesn't apply to most OSG reports
 * template (None):  HTML template file to use
-* logfile (None):  Logfile to use
 * is_test (False):  Test mode or not (If True, will send emails only to admins as set in config file 
 (test.emails and test.names)
 * no_email (False): Don't send any emails at all.  Just run the report
@@ -101,9 +100,6 @@ in the generation of the report.
 try to use IndexPattern.indexpattern\_generate to create a more specific index pattern to optimize 
 query speed.
 * check_no_email will look at the self.no_email flag, and if it's set, logs some info.
-* get_logfile_path tries to set the logfile path to something that's valid for the user running the 
-report.  It will try to set the logfile path to, respectively, the file given on the command line, 
-the path given in the configuration, the user's home directory, or the current working directory
 * __establish_client is a hidden method, but I wanted to mention it because it is where the connection
 to the GRACC host is established.  It is not meant to be used in any reports.
 

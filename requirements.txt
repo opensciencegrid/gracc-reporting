@@ -3,3 +3,4 @@ python-dateutil
 toml
 tabulate
 pandas
+setuptools

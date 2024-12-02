@@ -108,7 +108,7 @@ def main():
         print "Yay, it worked!"
         sys.exit(0)
     except Exception as e:
-        ReportUtils.runerror(args.config, e, traceback.format_exc(), '/tmp/logfile.junk')
+        ReportUtils.runerror(args.config, e, traceback.format_exc())
         sys.exit(1)
 
 if __name__ == '__main__':
